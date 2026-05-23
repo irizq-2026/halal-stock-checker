@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import os
+import random
 import re
-from typing import Any
+import time
+from typing import Any, Callable, TypeVar
 
 import pandas as pd
 import yfinance as yf
+
+T = TypeVar("T")
 
 _CACHE_DIR = os.environ.get("YFINANCE_CACHE_DIR", "/tmp/yfinance-cache")
 os.makedirs(_CACHE_DIR, exist_ok=True)
@@ -18,8 +22,15 @@ except Exception:
 
 NON_HALAL_KEYWORDS = ("insurance", "gambling", "alcohol", "tobacco")
 EXCLUDE_LABEL_PATTERNS = ("minority interest", "noncontrolling interest")
-
 UNKNOWN_PROFILE_VALUES = frozenset({"", "unknown", "n/a", "na", "none", "—", "-"})
+
+# Retry tuning for Yahoo rate limits on Streamlit Cloud
+MAX_RETRIES = 3
+RETRY_DELAYS = (0.5, 1.0, 2.0)
+
+
+class TransientDataError(Exception):
+    """Temporary Yahoo/network failure — callers should not cache this result."""
 
 
 def _clean_profile_text(value: Any) -> str:
@@ -31,97 +42,156 @@ def _clean_profile_text(value: Any) -> str:
     return text
 
 
+def _jitter_sleep(seconds: float) -> None:
+    time.sleep(seconds + random.uniform(0.05, 0.35))
+
+
+def _retry_call(
+    fn: Callable[[], T],
+    *,
+    attempts: int = MAX_RETRIES,
+    delays: tuple[float, ...] = RETRY_DELAYS,
+) -> T | None:
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except Exception as exc:
+            last_error = exc
+        if attempt < attempts - 1:
+            _jitter_sleep(delays[min(attempt, len(delays) - 1)])
+    if last_error:
+        return None
+    return None
+
+
+def _merge_profile_dicts(*parts: dict[str, str]) -> dict[str, str]:
+    merged: dict[str, str] = {}
+    for key in ("company_name", "sector", "industry"):
+        for part in parts:
+            val = _clean_profile_text(part.get(key))
+            if val and not merged.get(key):
+                merged[key] = val
+    return merged
+
+
 def _parse_quote_summary_block(block: dict) -> dict[str, str]:
-    out: dict[str, str] = {}
     asset = block.get("assetProfile") or {}
     summary = block.get("summaryProfile") or {}
     price = block.get("price") or {}
-    out["company_name"] = _clean_profile_text(
-        price.get("longName")
-        or price.get("shortName")
-        or summary.get("longName")
-        or summary.get("name")
-    )
-    out["sector"] = _clean_profile_text(
-        asset.get("sector") or asset.get("sectorDisp") or summary.get("sector")
-    )
-    out["industry"] = _clean_profile_text(
-        asset.get("industry") or asset.get("industryDisp") or summary.get("industry")
-    )
-    return out
+    return {
+        "company_name": _clean_profile_text(
+            price.get("longName")
+            or price.get("shortName")
+            or summary.get("longName")
+            or summary.get("name")
+        ),
+        "sector": _clean_profile_text(
+            asset.get("sector") or asset.get("sectorDisp") or summary.get("sector")
+        ),
+        "industry": _clean_profile_text(
+            asset.get("industry") or asset.get("industryDisp") or summary.get("industry")
+        ),
+    }
 
 
-def _fetch_quote_summary_profile(ticker: yf.Ticker) -> dict[str, str]:
-    """Load sector/industry/name via Yahoo quoteSummary (cloud-friendly)."""
-    out: dict[str, str] = {}
-    symbol = getattr(ticker, "ticker", None) or ""
-    if not symbol:
-        return out
+def _profile_from_chart(dat: Any, symbol: str) -> dict[str, str]:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    payload = dat.get_raw_json(url, params={"interval": "1d", "range": "5d"})
+    results = payload.get("chart", {}).get("result") or []
+    if not results:
+        return {}
+    meta = results[0].get("meta") or {}
+    return {
+        "company_name": _clean_profile_text(meta.get("longName") or meta.get("shortName")),
+        "sector": "",
+        "industry": "",
+    }
 
-    dat = getattr(ticker, "_data", None)
+
+def _profile_from_quote_summary(dat: Any, symbol: str) -> dict[str, str]:
     modules = "assetProfile,summaryProfile,price"
-    hosts = (
+    for host in (
         "https://query2.finance.yahoo.com",
         "https://query1.finance.yahoo.com",
-    )
+    ):
+        url = f"{host}/v10/finance/quoteSummary/{symbol}"
+        payload = dat.get_raw_json(url, params={"modules": modules})
+        results = payload.get("quoteSummary", {}).get("result") or []
+        if results:
+            parsed = _parse_quote_summary_block(results[0])
+            if parsed.get("company_name") or parsed.get("sector") or parsed.get("industry"):
+                return parsed
+    return {}
+
+
+def _profile_from_v7_quote(dat: Any, symbol: str) -> dict[str, str]:
+    url = "https://query1.finance.yahoo.com/v7/finance/quote"
+    payload = dat.get_raw_json(url, params={"symbols": symbol})
+    results = payload.get("quoteResponse", {}).get("result") or []
+    if not results:
+        return {}
+    row = results[0]
+    return {
+        "company_name": _clean_profile_text(row.get("longName") or row.get("shortName")),
+        "sector": _clean_profile_text(row.get("sector")),
+        "industry": _clean_profile_text(row.get("industry")),
+    }
+
+
+def _profile_from_info(ticker: yf.Ticker) -> dict[str, str]:
+    info = ticker.info or {}
+    if not isinstance(info, dict):
+        return {}
+    return {
+        "company_name": _clean_profile_text(
+            info.get("longName") or info.get("shortName") or info.get("displayName")
+        ),
+        "sector": _clean_profile_text(info.get("sector") or info.get("sectorDisp")),
+        "industry": _clean_profile_text(info.get("industry") or info.get("industryDisp")),
+    }
+
+
+def _fetch_company_profile_once(ticker: yf.Ticker, symbol: str) -> dict[str, str]:
+    parts: list[dict[str, str]] = []
+    dat = getattr(ticker, "_data", None)
 
     if dat is not None:
-        for host in hosts:
+        for fetcher in (
+            lambda: _profile_from_quote_summary(dat, symbol),
+            lambda: _profile_from_chart(dat, symbol),
+            lambda: _profile_from_v7_quote(dat, symbol),
+        ):
             try:
-                url = f"{host}/v10/finance/quoteSummary/{symbol}"
-                payload = dat.get_raw_json(url, params={"modules": modules})
-                results = payload.get("quoteSummary", {}).get("result") or []
-                if results:
-                    out = _parse_quote_summary_block(results[0])
-                    if out.get("sector") or out.get("industry") or out.get("company_name"):
-                        return out
+                parts.append(fetcher())
+                _jitter_sleep(0.15)
             except Exception:
                 continue
 
-        # v7 quote: reliable for company name on some cloud hosts
-        try:
-            url = "https://query1.finance.yahoo.com/v7/finance/quote"
-            payload = dat.get_raw_json(url, params={"symbols": symbol})
-            results = payload.get("quoteResponse", {}).get("result") or []
-            if results:
-                row = results[0]
-                if not out.get("company_name"):
-                    out["company_name"] = _clean_profile_text(
-                        row.get("longName") or row.get("shortName")
-                    )
-                if not out.get("sector"):
-                    out["sector"] = _clean_profile_text(row.get("sector"))
-                if not out.get("industry"):
-                    out["industry"] = _clean_profile_text(row.get("industry"))
-        except Exception:
-            pass
-
-    # Last resort: second info fetch (sometimes populates after other calls)
     try:
-        info = ticker.info or {}
-        if isinstance(info, dict):
-            if not out.get("company_name"):
-                out["company_name"] = _clean_profile_text(
-                    info.get("longName") or info.get("shortName")
-                )
-            if not out.get("sector"):
-                out["sector"] = _clean_profile_text(
-                    info.get("sector") or info.get("sectorDisp")
-                )
-            if not out.get("industry"):
-                out["industry"] = _clean_profile_text(
-                    info.get("industry") or info.get("industryDisp")
-                )
+        parts.append(_profile_from_info(ticker))
     except Exception:
         pass
 
-    return out
+    return _merge_profile_dicts(*parts)
+
+
+
+def _fetch_company_profile(ticker: yf.Ticker, symbol: str) -> dict[str, str]:
+    profile: dict[str, str] = {}
+    for attempt in range(MAX_RETRIES):
+        profile = _fetch_company_profile_once(ticker, symbol)
+        if profile.get("company_name") or profile.get("sector") or profile.get("industry"):
+            return profile
+        if attempt < MAX_RETRIES - 1:
+            _jitter_sleep(RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)])
+    return profile
 
 
 def _resolve_company_profile(
     ticker: yf.Ticker, info: dict, symbol: str
 ) -> tuple[str, str, str]:
-    profile = _fetch_quote_summary_profile(ticker)
+    profile = _fetch_company_profile(ticker, symbol)
 
     company_name = _clean_profile_text(
         info.get("longName")
@@ -138,12 +208,10 @@ def _resolve_company_profile(
 
     if not company_name or company_name.upper() == symbol.upper():
         company_name = profile.get("company_name") or company_name
-
     if not company_name or company_name.upper() == symbol.upper():
         company_name = ""
 
     return company_name, sector, industry
-
 
 
 def _to_float(value: Any) -> float | None:
@@ -244,7 +312,7 @@ def _fast_info_value(ticker: yf.Ticker, *keys: str) -> float | None:
     return None
 
 
-def _last_close_price(ticker: yf.Ticker) -> float | None:
+def _last_close_price(ticker: yf.Ticker, symbol: str) -> float | None:
     try:
         hist = ticker.history(period="5d", auto_adjust=True)
         if hist is not None and not hist.empty:
@@ -253,7 +321,7 @@ def _last_close_price(ticker: yf.Ticker) -> float | None:
         pass
     try:
         data = yf.download(
-            ticker.ticker,
+            symbol,
             period="5d",
             progress=False,
             threads=False,
@@ -270,7 +338,6 @@ def _last_close_price(ticker: yf.Ticker) -> float | None:
 
 
 def _merge_ticker_info(ticker: yf.Ticker) -> dict:
-    """Build a single info dict from every source yfinance exposes."""
     merged: dict = {}
     try:
         raw = ticker.info
@@ -283,13 +350,11 @@ def _merge_ticker_info(ticker: yf.Ticker) -> dict:
         "market_cap": "marketCap",
         "shares": "sharesOutstanding",
         "last_price": "currentPrice",
-        "year_high": "fiftyTwoWeekHigh",
-        "year_low": "fiftyTwoWeekLow",
     }
     try:
         fi = ticker.fast_info
         for src, dest in fast_map.items():
-            if dest in merged and merged.get(dest) is not None:
+            if merged.get(dest) is not None:
                 continue
             try:
                 val = getattr(fi, src, None)
@@ -304,7 +369,7 @@ def _merge_ticker_info(ticker: yf.Ticker) -> dict:
     return merged
 
 
-def _resolve_market_cap(ticker: yf.Ticker, info: dict) -> float | None:
+def _resolve_market_cap(ticker: yf.Ticker, info: dict, symbol: str) -> float | None:
     for key in ("marketCap", "enterpriseValue"):
         cap = _to_float(info.get(key))
         if cap is not None and cap > 0:
@@ -326,11 +391,10 @@ def _resolve_market_cap(ticker: yf.Ticker, info: dict) -> float | None:
     if price is None:
         price = _fast_info_value(ticker, "last_price", "lastPrice", "regularMarketPrice")
     if price is None:
-        price = _last_close_price(ticker)
+        price = _last_close_price(ticker, symbol)
 
     if shares is not None and price is not None and shares > 0 and price > 0:
         return shares * price
-
     return None
 
 
@@ -366,8 +430,7 @@ def _resolve_revenue(ticker: yf.Ticker, info: dict) -> float | None:
     if revenue is not None and revenue > 0:
         return revenue
     inc = _get_income_statement(ticker)
-    revenue = _df_row_value(inc, "total revenue", "total revenues", "revenue")
-    return revenue
+    return _df_row_value(inc, "total revenue", "total revenues", "revenue")
 
 
 def _financials_value(financials: pd.DataFrame | None, keyword: str) -> float:
@@ -415,46 +478,49 @@ def _sum_non_halal_income(financials: pd.DataFrame | None) -> float:
     return total
 
 
+def _fetch_stock_data_once(symbol: str) -> dict:
+    ticker = yf.Ticker(symbol)
+
+    info = _merge_ticker_info(ticker)
+    company_name, sector, industry = _resolve_company_profile(ticker, info, symbol)
+    _jitter_sleep(0.15)
+
+    market_cap = _resolve_market_cap(ticker, info, symbol)
+    if market_cap is None or market_cap <= 0:
+        raise TransientDataError("Market cap unavailable")
+
+    income_df = _get_income_statement(ticker)
+
+    return {
+        "symbol": symbol,
+        "company_name": company_name,
+        "sector": sector,
+        "industry": industry,
+        "market_cap": market_cap,
+        "total_debt": _resolve_total_debt(ticker, info),
+        "cash": _resolve_cash(ticker, info),
+        "total_revenue": _resolve_revenue(ticker, info),
+        "interest_income": _financials_value(income_df, "Interest"),
+        "non_halal_income": _sum_non_halal_income(income_df),
+    }
+
+
 def fetch_stock_data(symbol: str) -> dict | None:
-    """
-    Fetch stock data via yfinance with cloud-friendly fallbacks.
-    Returns None on hard failure, or {"error": "..."} if market cap cannot be resolved.
-    """
     try:
         symbol = symbol.strip().upper()
         if not symbol or not re.match(r"^[A-Z.\-]{1,10}$", symbol):
             return None
 
-        ticker = yf.Ticker(symbol)
-        info = _merge_ticker_info(ticker)
-        income_df = _get_income_statement(ticker)
+        def _attempt() -> dict:
+            return _fetch_stock_data_once(symbol)
 
-        company_name, sector, industry = _resolve_company_profile(
-            ticker, info, symbol
-        )
+        result = _retry_call(_attempt, attempts=MAX_RETRIES)
+        if result:
+            return result
 
-        market_cap = _resolve_market_cap(ticker, info)
-        if market_cap is None or market_cap <= 0:
-            return {"error": "Market cap unavailable"}
-
-        total_debt = _resolve_total_debt(ticker, info)
-        cash = _resolve_cash(ticker, info)
-        total_revenue = _resolve_revenue(ticker, info)
-
-        interest_income = _financials_value(income_df, "Interest")
-        non_halal_income = _sum_non_halal_income(income_df)
-
-        return {
-            "symbol": symbol,
-            "company_name": company_name,
-            "sector": sector,
-            "industry": industry,
-            "market_cap": market_cap,
-            "total_debt": total_debt,
-            "cash": cash,
-            "total_revenue": total_revenue,
-            "interest_income": interest_income,
-            "non_halal_income": non_halal_income,
-        }
+        # Last try — may raise TransientDataError for UI message
+        return _fetch_stock_data_once(symbol)
+    except TransientDataError:
+        raise
     except Exception:
         return None

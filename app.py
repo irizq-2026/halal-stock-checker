@@ -7,13 +7,13 @@ import os
 
 import streamlit as st
 
-from data import fetch_stock_data as _fetch_stock_data
+from data import TransientDataError, fetch_stock_data as _fetch_stock_data
 from rules import screen_stock
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def fetch_stock_data_cached(symbol: str):
-    """Cached wrapper - reduces Yahoo rate limits on Streamlit Cloud."""
+    """Cache successful fetches only (exceptions are not cached)."""
     return _fetch_stock_data(symbol)
 
 
@@ -371,14 +371,20 @@ def render_results(data: dict, screening: dict) -> None:
     st.markdown(f'<div class="explanation-card">{html.escape(reason)}</div>', unsafe_allow_html=True)
 
 
-def render_error(ticker: str) -> None:
+def render_error(ticker: str, transient: bool = False) -> None:
+    if transient:
+        message = (
+            f"Market data for <strong>{ticker.upper()}</strong> is temporarily unavailable "
+            "(Yahoo Finance rate limit or network). Wait 10-20 seconds and click "
+            "<strong>Check Stock</strong> again."
+        )
+    else:
+        message = (
+            f"Could not retrieve data for <strong>{ticker.upper()}</strong>. "
+            "Please check the symbol and try again."
+        )
     st.markdown(
-        f"""
-        <div class="error-card">
-          Could not retrieve data for <strong>{ticker.upper()}</strong>.
-          Please check the symbol and try again.
-        </div>
-        """,
+        f'<div class="error-card">{message}</div>',
         unsafe_allow_html=True,
     )
 
@@ -423,6 +429,9 @@ def main() -> None:
                     else:
                         screening = screen_stock(stock_data)
                         render_results(stock_data, screening)
+                except TransientDataError:
+                    fetch_stock_data_cached.clear()
+                    render_error(ticker, transient=True)
                 except Exception:
                     render_error(ticker)
 
