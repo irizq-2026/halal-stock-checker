@@ -1,4 +1,4 @@
-"""Halal Stock Checker (iRizq.com) — Streamlit UI."""
+"""Halal Stock Checker (iRizq.com) - Streamlit UI."""
 
 from __future__ import annotations
 
@@ -6,8 +6,15 @@ import os
 
 import streamlit as st
 
-from data import fetch_stock_data
+from data import fetch_stock_data as _fetch_stock_data
 from rules import screen_stock
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_stock_data_cached(symbol: str):
+    """Cached wrapper - reduces Yahoo rate limits on Streamlit Cloud."""
+    return _fetch_stock_data(symbol)
+
 
 PWA_HEAD = """
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -339,7 +346,7 @@ def main() -> None:
         st.image(logo_path, width=200)
 
     st.title("Halal Stock Checker")
-    st.markdown("### AAOIFI-Based Screening • Powered by iRizq.com")
+    st.markdown("### AAOIFI-Based Screening ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Powered by iRizq.com")
     st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
     if "ticker_input" not in st.session_state:
@@ -363,7 +370,7 @@ def main() -> None:
         else:
             with st.spinner("Fetching stock data and running AAOIFI screening..."):
                 try:
-                    stock_data = fetch_stock_data(ticker)
+                    stock_data = fetch_stock_data_cached(ticker)
                     if stock_data is None or stock_data.get("error"):
                         render_error(ticker)
                     else:
