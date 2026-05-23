@@ -403,7 +403,7 @@ def main() -> None:
         st.image(logo_path, width=200)
 
     st.title("Halal Stock Checker")
-    st.markdown("### AAOIFI-Based Screening â€¢ Powered by iRizq.com")
+    st.markdown("### AAOIFI-Based Screening Powered by [iRizq.com](https://www.iRizq.com)")
     st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
     ticker = st.text_input(
