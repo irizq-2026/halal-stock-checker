@@ -298,31 +298,25 @@ def breakdown_table_html(rows: list[dict]) -> str:
             f"<td>{result_cell(row)}</td>"
             f"</tr>"
         )
-    return f"""
-    <table>
-      <thead>
-        <tr>
-          <th>Check</th>
-          <th>Value</th>
-          <th>Threshold</th>
-          <th>Result</th>
-        </tr>
-      </thead>
-      <tbody>{body}</tbody>
-    </table>
-    """
+    return (
+        "<table><thead><tr>"
+        "<th>Check</th><th>Value</th><th>Threshold</th><th>Result</th>"
+        "</tr></thead><tbody>"
+        + body
+        + "</tbody></table>"
+    )
 
 
 def _display_profile_field(label: str, value: str, value_class: str = "") -> str:
     safe_label = html.escape(label)
     safe_value = html.escape(value)
     cls = f"company-value {value_class}".strip()
-    return f"""
-      <div class="company-field">
-        <span class="company-label">{safe_label}</span>
-        <span class="{cls}">{safe_value}</span>
-      </div>
-    """
+    return (
+        f'<div class="company-field">'
+        f'<span class="company-label">{safe_label}</span>'
+        f'<span class="{cls}">{safe_value}</span>'
+        f"</div>"
+    )
 
 
 def _format_sector_industry(sector: str, industry: str) -> tuple[str, str]:
@@ -344,7 +338,7 @@ def render_results(data: dict, screening: dict) -> None:
     symbol = data.get("symbol", "N/A")
     company = (data.get("company_name") or "").strip()
     if not company or company.upper() == str(symbol).upper():
-        company = "Name unavailable — verify ticker"
+        company = "Name unavailable - verify ticker"
         name_class = "muted"
     else:
         name_class = "name"
@@ -368,13 +362,13 @@ def render_results(data: dict, screening: dict) -> None:
         + _display_profile_field("Industry", industry, industry_class)
         + "</div>"
     )
-    st.markdown(company_html, unsafe_allow_html=True)
+    st.html(company_html)
 
     st.markdown("## Screening Breakdown")
-    st.markdown(breakdown_table_html(screening.get("breakdown", [])), unsafe_allow_html=True)
+    st.html(breakdown_table_html(screening.get("breakdown", [])))
 
     st.markdown("## Explanation")
-    st.markdown(f'<div class="explanation-card">{reason}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="explanation-card">{html.escape(reason)}</div>', unsafe_allow_html=True)
 
 
 def render_error(ticker: str) -> None:
@@ -403,17 +397,13 @@ def main() -> None:
         st.image(logo_path, width=200)
 
     st.title("Halal Stock Checker")
-    st.markdown("### AAOIFI-Based Screening ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Powered by iRizq.com")
+    st.markdown("### AAOIFI-Based Screening â€¢ Powered by iRizq.com")
     st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
-    if "ticker_input" not in st.session_state:
-        st.session_state.ticker_input = ""
-
     ticker = st.text_input(
-        "US Stock Ticker",
-        value=st.session_state.ticker_input,
-        placeholder="e.g. AAPL, MSFT, TSLA",
-        label_visibility="collapsed",
+        "Enter Stock Symbol:",
+        placeholder="e.g. AAPL",
+        label_visibility="visible",
     ).strip().upper()
 
     check_clicked = st.button("Check Stock", type="primary", use_container_width=True)

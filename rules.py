@@ -52,7 +52,7 @@ def _business_display_value(sector: str, industry: str) -> str:
     sector = _clean_profile_text(sector)
     industry = _clean_profile_text(industry)
     if sector and industry:
-        return f"{sector} — {industry}"
+        return f"{sector} â€” {industry}"
     if sector:
         return sector
     if industry:

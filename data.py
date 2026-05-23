@@ -31,42 +31,90 @@ def _clean_profile_text(value: Any) -> str:
     return text
 
 
-def _fetch_quote_summary_profile(ticker: yf.Ticker) -> dict[str, str]:
+def _parse_quote_summary_block(block: dict) -> dict[str, str]:
     out: dict[str, str] = {}
-    try:
-        symbol = getattr(ticker, "ticker", None) or ""
-        if not symbol:
-            return out
-        dat = getattr(ticker, "_data", None)
-        if dat is None:
-            return out
-        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
-        payload = dat.get_raw_json(
-            url,
-            params={"modules": "assetProfile,summaryProfile,price"},
-        )
-        results = payload.get("quoteSummary", {}).get("result") or []
-        if not results:
-            return out
-        block = results[0]
-        asset = block.get("assetProfile") or {}
-        summary = block.get("summaryProfile") or {}
-        price = block.get("price") or {}
+    asset = block.get("assetProfile") or {}
+    summary = block.get("summaryProfile") or {}
+    price = block.get("price") or {}
+    out["company_name"] = _clean_profile_text(
+        price.get("longName")
+        or price.get("shortName")
+        or summary.get("longName")
+        or summary.get("name")
+    )
+    out["sector"] = _clean_profile_text(
+        asset.get("sector") or asset.get("sectorDisp") or summary.get("sector")
+    )
+    out["industry"] = _clean_profile_text(
+        asset.get("industry") or asset.get("industryDisp") or summary.get("industry")
+    )
+    return out
 
-        out["company_name"] = _clean_profile_text(
-            price.get("longName")
-            or price.get("shortName")
-            or summary.get("longName")
-            or summary.get("name")
-        )
-        out["sector"] = _clean_profile_text(
-            asset.get("sector") or asset.get("sectorDisp") or summary.get("sector")
-        )
-        out["industry"] = _clean_profile_text(
-            asset.get("industry") or asset.get("industryDisp") or summary.get("industry")
-        )
+
+def _fetch_quote_summary_profile(ticker: yf.Ticker) -> dict[str, str]:
+    """Load sector/industry/name via Yahoo quoteSummary (cloud-friendly)."""
+    out: dict[str, str] = {}
+    symbol = getattr(ticker, "ticker", None) or ""
+    if not symbol:
+        return out
+
+    dat = getattr(ticker, "_data", None)
+    modules = "assetProfile,summaryProfile,price"
+    hosts = (
+        "https://query2.finance.yahoo.com",
+        "https://query1.finance.yahoo.com",
+    )
+
+    if dat is not None:
+        for host in hosts:
+            try:
+                url = f"{host}/v10/finance/quoteSummary/{symbol}"
+                payload = dat.get_raw_json(url, params={"modules": modules})
+                results = payload.get("quoteSummary", {}).get("result") or []
+                if results:
+                    out = _parse_quote_summary_block(results[0])
+                    if out.get("sector") or out.get("industry") or out.get("company_name"):
+                        return out
+            except Exception:
+                continue
+
+        # v7 quote: reliable for company name on some cloud hosts
+        try:
+            url = "https://query1.finance.yahoo.com/v7/finance/quote"
+            payload = dat.get_raw_json(url, params={"symbols": symbol})
+            results = payload.get("quoteResponse", {}).get("result") or []
+            if results:
+                row = results[0]
+                if not out.get("company_name"):
+                    out["company_name"] = _clean_profile_text(
+                        row.get("longName") or row.get("shortName")
+                    )
+                if not out.get("sector"):
+                    out["sector"] = _clean_profile_text(row.get("sector"))
+                if not out.get("industry"):
+                    out["industry"] = _clean_profile_text(row.get("industry"))
+        except Exception:
+            pass
+
+    # Last resort: second info fetch (sometimes populates after other calls)
+    try:
+        info = ticker.info or {}
+        if isinstance(info, dict):
+            if not out.get("company_name"):
+                out["company_name"] = _clean_profile_text(
+                    info.get("longName") or info.get("shortName")
+                )
+            if not out.get("sector"):
+                out["sector"] = _clean_profile_text(
+                    info.get("sector") or info.get("sectorDisp")
+                )
+            if not out.get("industry"):
+                out["industry"] = _clean_profile_text(
+                    info.get("industry") or info.get("industryDisp")
+                )
     except Exception:
         pass
+
     return out
 
 
