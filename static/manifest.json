@@ -1,0 +1,18 @@
+﻿{
+  "name": "Halal Stock Checker",
+  "short_name": "Halal Stocks",
+  "description": "AAOIFI-based halal stock screening — powered by iRizq.com",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1B2A",
+  "theme_color": "#C9A84C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    }
+  ]
+}
