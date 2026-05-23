@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import os
 
 import streamlit as st
@@ -169,21 +170,40 @@ IRIZQ_CSS = """
     border: 1px solid #2A3F55;
     margin: 0.8rem 0;
   }
-  .company-name {
+  .company-field {
+    margin-bottom: 0.75rem;
+  }
+  .company-field:last-child {
+    margin-bottom: 0;
+  }
+  .company-label {
+    display: block;
+    color: #8A9BB0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.2rem;
+  }
+  .company-value {
+    display: block;
+    color: #F5F5F5;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+  .company-value.name {
     color: #C9A84C;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
-  .company-ticker {
+  .company-value.ticker {
     color: #E8C96A;
     font-family: monospace;
-    font-size: 1rem;
     font-weight: 600;
   }
-  .company-sector {
+  .company-value.muted {
     color: #8A9BB0;
-    font-size: 0.9rem;
-    margin-top: 0.2rem;
+    font-style: italic;
   }
   .explanation-card {
     background-color: #1A2B3C;
@@ -293,25 +313,62 @@ def breakdown_table_html(rows: list[dict]) -> str:
     """
 
 
+def _display_profile_field(label: str, value: str, value_class: str = "") -> str:
+    safe_label = html.escape(label)
+    safe_value = html.escape(value)
+    cls = f"company-value {value_class}".strip()
+    return f"""
+      <div class="company-field">
+        <span class="company-label">{safe_label}</span>
+        <span class="{cls}">{safe_value}</span>
+      </div>
+    """
+
+
+def _format_sector_industry(sector: str, industry: str) -> tuple[str, str]:
+    sector = (sector or "").strip()
+    industry = (industry or "").strip()
+    unknown = {"", "unknown", "n/a", "na", "none"}
+    sector_ok = sector and sector.lower() not in unknown
+    industry_ok = industry and industry.lower() not in unknown
+    sector_display = sector if sector_ok else "Not available"
+    industry_display = industry if industry_ok else "Not available"
+    if not sector_ok:
+        sector_display = "Not available"
+    if not industry_ok:
+        industry_display = "Not available"
+    return sector_display, industry_display
+
+
 def render_results(data: dict, screening: dict) -> None:
     symbol = data.get("symbol", "N/A")
-    company = data.get("company_name") or "N/A"
-    sector = data.get("sector") or "N/A"
+    company = (data.get("company_name") or "").strip()
+    if not company or company.upper() == str(symbol).upper():
+        company = "Name unavailable — verify ticker"
+        name_class = "muted"
+    else:
+        name_class = "name"
+
+    sector, industry = _format_sector_industry(
+        data.get("sector", ""), data.get("industry", "")
+    )
+    sector_class = "muted" if sector == "Not available" else ""
+    industry_class = "muted" if industry == "Not available" else ""
+
     result = screening.get("result", "Questionable / Needs Scholar Review")
     reason = screening.get("reason", "")
 
     st.markdown(f'<div style="margin:1rem 0;">{badge_html(result)}</div>', unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class="company-info">
-          <div class="company-name">{company}</div>
-          <div class="company-ticker">{symbol}</div>
-          <div class="company-sector">{sector}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    company_html = (
+        '<div class="company-info">'
+        + _display_profile_field("Company", company, name_class)
+        + _display_profile_field("Ticker", str(symbol), "ticker")
+        + _display_profile_field("Sector", sector, sector_class)
+        + _display_profile_field("Industry", industry, industry_class)
+        + "</div>"
     )
+    st.markdown(company_html, unsafe_allow_html=True)
 
     st.markdown("## Screening Breakdown")
     st.markdown(breakdown_table_html(screening.get("breakdown", [])), unsafe_allow_html=True)

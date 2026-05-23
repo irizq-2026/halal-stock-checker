@@ -19,6 +19,84 @@ except Exception:
 NON_HALAL_KEYWORDS = ("insurance", "gambling", "alcohol", "tobacco")
 EXCLUDE_LABEL_PATTERNS = ("minority interest", "noncontrolling interest")
 
+UNKNOWN_PROFILE_VALUES = frozenset({"", "unknown", "n/a", "na", "none", "—", "-"})
+
+
+def _clean_profile_text(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if text.lower() in UNKNOWN_PROFILE_VALUES:
+        return ""
+    return text
+
+
+def _fetch_quote_summary_profile(ticker: yf.Ticker) -> dict[str, str]:
+    out: dict[str, str] = {}
+    try:
+        symbol = getattr(ticker, "ticker", None) or ""
+        if not symbol:
+            return out
+        dat = getattr(ticker, "_data", None)
+        if dat is None:
+            return out
+        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
+        payload = dat.get_raw_json(
+            url,
+            params={"modules": "assetProfile,summaryProfile,price"},
+        )
+        results = payload.get("quoteSummary", {}).get("result") or []
+        if not results:
+            return out
+        block = results[0]
+        asset = block.get("assetProfile") or {}
+        summary = block.get("summaryProfile") or {}
+        price = block.get("price") or {}
+
+        out["company_name"] = _clean_profile_text(
+            price.get("longName")
+            or price.get("shortName")
+            or summary.get("longName")
+            or summary.get("name")
+        )
+        out["sector"] = _clean_profile_text(
+            asset.get("sector") or asset.get("sectorDisp") or summary.get("sector")
+        )
+        out["industry"] = _clean_profile_text(
+            asset.get("industry") or asset.get("industryDisp") or summary.get("industry")
+        )
+    except Exception:
+        pass
+    return out
+
+
+def _resolve_company_profile(
+    ticker: yf.Ticker, info: dict, symbol: str
+) -> tuple[str, str, str]:
+    profile = _fetch_quote_summary_profile(ticker)
+
+    company_name = _clean_profile_text(
+        info.get("longName")
+        or info.get("shortName")
+        or info.get("displayName")
+        or profile.get("company_name")
+    )
+    sector = _clean_profile_text(
+        info.get("sector") or info.get("sectorDisp") or profile.get("sector")
+    )
+    industry = _clean_profile_text(
+        info.get("industry") or info.get("industryDisp") or profile.get("industry")
+    )
+
+    if not company_name or company_name.upper() == symbol.upper():
+        company_name = profile.get("company_name") or company_name
+
+    if not company_name or company_name.upper() == symbol.upper():
+        company_name = ""
+
+    return company_name, sector, industry
+
+
 
 def _to_float(value: Any) -> float | None:
     if value is None:
@@ -303,14 +381,9 @@ def fetch_stock_data(symbol: str) -> dict | None:
         info = _merge_ticker_info(ticker)
         income_df = _get_income_statement(ticker)
 
-        company_name = (
-            info.get("longName")
-            or info.get("shortName")
-            or info.get("displayName")
-            or symbol
+        company_name, sector, industry = _resolve_company_profile(
+            ticker, info, symbol
         )
-        sector = info.get("sector") or info.get("sectorDisp") or "Unknown"
-        industry = info.get("industry") or info.get("industryDisp") or ""
 
         market_cap = _resolve_market_cap(ticker, info)
         if market_cap is None or market_cap <= 0:
