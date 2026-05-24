@@ -502,7 +502,7 @@ def main() -> None:
                 except Exception:
                     render_error(ticker)
 
-	render_feedback()
+            render_feedback()
 
     render_feedback_small()
     render_disclaimer()
