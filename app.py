@@ -389,6 +389,73 @@ def render_error(ticker: str, transient: bool = False) -> None:
     )
 
 
+def render_feedback() -> None:
+    st.markdown(
+        """
+        <div style="
+            background-color: #1A2B3C;
+            border: 1px solid #2A3F55;
+            border-left: 4px solid #C9A84C;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        ">
+            <p style="
+                color: #F5F5F5;
+                font-family: 'Inter', sans-serif;
+                font-size: 0.95rem;
+                font-weight: 600;
+                margin: 0 0 0.5rem 0;
+            ">
+                🌟 Help us improve this tool!
+            </p>
+            <p style="
+                color: #8A9BB0;
+                font-family: 'Inter', sans-serif;
+                font-size: 0.85rem;
+                margin: 0 0 1rem 0;
+            ">
+                This is a beta version. Your feedback helps us
+                build a better halal investing experience.
+            </p>
+            <a href="https://forms.gle/Jn9xzW46hPT43SSz6" target="_blank" style="
+                background-color: #C9A84C;
+                color: #0D1B2A;
+                font-family: 'Inter', sans-serif;
+                font-weight: 700;
+                font-size: 0.9rem;
+                padding: 0.5rem 1.5rem;
+                border-radius: 20px;
+                text-decoration: none;
+                display: inline-block;
+            ">
+                📝 Share Your Feedback
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_feedback_small() -> None:
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 1rem 0; margin-top: 0.5rem;">
+            <a href="YOUR_GOOGLE_FORM_URL" target="_blank" style="
+                color: #8A9BB0;
+                font-family: 'Inter', sans-serif;
+                font-size: 0.82rem;
+                text-decoration: none;
+                border-bottom: 1px dashed #2A3F55;
+            ">
+                ⭐ Rate this tool &amp; share feedback
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def main() -> None:
     st.set_page_config(
         page_title="Halal Stock Checker | iRizq.com",
@@ -435,6 +502,9 @@ def main() -> None:
                 except Exception:
                     render_error(ticker)
 
+	render_feedback()
+
+    render_feedback_small()
     render_disclaimer()
 
 
