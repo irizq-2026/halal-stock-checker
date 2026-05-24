@@ -442,7 +442,7 @@ def render_feedback_small() -> None:
     st.markdown(
         """
         <div style="text-align: center; padding: 1rem 0; margin-top: 0.5rem;">
-            <a href="YOUR_GOOGLE_FORM_URL" target="_blank" style="
+            <a href="https://forms.gle/Jn9xzW46hPT43SSz6" target="_blank" style="
                 color: #8A9BB0;
                 font-family: 'Inter', sans-serif;
                 font-size: 0.82rem;
