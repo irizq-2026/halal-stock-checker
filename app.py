@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import os
 import time
@@ -516,6 +517,19 @@ RESULT_ICONS = {
 }
 
 
+def _linked_logo_html(logo_path: str) -> str:
+    try:
+        with open(logo_path, "rb") as logo_file:
+            encoded_logo = base64.b64encode(logo_file.read()).decode("ascii")
+    except OSError:
+        return ""
+    return (
+        '<a href="https://www.irizq.com" target="_blank">'
+        f'<img src="data:image/png;base64,{encoded_logo}" alt="iRizq" style="width:200px;">'
+        '</a>'
+    )
+
+
 def inject_head_and_styles() -> None:
     st.markdown(PWA_HEAD + IRIZQ_CSS, unsafe_allow_html=True)
 
@@ -792,14 +806,31 @@ def _financial_statuses(screening: dict) -> dict[str, str]:
 
 
 def _is_core_interest_business(data: dict) -> bool:
-    profile = " ".join(
-        str(data.get(key, ""))
-        for key in ("sector", "industry", "company_name")
-    ).lower()
+    info = data.get("_ui_info", {}) if isinstance(data.get("_ui_info", {}), dict) else {}
+    profile_parts = [
+        data.get("symbol", ""),
+        data.get("sector", ""),
+        data.get("industry", ""),
+        data.get("company_name", ""),
+        info.get("sector", ""),
+        info.get("industry", ""),
+        info.get("longName", ""),
+        info.get("longBusinessSummary", ""),
+    ]
+    profile = " ".join(str(part) for part in profile_parts).lower()
+    core_tickers = {
+        "JPM", "C", "BAC", "WFC", "GS", "MS", "AXP", "USB", "PNC",
+        "TFC", "COF", "SCHW", "BLK", "AIG", "MET", "PRU", "ALL", "TRV",
+    }
+    symbol = str(data.get("symbol", "")).upper()
+    if symbol in core_tickers:
+        return True
+
     keywords = (
         "bank",
         "banks",
-        "financial",
+        "banking",
+        "financial services",
         "insurance",
         "credit",
         "capital markets",
@@ -808,7 +839,17 @@ def _is_core_interest_business(data: dict) -> bool:
         "brokerage",
         "investment services",
     )
-    return any(keyword in profile for keyword in keywords)
+    if any(keyword in profile for keyword in keywords):
+        return True
+
+    try:
+        interest_income = abs(float(data.get("interest_income") or 0))
+        revenue = abs(float(data.get("total_revenue") or 0))
+        if revenue > 0 and interest_income / revenue > 0.5:
+            return True
+    except (TypeError, ValueError, ZeroDivisionError):
+        pass
+    return False
 
 
 def _display_result(data: dict, screening: dict) -> str:
@@ -1296,12 +1337,7 @@ def main() -> None:
 
     logo_path = "static/logo.png"
     if os.path.exists(logo_path):
-        st.markdown(
-            '<a href="https://www.irizq.com" target="_blank">'
-            '<img src="/static/logo.png" alt="iRizq" style="width:200px;">'
-            '</a>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(_linked_logo_html(logo_path), unsafe_allow_html=True)
 
     st.title("Halal Stock Checker")
     st.markdown("### AAOIFI-Based Screening Powered by [iRizq.com](https://www.iRizq.com)")
