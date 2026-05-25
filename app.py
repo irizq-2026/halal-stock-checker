@@ -359,7 +359,7 @@ IRIZQ_CSS = """
   }
   .stTabs [data-baseweb="tab-panel"] .overview-card:first-child,
   .stTabs [data-baseweb="tab-panel"] .metric-card:first-child {
-    margin-top: 0.25rem !important;
+    margin-top: 0.8rem !important;
   }
 
   .stTabs [data-baseweb="tab"] {
