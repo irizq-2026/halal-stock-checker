@@ -654,13 +654,30 @@ def _pill(label: str, kind: str) -> str:
     return f'<span class="mini-pill" style="background-color:{bg};color:{fg};border:1px solid {border};">{html.escape(label)}</span>'
 
 
-def _status_badge(result: str) -> str:
+def _status_badge(result: str, *, large: bool = False) -> str:
     kind = _result_kind(result)
     if kind == "pass":
-        return _pill("🟢 HALAL", "pass")
-    if kind == "fail":
-        return _pill("🔴 NOT HALAL", "fail")
-    return _pill("🟡 QUESTIONABLE", "questionable")
+        label = "🟢 HALAL"
+    elif kind == "fail":
+        label = "🔴 NOT HALAL"
+    else:
+        label = "🟡 QUESTIONABLE"
+
+    if not large:
+        return _pill(label, kind)
+
+    colors = {
+        "pass": ("#1B5E20", "#A5D6A7", "#2E7D32"),
+        "fail": ("#7F1515", "#FFCDD2", "#C62828"),
+        "questionable": ("#7B4F00", "#FFE0B2", "#F59E0B"),
+    }
+    bg, fg, border = colors[kind]
+    return (
+        f'<span style="background-color:{bg};color:{fg};border:1px solid {border};'
+        'border-radius:999px;display:inline-block;font-size:1rem;font-weight:800;'
+        'letter-spacing:0.03em;padding:0.5rem 1rem;">'
+        f'{html.escape(label)}</span>'
+    )
 
 
 def _breakdown_row(screening: dict, check_name: str) -> dict:
@@ -774,6 +791,26 @@ def _financial_statuses(screening: dict) -> dict[str, str]:
     }
 
 
+def _is_core_interest_business(data: dict) -> bool:
+    profile = " ".join(
+        str(data.get(key, ""))
+        for key in ("sector", "industry", "company_name")
+    ).lower()
+    keywords = (
+        "bank",
+        "banks",
+        "financial",
+        "insurance",
+        "credit",
+        "capital markets",
+        "mortgage",
+        "asset management",
+        "brokerage",
+        "investment services",
+    )
+    return any(keyword in profile for keyword in keywords)
+
+
 def _display_result(data: dict, screening: dict) -> str:
     business_row = _breakdown_row(screening, "Business")
     business_class = business_row.get("result_class", "unknown")
@@ -827,7 +864,7 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
             <div><div style="color:#C9A84C;font-size:1.12rem;font-weight:800;line-height:1.25;">{html.escape(company)}</div><div style="color:#E8C96A;font-family:monospace;font-size:0.9rem;margin-top:0.15rem;">{symbol}</div></div>
           </div>
           <div class="muted-copy" style="margin-top:0.9rem;">{html.escape(industry)} • {html.escape(exchange)}</div>
-          <div style="margin-top:0.85rem;">{_status_badge(result)}</div>
+          <div style="margin-top:0.85rem;">{_status_badge(result, large=True)}</div>
           <div style="margin-top:1rem;background-color:#162032;border-radius:10px;padding:0.9rem 1rem;border:1px solid #2A3F55;">
             <div style="color:#C9A84C;font-weight:800;font-size:1.25rem;">{passed}/{total}</div>
             <div class="muted-copy">Screening criteria passed</div>
@@ -883,6 +920,13 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
     st.markdown(f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>', unsafe_allow_html=True)
 
 def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, float | None]:
+    if _is_core_interest_business(data):
+        if metric == "debt":
+            return data.get("total_debt"), data.get("market_cap"), None
+        if metric == "cash":
+            return data.get("cash"), data.get("market_cap"), None
+        return data.get("interest_income"), data.get("total_revenue"), None
+
     if metric == "debt":
         numerator, denominator = data.get("total_debt"), data.get("market_cap")
     elif metric == "cash":
@@ -900,15 +944,20 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
 def _render_metric_card(title: str, metric: str, threshold: float, questionable_floor: float, numerator_label: str, denominator_label: str, what_it_means: str, why_it_matters: str, note: str = "") -> None:
     data = st.session_state.stock_data or {}
     numerator, denominator, ratio = _metric_data(data, metric)
-    status = _ratio_status(ratio, threshold, questionable_floor)
-    badge = {"pass": _pill("PASS", "pass"), "questionable": _pill("⚠️ BORDERLINE", "questionable"), "fail": _pill("FAIL", "fail"), "unavailable": _pill("NO DATA", "neutral")}[status]
-    ratio_display = _format_ratio(ratio)
-    bar_html = f'<div class="missing-data">{NOT_AVAILABLE}</div>' if ratio is None else _progress_bar_html(ratio * 100, threshold * 100, _ratio_color(status))
+    core_interest_business = _is_core_interest_business(data)
+    status = "unavailable" if core_interest_business else _ratio_status(ratio, threshold, questionable_floor)
+    badge = {"pass": _pill("PASS", "pass"), "questionable": _pill("⚠️ BORDERLINE", "questionable"), "fail": _pill("FAIL", "fail"), "unavailable": _pill("N/A", "neutral")}[status]
+    ratio_display = "Not applicable" if core_interest_business else _format_ratio(ratio)
+    threshold_text = "" if core_interest_business else f"≤ {threshold * 100:.0f}% Threshold"
+    if core_interest_business:
+        bar_html = '<div class="missing-data">This ratio is not meaningful for banks, insurers, or similar financial businesses.</div>'
+    else:
+        bar_html = f'<div class="missing-data">{NOT_AVAILABLE}</div>' if ratio is None else _progress_bar_html(ratio * 100, threshold * 100, _ratio_color(status))
     note_html = f'<div class="metric-label">{html.escape(note)}</div>' if note else ""
     st.markdown(f'''
         <div class="metric-card">
           <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;"><div class="metric-title">{html.escape(title)} <span title="{html.escape(what_it_means)}" style="color:#C9A84C;">?</span></div>{badge}</div>
-          <div style="margin-top:0.4rem;"><span class="metric-value">{html.escape(ratio_display)}</span><span class="metric-threshold">≤ {threshold * 100:.0f}% Threshold</span></div>
+          <div style="margin-top:0.4rem;"><span class="metric-value">{html.escape(ratio_display)}</span><span class="metric-threshold">{threshold_text}</span></div>
           {bar_html}
           <div class="metric-label"><strong style="color:#F5F5F5;">What it means:</strong><br>{html.escape(what_it_means)}</div>
           <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}
@@ -916,11 +965,20 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
     with st.expander("View Calculation"):
         st.markdown(f"**Numerator:** {numerator_label} = {_format_money(numerator)}")
         st.markdown(f"**Denominator:** {denominator_label} = {_format_money(denominator)}")
-        st.markdown(f"**Result:** {NOT_AVAILABLE}" if ratio is None else f"**Result:** {ratio * 100:.1f}% = {_format_money(numerator)} / {_format_money(denominator)}")
+        if core_interest_business:
+            st.markdown("**Result:** Not applicable for this business type")
+        else:
+            st.markdown(f"**Result:** {NOT_AVAILABLE}" if ratio is None else f"**Result:** {ratio * 100:.1f}% = {_format_money(numerator)} / {_format_money(denominator)}")
 
 
 def _plain_english_financial_summary(data: dict, screening: dict) -> str:
     company = _company_name(data)
+    if _is_core_interest_business(data):
+        return (
+            f"{company} appears to be a bank, insurer, or similar financial business. "
+            "Standard debt, cash, and interest-income ratios can be misleading for this business type, "
+            "so the business activity screen should drive the result."
+        )
     statuses = _financial_statuses(screening)
     failing = [name for name, status in statuses.items() if status == "fail"]
     close = [name for name, status in statuses.items() if status == "questionable"]
@@ -1014,9 +1072,9 @@ def _render_ethical_tab(data: dict, screening: dict) -> None:
     st.markdown('''<div class="warning-banner"><strong>⚠️ LIMITED DATA SOURCE</strong><br>Ethical screening below is based only on available market data (sector, industry, company description, and basic news). This is NOT a comprehensive ethical audit. Always consult a qualified Islamic finance scholar.</div>''', unsafe_allow_html=True)
     flag_html = f'<div style="color:#F59E0B;margin-top:0.5rem;">Flagged keyword: {html.escape(prohibited_match)}</div>' if prohibited_match else ""
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Industry &amp; Sector Assessment</div>{_pill(industry_status, industry_kind)}</div><div class="muted-copy">Sector: {html.escape(sector)}</div><div class="muted-copy">Industry: {html.escape(industry)}</div><div class="muted-copy" style="margin-top:0.5rem;">Confidence level: {html.escape(confidence)}</div>{flag_html}</div>', unsafe_allow_html=True)
-    _render_news_card(data)
     _render_geopolitical_card(profile_text)
     _render_israel_connection_card(profile_text, data)
+    _render_news_card(data)
     st.markdown('<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">What Do These Terms Mean?</div></div><div class="muted-copy">Open the glossary below for plain-English definitions.</div></div>', unsafe_allow_html=True)
     with st.expander("Glossary"):
         st.markdown("**Halal / Haram:** Halal means permissible; haram means prohibited under Islamic law.")
@@ -1145,7 +1203,10 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
     symbol = str(data.get("symbol", "")).upper()
     company = _company_name(data)
     result = _display_result(data, screening)
-    share_text = f"I checked {company} ({symbol}) on iRizq Halal Stock Checker. Result: {result}."
+    share_text = (
+        f"I checked {company} ({symbol}) on iRizq Halal Stock Checker "
+        f"https://halal-stock-checker-irizq.streamlit.app/. Result: {result}."
+    )
     url = f"https://wa.me/?text={quote(share_text)}"
     st.markdown(f'''
         <div style="text-align:center;margin:1rem 0;">
@@ -1235,7 +1296,12 @@ def main() -> None:
 
     logo_path = "static/logo.png"
     if os.path.exists(logo_path):
-        st.image(logo_path, width=200)
+        st.markdown(
+            '<a href="https://www.irizq.com" target="_blank">'
+            '<img src="/static/logo.png" alt="iRizq" style="width:200px;">'
+            '</a>',
+            unsafe_allow_html=True,
+        )
 
     st.title("Halal Stock Checker")
     st.markdown("### AAOIFI-Based Screening Powered by [iRizq.com](https://www.iRizq.com)")
