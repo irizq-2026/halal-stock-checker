@@ -815,7 +815,6 @@ def _is_core_interest_business(data: dict) -> bool:
         info.get("sector", ""),
         info.get("industry", ""),
         info.get("longName", ""),
-        info.get("longBusinessSummary", ""),
     ]
     profile = " ".join(str(part) for part in profile_parts).lower()
     core_tickers = {
@@ -830,11 +829,10 @@ def _is_core_interest_business(data: dict) -> bool:
         "bank",
         "banks",
         "banking",
-        "financial services",
         "insurance",
-        "credit",
+        "credit services",
         "capital markets",
-        "mortgage",
+        "mortgage finance",
         "asset management",
         "brokerage",
         "investment services",
