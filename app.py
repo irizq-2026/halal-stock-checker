@@ -348,7 +348,7 @@ IRIZQ_CSS = """
     border-bottom: none !important;
     gap: 10px;
     overflow-x: hidden !important;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.25rem;
   }
   .stTabs [data-baseweb="tab-border"],
   .stTabs [data-baseweb="tab-highlight"] {
@@ -869,8 +869,8 @@ def _is_core_interest_business(data: dict) -> bool:
     ]
     profile = " ".join(str(part) for part in profile_parts).lower()
     core_tickers = {
-        "JPM", "C", "BAC", "WFC", "GS", "MS", "AXP", "USB", "PNC",
-        "TFC", "COF", "SCHW", "BLK", "AIG", "MET", "PRU", "ALL", "TRV",
+        "JPM", "C", "BAC", "WFC", "USB", "PNC", "TFC",
+        "AIG", "MET", "PRU", "ALL", "TRV",
     }
     symbol = str(data.get("symbol", "")).upper()
     if symbol in core_tickers:
@@ -881,24 +881,10 @@ def _is_core_interest_business(data: dict) -> bool:
         "banks",
         "banking",
         "insurance",
-        "credit services",
-        "capital markets",
-        "mortgage finance",
-        "asset management",
-        "brokerage",
-        "investment services",
+        "insurer",
+        "reinsurance",
     )
-    if any(keyword in profile for keyword in keywords):
-        return True
-
-    try:
-        interest_income = abs(float(data.get("interest_income") or 0))
-        revenue = abs(float(data.get("total_revenue") or 0))
-        if revenue > 0 and interest_income / revenue > 0.5:
-            return True
-    except (TypeError, ValueError, ZeroDivisionError):
-        pass
-    return False
+    return any(keyword in profile for keyword in keywords)
 
 
 def _display_result(data: dict, screening: dict) -> str:
@@ -1317,6 +1303,7 @@ def initialize_session_state() -> None:
         "stock_data": None,
         "screening": None,
         "last_ticker": "",
+        "ticker_input": "",
         "has_results": False,
     }
     for key, value in defaults.items():
@@ -1408,9 +1395,9 @@ def main() -> None:
 
     ticker = st.text_input(
         "Enter Stock Symbol:",
-        value=st.session_state.last_ticker,
         placeholder="e.g. AAPL",
         label_visibility="visible",
+        key="ticker_input",
     ).strip().upper()
 
     check_clicked = st.button("Check Stock", type="primary", use_container_width=True)
