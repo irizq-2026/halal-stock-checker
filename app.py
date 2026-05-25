@@ -6,9 +6,8 @@ import html
 import os
 import time
 from datetime import date
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-import plotly.graph_objects as go
 import streamlit as st
 import yfinance as yf
 
@@ -22,7 +21,7 @@ def fetch_stock_data_cached(symbol: str):
     return _fetch_stock_data(symbol)
 
 
-NOT_AVAILABLE = "Not available from free data source"
+NOT_AVAILABLE = "Not available"
 PROHIBITED_KEYWORDS = (
     "bank", "financ", "insurance", "gambling", "alcohol", "tobacco",
     "adult", "entertainment", "weapon", "defense", "cannabis",
@@ -33,15 +32,33 @@ NEWS_FLAG_KEYWORDS = (
     "cannabis", "pork", "riba", "lawsuit", "fraud", "corruption",
 )
 WEAPONS_KEYWORDS = ("defense", "aerospace", "weapon", "military", "arms")
+ISRAEL_KEYWORDS = ("israel", "israeli", "tel aviv", "jerusalem", "idf", "gaza", "west bank")
 
 
-def _extract_news_title(item: dict) -> str:
+def _extract_news_item(item: dict) -> dict:
     if not isinstance(item, dict):
-        return ""
+        return {}
     content = item.get("content") or {}
     title = item.get("title") or item.get("headline") or content.get("title") or content.get("headline")
-    return title.strip() if isinstance(title, str) else ""
-
+    canonical_url = content.get("canonicalUrl") or {}
+    click_url = content.get("clickThroughUrl") or {}
+    url = (
+        item.get("link")
+        or item.get("url")
+        or canonical_url.get("url")
+        or click_url.get("url")
+        or ""
+    )
+    publisher = item.get("publisher") or content.get("provider", {}).get("displayName") or ""
+    published = item.get("providerPublishTime") or content.get("pubDate") or ""
+    if not isinstance(title, str) or not title.strip():
+        return {}
+    return {
+        "title": title.strip(),
+        "url": str(url).strip(),
+        "publisher": str(publisher).strip(),
+        "published": str(published).strip(),
+    }
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_ui_enrichment_cached(symbol: str) -> dict:
@@ -67,9 +84,9 @@ def fetch_ui_enrichment_cached(symbol: str) -> dict:
     try:
         raw_news = ticker.news or []
         if isinstance(raw_news, list):
-            headlines = [title for title in (_extract_news_title(item) for item in raw_news[:5]) if title]
-            enrichment["news"] = headlines
-            enrichment["news_available"] = bool(headlines)
+            news_items = [news for news in (_extract_news_item(item) for item in raw_news[:5]) if news]
+            enrichment["news"] = news_items
+            enrichment["news_available"] = bool(news_items)
     except Exception:
         pass
     try:
@@ -653,15 +670,14 @@ def _breakdown_row(screening: dict, check_name: str) -> dict:
     return {}
 
 
-def _ratio_status(value: float | None, threshold: float, questionable_floor: float) -> str:
+def _ratio_status(value: float | None, threshold: float, questionable_floor: float | None = None) -> str:
     if value is None:
         return "unavailable"
     if value > threshold:
         return "fail"
-    if value >= questionable_floor:
+    if value + 1e-12 >= threshold * 0.9:
         return "questionable"
     return "pass"
-
 
 def _ratio_color(status: str) -> str:
     return {"pass": "#4CAF50", "questionable": "#F59E0B", "fail": "#EF5350"}.get(status, "#8A9BB0")
@@ -758,6 +774,32 @@ def _financial_statuses(screening: dict) -> dict[str, str]:
     }
 
 
+def _display_result(data: dict, screening: dict) -> str:
+    business_row = _breakdown_row(screening, "Business")
+    business_class = business_row.get("result_class", "unknown")
+    statuses = _financial_statuses(screening)
+    if business_class == "fail" or "fail" in statuses.values():
+        return "Not Halal"
+    if business_class == "unknown" or any(status in {"questionable", "unavailable"} for status in statuses.values()):
+        return "Questionable / Needs Scholar Review"
+    return "Halal"
+
+
+def _criteria_summary(data: dict, screening: dict) -> tuple[int, int, list[str]]:
+    statuses = _financial_statuses(screening)
+    business_row = _breakdown_row(screening, "Business")
+    profile_text = " ".join(str(data.get(key, "")) for key in ("sector", "industry"))
+    news_text = " ".join(item.get("title", "") for item in data.get("_ui_news", []) if isinstance(item, dict))
+    ethical_clear = not _contains_keyword(f"{profile_text} {news_text}", NEWS_FLAG_KEYWORDS + WEAPONS_KEYWORDS)
+    checks = [
+        ("Business", business_row.get("result_class") == "pass"),
+        ("Debt", statuses["debt"] == "pass"),
+        ("Cash", statuses["cash"] == "pass"),
+        ("Income", statuses["income"] == "pass"),
+        ("Ethical", ethical_clear),
+    ]
+    return sum(1 for _, passed in checks if passed), len(checks), [label for label, passed in checks if passed]
+
 def _main_issue(screening: dict) -> str:
     business_row = _breakdown_row(screening, "Business")
     if business_row.get("result_class") == "unknown":
@@ -765,35 +807,9 @@ def _main_issue(screening: dict) -> str:
     ratios = [("Debt Ratio", screening.get("debt_ratio"), 0.33), ("Cash Ratio", screening.get("cash_ratio"), 0.33), ("Income Ratio", screening.get("income_ratio"), 0.05)]
     available = [(name, value, threshold) for name, value, threshold in ratios if value is not None]
     if not available:
-        return "Financial statement data is incomplete in the free data source."
+        return "Financial statement data is incomplete in yfinance."
     name, value, threshold = min(available, key=lambda item: abs(item[2] - item[1]))
     return f"{name} is closest to its {threshold * 100:.0f}% threshold at {value * 100:.1f}%."
-
-
-def _render_score_gauge(score: int) -> None:
-    label, bar_color, stars = _score_label(score)
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=score,
-        domain={"x": [0, 1], "y": [0, 1]},
-        gauge={
-            "axis": {"range": [0, 100]},
-            "bar": {"color": bar_color},
-            "steps": [
-                {"range": [0, 40], "color": "#3D1515"},
-                {"range": [40, 65], "color": "#3D2800"},
-                {"range": [65, 80], "color": "#1A3D1A"},
-                {"range": [80, 100], "color": "#0D2B0D"},
-            ],
-            "threshold": {"line": {"color": "#C9A84C", "width": 3}, "thickness": 0.75, "value": score},
-        },
-        number={"font": {"color": "#F5F5F5", "size": 40}},
-    ))
-    fig.update_layout(paper_bgcolor="#0D1B2A", font={"color": "#F5F5F5"}, height=220, margin={"t": 20, "b": 10, "l": 20, "r": 20})
-    st.markdown('<div class="overview-card"><div class="card-title">iRizq Score</div>', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown(f'<div style="text-align:center;margin-top:-0.5rem;"><div class="star-rating">{stars}</div><div style="color:{bar_color};font-weight:700;margin-top:0.2rem;">{label}</div></div></div>', unsafe_allow_html=True)
-
 
 def _render_overview_tab(data: dict, screening: dict) -> None:
     symbol = html.escape(str(data.get("symbol", "N/A")))
@@ -801,9 +817,9 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     sector, industry = _format_sector_industry(data.get("sector", ""), data.get("industry", ""))
     info = data.get("_ui_info", {})
     exchange = _safe_text(info.get("exchange"))
-    result = screening.get("result", "Questionable / Needs Scholar Review")
-    score = _calculate_score(screening)
-    confidence = _confidence_level(data, screening)
+    result = _display_result(data, screening)
+    passed, total, passed_labels = _criteria_summary(data, screening)
+    passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
     st.markdown(f'''
         <div class="overview-card">
           <div style="display:flex;gap:0.9rem;align-items:center;">
@@ -812,18 +828,19 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
           </div>
           <div class="muted-copy" style="margin-top:0.9rem;">{html.escape(industry)} • {html.escape(exchange)}</div>
           <div style="margin-top:0.85rem;">{_status_badge(result)}</div>
-          <div style="margin-top:1rem;color:#F5F5F5;font-weight:600;font-size:0.9rem;">Confidence Level <span style="color:#C9A84C;">{confidence}%</span></div>
-          {_progress_bar_html(confidence, None, "#C9A84C")}
-          <div class="muted-copy">Last Updated: {html.escape(date.today().strftime("%B %d, %Y"))}</div>
+          <div style="margin-top:1rem;background-color:#162032;border-radius:10px;padding:0.9rem 1rem;border:1px solid #2A3F55;">
+            <div style="color:#C9A84C;font-weight:800;font-size:1.25rem;">{passed}/{total}</div>
+            <div class="muted-copy">Screening criteria passed</div>
+            <div class="muted-copy" style="margin-top:0.35rem;">Passed: {html.escape(passed_copy)}</div>
+          </div>
+          <div class="muted-copy" style="margin-top:0.8rem;">Last Updated: {html.escape(date.today().strftime("%B %d, %Y"))}</div>
         </div>
         ''', unsafe_allow_html=True)
-    _render_score_gauge(score)
+    _render_at_a_glance(data, screening)
     _render_quick_summary(data, screening)
-    _render_at_a_glance(screening)
-
 
 def _render_quick_summary(data: dict, screening: dict) -> None:
-    result = screening.get("result", "Questionable / Needs Scholar Review")
+    result = _display_result(data, screening)
     business_row = _breakdown_row(screening, "Business")
     business_class = business_row.get("result_class", "unknown")
     financial_statuses = _financial_statuses(screening)
@@ -834,12 +851,12 @@ def _render_quick_summary(data: dict, screening: dict) -> None:
         business_icon, business_text = "❌", "Business activity appears prohibited based on sector or industry."
         prohibited_icon, prohibited_text = "❌", "Prohibited activity: detected in available profile data."
     else:
-        business_icon, business_text = "⚠️", "Business activity is unclear from the free data source."
+        business_icon, business_text = "⚠️", "Business activity is unclear from available yfinance data."
         prohibited_icon, prohibited_text = "⚠️", "Prohibited activity: possible concern due to limited profile data."
     if "fail" in financial_statuses.values():
         financial_icon, financial_text = "❌", "Financial ratios are exceeding one or more AAOIFI limits."
     elif "questionable" in financial_statuses.values() or "unavailable" in financial_statuses.values():
-        financial_icon, financial_text = "⚠️", "Financial ratios are near a threshold or missing from free data."
+        financial_icon, financial_text = "⚠️", "Financial ratios are near a threshold or missing from yfinance data."
     else:
         financial_icon, financial_text = "✅", "Financial ratios are within AAOIFI screening limits."
     issue_html = f"<div style='margin-top:0.7rem;color:#F59E0B;font-weight:700;'>Main issue: {html.escape(_main_issue(screening))}</div>" if _result_kind(result) == "questionable" else ""
@@ -851,20 +868,19 @@ def _render_quick_summary(data: dict, screening: dict) -> None:
         </div>''', unsafe_allow_html=True)
 
 
-def _render_at_a_glance(screening: dict) -> None:
+def _render_at_a_glance(data: dict, screening: dict) -> None:
     business_row = _breakdown_row(screening, "Business")
     business_kind = {"pass": "pass", "fail": "fail", "unknown": "questionable"}.get(business_row.get("result_class", "unknown"), "questionable")
     statuses = _financial_statuses(screening)
     if "fail" in statuses.values():
         financial_kind, financial_label = "fail", "FAIL"
     elif "questionable" in statuses.values() or "unavailable" in statuses.values():
-        financial_kind, financial_label = "questionable", "QUESTIONABLE"
+        financial_kind, financial_label = "questionable", "BORDERLINE"
     else:
         financial_kind, financial_label = "pass", "PASS"
-    rows = [("Business Activity", _pill(business_row.get("result", "Needs Review").upper(), business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(screening.get("result", "Questionable / Needs Scholar Review")))]
+    rows = [("Business Activity", _pill(business_row.get("result", "Needs Review").upper(), business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(_display_result(data, screening)))]
     body = "".join(f'<div class="glance-row"><span class="glance-label">{html.escape(label)}</span>{badge}</div>' for label, badge in rows)
     st.markdown(f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>', unsafe_allow_html=True)
-
 
 def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, float | None]:
     if metric == "debt":
@@ -885,7 +901,7 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
     data = st.session_state.stock_data or {}
     numerator, denominator, ratio = _metric_data(data, metric)
     status = _ratio_status(ratio, threshold, questionable_floor)
-    badge = {"pass": _pill("PASS", "pass"), "questionable": _pill("QUESTIONABLE", "questionable"), "fail": _pill("FAIL", "fail"), "unavailable": _pill("NO DATA", "neutral")}[status]
+    badge = {"pass": _pill("PASS", "pass"), "questionable": _pill("⚠️ BORDERLINE", "questionable"), "fail": _pill("FAIL", "fail"), "unavailable": _pill("NO DATA", "neutral")}[status]
     ratio_display = _format_ratio(ratio)
     bar_html = f'<div class="missing-data">{NOT_AVAILABLE}</div>' if ratio is None else _progress_bar_html(ratio * 100, threshold * 100, _ratio_color(status))
     note_html = f'<div class="metric-label">{html.escape(note)}</div>' if note else ""
@@ -914,7 +930,7 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
     if close:
         return f"{company}'s financials are mostly within the allowable limits. The {', '.join(close)} ratio is close to its threshold, which makes the result questionable."
     if missing:
-        return f"{company}'s available financial ratios look acceptable, but some data is missing from yfinance. Because the free data source is incomplete, a scholar should review it before investing."
+        return f"{company}'s available financial ratios look acceptable, but some data is missing from yfinance. Because the available data is incomplete, a scholar should review it before investing."
     return f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
 
 
@@ -922,7 +938,7 @@ def _render_financial_tab(data: dict, screening: dict) -> None:
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
-    st.markdown(f'<div class="plain-english"><strong>Plain English Summary</strong><br>{html.escape(_plain_english_financial_summary(data, screening))}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="plain-english"><strong>Summary</strong><br>{html.escape(_plain_english_financial_summary(data, screening))}</div>', unsafe_allow_html=True)
 
 
 def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
@@ -934,22 +950,29 @@ def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
 
 
 def _render_news_card(data: dict) -> None:
-    headlines = data.get("_ui_news") or []
-    if not headlines:
+    news_items = data.get("_ui_news") or []
+    if not news_items:
         status = _pill("NO DATA", "neutral")
-        body = f'<div class="muted-copy">{NOT_AVAILABLE}</div><div class="muted-copy">No recent news available from free data source</div>'
+        body = f'<div class="muted-copy">{NOT_AVAILABLE}</div><div class="muted-copy">No recent news available from yfinance</div>'
     else:
         flagged_any = False
         items = []
-        for headline in headlines[:5]:
+        for item in news_items[:5]:
+            headline = item.get("title", "") if isinstance(item, dict) else str(item)
+            url = item.get("url", "") if isinstance(item, dict) else ""
+            publisher = item.get("publisher", "") if isinstance(item, dict) else ""
             match = _contains_keyword(headline, NEWS_FLAG_KEYWORDS)
             flagged_any = flagged_any or bool(match)
             flag = f'<div class="news-flag">⚠️ Keyword: {html.escape(match)}</div>' if match else ""
-            items.append(f'<div class="news-item">{html.escape(headline)}{flag}</div>')
+            publisher_html = f'<div class="muted-copy" style="font-size:0.76rem;">{html.escape(publisher)}</div>' if publisher else ""
+            if url:
+                title_html = f'<a href="{html.escape(url)}" target="_blank" style="color:#F5F5F5;text-decoration:none;">{html.escape(headline)}</a>'
+            else:
+                title_html = html.escape(headline)
+            items.append(f'<div class="news-item">{title_html}{publisher_html}{flag}</div>')
         status = _pill("NEWS DETECTED" if flagged_any else "NONE FOUND", "questionable" if flagged_any else "pass")
         body = "".join(items)
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">News Mentions</div>{status}</div>{body}</div>', unsafe_allow_html=True)
-
 
 def _render_geopolitical_card(profile_text: str) -> None:
     match = _contains_keyword(profile_text, WEAPONS_KEYWORDS)
@@ -957,6 +980,26 @@ def _render_geopolitical_card(profile_text: str) -> None:
     concern = f'<div style="color:#F59E0B;margin-top:0.5rem;">Matched keyword: {html.escape(match)}</div>' if match else ""
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Geopolitical &amp; Weapons</div>{status}</div><div class="muted-copy">⚠️ This is a heuristic check only based on sector classification. Not a verified ethical audit.</div>{concern}</div>', unsafe_allow_html=True)
 
+
+def _render_israel_connection_card(profile_text: str, data: dict) -> None:
+    news_items = data.get("_ui_news") or []
+    news_text = " ".join(item.get("title", "") for item in news_items if isinstance(item, dict))
+    combined_text = f"{profile_text} {data.get('_ui_info', {}).get('longBusinessSummary', '')} {news_text}"
+    match = _contains_keyword(combined_text, ISRAEL_KEYWORDS)
+    if match:
+        status = _pill("POSSIBLE MENTION", "questionable")
+        message = (
+            "Available yfinance profile or news text mentions "
+            f"'{html.escape(match)}'. This may indicate a business location, news event, "
+            "partnership, lawsuit, or other mention. It does not prove ownership, support, or a verified ethical connection."
+        )
+    elif combined_text.strip():
+        status = _pill("NONE FOUND", "pass")
+        message = "No Israel-related mention was found in the available yfinance profile or recent news headlines."
+    else:
+        status = _pill("NO DATA", "neutral")
+        message = "Not available from yfinance profile or recent news headlines."
+    st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Israel Connection Check</div>{status}</div><div class="muted-copy">{message}</div><div class="muted-copy" style="margin-top:0.5rem;">⚠️ This is a keyword-based check only, not a verified geopolitical audit.</div></div>', unsafe_allow_html=True)
 
 def _render_ethical_tab(data: dict, screening: dict) -> None:
     sector, industry = _format_sector_industry(data.get("sector", ""), data.get("industry", ""))
@@ -973,10 +1016,11 @@ def _render_ethical_tab(data: dict, screening: dict) -> None:
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Industry &amp; Sector Assessment</div>{_pill(industry_status, industry_kind)}</div><div class="muted-copy">Sector: {html.escape(sector)}</div><div class="muted-copy">Industry: {html.escape(industry)}</div><div class="muted-copy" style="margin-top:0.5rem;">Confidence level: {html.escape(confidence)}</div>{flag_html}</div>', unsafe_allow_html=True)
     _render_news_card(data)
     _render_geopolitical_card(profile_text)
+    _render_israel_connection_card(profile_text, data)
     st.markdown('<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">What Do These Terms Mean?</div></div><div class="muted-copy">Open the glossary below for plain-English definitions.</div></div>', unsafe_allow_html=True)
     with st.expander("Glossary"):
         st.markdown("**Halal / Haram:** Halal means permissible; haram means prohibited under Islamic law.")
-        st.markdown("**AAOIFI:** An international standards body for Islamic finance guidance.")
+        st.markdown("**AAOIFI:** Accounting and Auditing Organization for Islamic Financial Institutions - an international standards body for Islamic finance guidance.")
         st.markdown("**Debt Ratio:** Total debt divided by market capitalization.")
         st.markdown("**Interest Income:** Money earned from interest-bearing sources.")
         st.markdown("**Riba:** Interest or usury, which is prohibited in Islamic finance.")
@@ -1097,6 +1141,23 @@ def render_feedback_small() -> None:
     )
 
 
+def render_whatsapp_share(data: dict, screening: dict) -> None:
+    symbol = str(data.get("symbol", "")).upper()
+    company = _company_name(data)
+    result = _display_result(data, screening)
+    share_text = f"I checked {company} ({symbol}) on iRizq Halal Stock Checker. Result: {result}."
+    url = f"https://wa.me/?text={quote(share_text)}"
+    st.markdown(f'''
+        <div style="text-align:center;margin:1rem 0;">
+          <a href="{url}" target="_blank" style="
+            background-color:#25D366;color:#0D1B2A;font-weight:800;
+            padding:0.65rem 1.2rem;border-radius:999px;text-decoration:none;
+            display:inline-block;font-family:'Inter',sans-serif;
+          ">Share on WhatsApp</a>
+        </div>
+        ''', unsafe_allow_html=True)
+
+
 def initialize_session_state() -> None:
     defaults = {
         "stock_data": None,
@@ -1188,9 +1249,6 @@ def main() -> None:
     ).strip().upper()
 
     check_clicked = st.button("Check Stock", type="primary", use_container_width=True)
-    refresh_clicked = False
-    if st.session_state.has_results:
-        refresh_clicked = st.button("Refresh", use_container_width=True)
 
     if check_clicked:
         if not ticker:
@@ -1202,17 +1260,14 @@ def main() -> None:
             run_screening_flow(ticker)
         else:
             st.markdown(
-                '<div class="info-msg">Showing saved results. Use Refresh to fetch the latest yfinance data.</div>',
+                '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Stock to run a new screen.</div>',
                 unsafe_allow_html=True,
             )
 
-    if refresh_clicked:
-        refresh_ticker = ticker or st.session_state.last_ticker
-        if refresh_ticker:
-            run_screening_flow(refresh_ticker, refresh=True)
 
     if st.session_state.has_results and st.session_state.stock_data and st.session_state.screening:
         render_results(st.session_state.stock_data, st.session_state.screening)
+        render_whatsapp_share(st.session_state.stock_data, st.session_state.screening)
     elif not st.session_state.has_results:
         render_disclaimer()
 
