@@ -815,7 +815,6 @@ def _is_core_interest_business(data: dict) -> bool:
         info.get("sector", ""),
         info.get("industry", ""),
         info.get("longName", ""),
-        info.get("longBusinessSummary", ""),
     ]
     profile = " ".join(str(part) for part in profile_parts).lower()
     core_tickers = {
@@ -830,11 +829,10 @@ def _is_core_interest_business(data: dict) -> bool:
         "bank",
         "banks",
         "banking",
-        "financial services",
         "insurance",
-        "credit",
+        "credit services",
         "capital markets",
-        "mortgage",
+        "mortgage finance",
         "asset management",
         "brokerage",
         "investment services",
@@ -1245,8 +1243,10 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
     company = _company_name(data)
     result = _display_result(data, screening)
     share_text = (
-        f"I checked {company} ({symbol}) on iRizq Halal Stock Checker "
-        f"https://halal-stock-checker-irizq.streamlit.app/. Result: {result}."
+        f"I checked {company} ({symbol}) on:\n"
+        "iRizq Halal Stock Checker\n"
+        "https://halal-stock-checker-irizq.streamlit.app/\n\n"
+        f"Result: {result}."
     )
     url = f"https://wa.me/?text={quote(share_text)}"
     st.markdown(f'''
