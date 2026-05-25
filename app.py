@@ -349,6 +349,25 @@ IRIZQ_CSS = """
     font-size: 1rem !important;
     line-height: 1.3 !important;
   }
+  @media (max-width: 480px) {
+    .stTabs [data-baseweb="tab-list"] {
+      gap: 0 !important;
+      overflow-x: hidden !important;
+      justify-content: space-between !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      max-width: 33.33% !important;
+      padding: 6px 2px !important;
+      justify-content: center !important;
+    }
+    .stTabs [data-baseweb="tab"] p {
+      font-size: 0.78rem !important;
+      line-height: 1.2 !important;
+      white-space: nowrap !important;
+    }
+  }
 
   /* Metric cards */
   .metric-card {
@@ -1352,6 +1371,11 @@ def main() -> None:
         'style="color:#C9A84C;text-decoration:none;">iRizq.com</a></h3>',
         unsafe_allow_html=True,
     )
+    with st.popover("What is AAOIFI?"):
+        st.markdown(
+            "AAOIFI stands for **Accounting and Auditing Organization for "
+            "Islamic Financial Institutions**."
+        )
     st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
     ticker = st.text_input(
