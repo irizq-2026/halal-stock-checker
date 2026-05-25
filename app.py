@@ -317,6 +317,22 @@ IRIZQ_CSS = """
     color: #8A9BB0;
     margin: 0.8rem 0;
   }
+
+  div[data-testid="stPopover"] button {
+    background-color: transparent !important;
+    color: #C9A84C !important;
+    border: 1px solid #2A3F55 !important;
+    border-radius: 999px !important;
+    padding: 0.25rem 0.65rem !important;
+    min-height: 0 !important;
+    width: auto !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    margin-top: -0.25rem !important;
+  }
+  div[data-testid="stPopover"] button p {
+    font-size: 0.78rem !important;
+  }
   footer { visibility: hidden; }
   #MainMenu { visibility: hidden; }
   header { visibility: hidden; }
@@ -329,9 +345,14 @@ IRIZQ_CSS = """
   /* Tab styling */
   .stTabs [data-baseweb="tab-list"] {
     background-color: #0D1B2A;
-    border-bottom: none;
+    border-bottom: none !important;
     gap: 10px;
     overflow-x: hidden !important;
+    margin-bottom: 0.8rem;
+  }
+  .stTabs [data-baseweb="tab-border"],
+  .stTabs [data-baseweb="tab-highlight"] {
+    display: none !important;
   }
   .stTabs [data-baseweb="tab"] {
     background-color: #0A111D !important;
