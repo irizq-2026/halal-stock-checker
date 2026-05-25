@@ -1096,6 +1096,72 @@ def render_feedback_small() -> None:
         unsafe_allow_html=True,
     )
 
+
+def initialize_session_state() -> None:
+    defaults = {
+        "stock_data": None,
+        "screening": None,
+        "last_ticker": "",
+        "has_results": False,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def clear_results_for_error(ticker: str) -> None:
+    st.session_state.stock_data = None
+    st.session_state.screening = None
+    st.session_state.last_ticker = ticker
+    st.session_state.has_results = False
+
+
+def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
+    if refresh:
+        fetch_stock_data_cached.clear()
+        fetch_ui_enrichment_cached.clear()
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    try:
+        status_text.markdown("🔍 Looking up company profile...")
+        progress_bar.progress(20)
+        time.sleep(0.3)
+
+        status_text.markdown("📊 Fetching financial statements...")
+        progress_bar.progress(50)
+        stock_data = fetch_stock_data_cached(ticker)
+        enrichment = fetch_ui_enrichment_cached(ticker)
+
+        if stock_data is None or stock_data.get("error"):
+            clear_results_for_error(ticker)
+            render_error(ticker)
+            return
+
+        status_text.markdown("🧮 Running AAOIFI screening...")
+        progress_bar.progress(80)
+        screening = screen_stock(stock_data)
+
+        st.session_state.stock_data = _build_enriched_stock_data(stock_data, enrichment)
+        st.session_state.screening = screening
+        st.session_state.last_ticker = ticker
+        st.session_state.has_results = True
+
+        status_text.markdown("✅ Done!")
+        progress_bar.progress(100)
+        time.sleep(0.3)
+    except TransientDataError:
+        fetch_stock_data_cached.clear()
+        clear_results_for_error(ticker)
+        render_error(ticker, transient=True)
+    except Exception:
+        clear_results_for_error(ticker)
+        render_error(ticker)
+    finally:
+        progress_bar.empty()
+        status_text.empty()
+
 def main() -> None:
     st.set_page_config(
         page_title="Halal Stock Checker | iRizq.com",
@@ -1103,6 +1169,7 @@ def main() -> None:
         layout="centered",
     )
 
+    initialize_session_state()
     inject_head_and_styles()
 
     logo_path = "static/logo.png"
@@ -1115,11 +1182,15 @@ def main() -> None:
 
     ticker = st.text_input(
         "Enter Stock Symbol:",
+        value=st.session_state.last_ticker,
         placeholder="e.g. AAPL",
         label_visibility="visible",
     ).strip().upper()
 
     check_clicked = st.button("Check Stock", type="primary", use_container_width=True)
+    refresh_clicked = False
+    if st.session_state.has_results:
+        refresh_clicked = st.button("Refresh", use_container_width=True)
 
     if check_clicked:
         if not ticker:
@@ -1127,25 +1198,25 @@ def main() -> None:
                 '<div class="info-msg">Please enter a US stock ticker symbol to continue.</div>',
                 unsafe_allow_html=True,
             )
+        elif ticker != st.session_state.last_ticker or not st.session_state.has_results:
+            run_screening_flow(ticker)
         else:
-            with st.spinner("Fetching stock data and running AAOIFI screening..."):
-                try:
-                    stock_data = fetch_stock_data_cached(ticker)
-                    if stock_data is None or stock_data.get("error"):
-                        render_error(ticker)
-                    else:
-                        screening = screen_stock(stock_data)
-                        render_results(stock_data, screening)
-                except TransientDataError:
-                    fetch_stock_data_cached.clear()
-                    render_error(ticker, transient=True)
-                except Exception:
-                    render_error(ticker)
+            st.markdown(
+                '<div class="info-msg">Showing saved results. Use Refresh to fetch the latest yfinance data.</div>',
+                unsafe_allow_html=True,
+            )
 
-            render_feedback()
+    if refresh_clicked:
+        refresh_ticker = ticker or st.session_state.last_ticker
+        if refresh_ticker:
+            run_screening_flow(refresh_ticker, refresh=True)
+
+    if st.session_state.has_results and st.session_state.stock_data and st.session_state.screening:
+        render_results(st.session_state.stock_data, st.session_state.screening)
+    elif not st.session_state.has_results:
+        render_disclaimer()
 
     render_feedback_small()
-    render_disclaimer()
 
 
 if __name__ == "__main__":
