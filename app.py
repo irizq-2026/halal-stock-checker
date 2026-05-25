@@ -336,14 +336,18 @@ IRIZQ_CSS = """
     background-color: #0D1B2A;
     color: #8A9BB0;
     font-weight: 600;
-    font-size: 0.85rem;
-    padding: 8px 12px;
+    font-size: 1rem;
+    padding: 10px 14px;
     font-family: 'Inter', sans-serif;
   }
   .stTabs [aria-selected="true"] {
     background-color: #1A2B3C !important;
     color: #C9A84C !important;
     border-bottom: 2px solid #C9A84C !important;
+  }
+  .stTabs [data-baseweb="tab"] p {
+    font-size: 1rem !important;
+    line-height: 1.3 !important;
   }
 
   /* Metric cards */
@@ -1114,7 +1118,10 @@ def _render_ethical_tab(data: dict, screening: dict) -> None:
     _render_geopolitical_card(profile_text)
     _render_israel_connection_card(profile_text, data)
     _render_news_card(data)
-    st.markdown('<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">What Do These Terms Mean?</div></div><div class="muted-copy">Open the glossary below for plain-English definitions.</div></div>', unsafe_allow_html=True)
+
+
+def _render_glossary_card() -> None:
+    st.markdown('<div class="overview-card"><div class="card-title">What Do These Terms Mean?</div><div class="muted-copy">Open the glossary below for plain-English definitions.</div></div>', unsafe_allow_html=True)
     with st.expander("Glossary"):
         st.markdown("**Halal / Haram:** Halal means permissible; haram means prohibited under Islamic law.")
         st.markdown("**AAOIFI:** Accounting and Auditing Organization for Islamic Financial Institutions - an international standards body for Islamic finance guidance.")
@@ -1132,23 +1139,21 @@ def _render_details_tab(data: dict, screening: dict) -> None:
     cash_num, cash_den, cash_ratio = _metric_data(data, "cash")
     income_num, income_den, income_ratio = _metric_data(data, "income")
     st.markdown(f'<div class="overview-card"><div class="card-title">Calculation Breakdown</div><div class="muted-copy">Debt Ratio = {_format_money(debt_num)} ÷ {_format_money(debt_den)} = {_format_ratio(debt_ratio)}</div><div class="muted-copy">Cash Ratio = {_format_money(cash_num)} ÷ {_format_money(cash_den)} = {_format_ratio(cash_ratio)}</div><div class="muted-copy">Income Ratio = {_format_money(income_num)} ÷ {_format_money(income_den)} = {_format_ratio(income_ratio)}</div></div>', unsafe_allow_html=True)
+    _render_glossary_card()
     render_disclaimer()
     render_feedback()
 
 def render_results(data: dict, screening: dict) -> None:
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "🏠 Overview",
         "📊 Financial",
-        "🌿 Ethical",
-        "📋 Details",
+        "📖 Guide",
     ])
     with tab1:
         _render_overview_tab(data, screening)
     with tab2:
         _render_financial_tab(data, screening)
     with tab3:
-        _render_ethical_tab(data, screening)
-    with tab4:
         _render_details_tab(data, screening)
 
 
@@ -1340,7 +1345,13 @@ def main() -> None:
         st.markdown(_linked_logo_html(logo_path), unsafe_allow_html=True)
 
     st.title("Halal Stock Checker")
-    st.markdown("### AAOIFI-Based Screening Powered by [iRizq.com](https://www.iRizq.com)")
+    st.markdown(
+        '<h3><abbr title="Accounting and Auditing Organization for Islamic Financial Institutions" '
+        'style="text-decoration: underline dotted; cursor: help;">AAOIFI</abbr>-Based '
+        'Screening Powered by <a href="https://www.iRizq.com" target="_blank" '
+        'style="color:#C9A84C;text-decoration:none;">iRizq.com</a></h3>',
+        unsafe_allow_html=True,
+    )
     st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
     ticker = st.text_input(
