@@ -348,12 +348,20 @@ IRIZQ_CSS = """
     border-bottom: none !important;
     gap: 10px;
     overflow-x: hidden !important;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0 !important;
   }
   .stTabs [data-baseweb="tab-border"],
   .stTabs [data-baseweb="tab-highlight"] {
     display: none !important;
   }
+  .stTabs [data-baseweb="tab-panel"] {
+    padding-top: 0 !important;
+  }
+  .stTabs [data-baseweb="tab-panel"] .overview-card:first-child,
+  .stTabs [data-baseweb="tab-panel"] .metric-card:first-child {
+    margin-top: 0.25rem !important;
+  }
+
   .stTabs [data-baseweb="tab"] {
     background-color: #0A111D !important;
     color: #F5F5F5 !important;
@@ -1177,10 +1185,13 @@ def _render_details_tab(data: dict, screening: dict) -> None:
     render_feedback()
 
 def render_results(data: dict, screening: dict) -> None:
+    # Streamlit tabs keep their selected index across reruns. Changing the
+    # invisible suffix after a new screen remounts the tabs back to Overview.
+    reset_suffix = "​" * int(st.session_state.get("tabs_reset_token", 0))
     tab1, tab2, tab3 = st.tabs([
-        "Overview",
-        "Financial",
-        "Guide",
+        f"Overview{reset_suffix}",
+        f"Financial{reset_suffix}",
+        f"Guide{reset_suffix}",
     ])
     with tab1:
         _render_overview_tab(data, screening)
@@ -1304,6 +1315,7 @@ def initialize_session_state() -> None:
         "screening": None,
         "last_ticker": "",
         "ticker_input": "",
+        "tabs_reset_token": 0,
         "has_results": False,
     }
     for key, value in defaults.items():
@@ -1348,6 +1360,7 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
         st.session_state.stock_data = _build_enriched_stock_data(stock_data, enrichment)
         st.session_state.screening = screening
         st.session_state.last_ticker = ticker
+        st.session_state.tabs_reset_token += 1
         st.session_state.has_results = True
 
         status_text.markdown("✅ Done!")
