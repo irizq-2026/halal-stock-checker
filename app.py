@@ -62,7 +62,7 @@ def _extract_news_item(item: dict) -> dict:
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_ui_enrichment_cached(symbol: str) -> dict:
-    """Fetch optional yfinance-only UI fields without changing screening logic."""
+    """Fetch optional UI fields without changing screening logic."""
     enrichment = {"info": {}, "news": [], "cashflow_available": False, "news_available": False}
     try:
         ticker = yf.Ticker(symbol)
@@ -657,9 +657,9 @@ def _pill(label: str, kind: str) -> str:
 def _status_badge(result: str) -> str:
     kind = _result_kind(result)
     if kind == "pass":
-        return _pill("🟢 PASS", "pass")
+        return _pill("🟢 HALAL", "pass")
     if kind == "fail":
-        return _pill("🔴 FAIL", "fail")
+        return _pill("🔴 NOT HALAL", "fail")
     return _pill("🟡 QUESTIONABLE", "questionable")
 
 
@@ -803,11 +803,11 @@ def _criteria_summary(data: dict, screening: dict) -> tuple[int, int, list[str]]
 def _main_issue(screening: dict) -> str:
     business_row = _breakdown_row(screening, "Business")
     if business_row.get("result_class") == "unknown":
-        return "Business activity could not be fully verified from yfinance sector data."
+        return "Business activity could not be fully verified from available sector data."
     ratios = [("Debt Ratio", screening.get("debt_ratio"), 0.33), ("Cash Ratio", screening.get("cash_ratio"), 0.33), ("Income Ratio", screening.get("income_ratio"), 0.05)]
     available = [(name, value, threshold) for name, value, threshold in ratios if value is not None]
     if not available:
-        return "Financial statement data is incomplete in yfinance."
+        return "Financial statement data is incomplete."
     name, value, threshold = min(available, key=lambda item: abs(item[2] - item[1]))
     return f"{name} is closest to its {threshold * 100:.0f}% threshold at {value * 100:.1f}%."
 
@@ -851,12 +851,12 @@ def _render_quick_summary(data: dict, screening: dict) -> None:
         business_icon, business_text = "❌", "Business activity appears prohibited based on sector or industry."
         prohibited_icon, prohibited_text = "❌", "Prohibited activity: detected in available profile data."
     else:
-        business_icon, business_text = "⚠️", "Business activity is unclear from available yfinance data."
+        business_icon, business_text = "⚠️", "Business activity is unclear from available data."
         prohibited_icon, prohibited_text = "⚠️", "Prohibited activity: possible concern due to limited profile data."
     if "fail" in financial_statuses.values():
         financial_icon, financial_text = "❌", "Financial ratios are exceeding one or more AAOIFI limits."
     elif "questionable" in financial_statuses.values() or "unavailable" in financial_statuses.values():
-        financial_icon, financial_text = "⚠️", "Financial ratios are near a threshold or missing from yfinance data."
+        financial_icon, financial_text = "⚠️", "Financial ratios are near a threshold or missing from available data."
     else:
         financial_icon, financial_text = "✅", "Financial ratios are within AAOIFI screening limits."
     issue_html = f"<div style='margin-top:0.7rem;color:#F59E0B;font-weight:700;'>Main issue: {html.escape(_main_issue(screening))}</div>" if _result_kind(result) == "questionable" else ""
@@ -873,12 +873,12 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
     business_kind = {"pass": "pass", "fail": "fail", "unknown": "questionable"}.get(business_row.get("result_class", "unknown"), "questionable")
     statuses = _financial_statuses(screening)
     if "fail" in statuses.values():
-        financial_kind, financial_label = "fail", "FAIL"
+        financial_kind, financial_label = "fail", "NOT HALAL"
     elif "questionable" in statuses.values() or "unavailable" in statuses.values():
-        financial_kind, financial_label = "questionable", "BORDERLINE"
+        financial_kind, financial_label = "questionable", "QUESTIONABLE"
     else:
-        financial_kind, financial_label = "pass", "PASS"
-    rows = [("Business Activity", _pill(business_row.get("result", "Needs Review").upper(), business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(_display_result(data, screening)))]
+        financial_kind, financial_label = "pass", "HALAL"
+    rows = [("Business Activity", _pill("HALAL" if business_kind == "pass" else "NOT HALAL" if business_kind == "fail" else "QUESTIONABLE", business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(_display_result(data, screening)))]
     body = "".join(f'<div class="glance-row"><span class="glance-label">{html.escape(label)}</span>{badge}</div>' for label, badge in rows)
     st.markdown(f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>', unsafe_allow_html=True)
 
@@ -930,7 +930,7 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
     if close:
         return f"{company}'s financials are mostly within the allowable limits. The {', '.join(close)} ratio is close to its threshold, which makes the result questionable."
     if missing:
-        return f"{company}'s available financial ratios look acceptable, but some data is missing from yfinance. Because the available data is incomplete, a scholar should review it before investing."
+        return f"{company}'s available financial ratios look acceptable, but some data is missing. Because the available data is incomplete, a scholar should review it before investing."
     return f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
 
 
@@ -953,7 +953,7 @@ def _render_news_card(data: dict) -> None:
     news_items = data.get("_ui_news") or []
     if not news_items:
         status = _pill("NO DATA", "neutral")
-        body = f'<div class="muted-copy">{NOT_AVAILABLE}</div><div class="muted-copy">No recent news available from yfinance</div>'
+        body = f'<div class="muted-copy">{NOT_AVAILABLE}</div><div class="muted-copy">No recent news available</div>'
     else:
         flagged_any = False
         items = []
@@ -989,16 +989,16 @@ def _render_israel_connection_card(profile_text: str, data: dict) -> None:
     if match:
         status = _pill("POSSIBLE MENTION", "questionable")
         message = (
-            "Available yfinance profile or news text mentions "
+            "Available profile or news text mentions "
             f"'{html.escape(match)}'. This may indicate a business location, news event, "
             "partnership, lawsuit, or other mention. It does not prove ownership, support, or a verified ethical connection."
         )
     elif combined_text.strip():
         status = _pill("NONE FOUND", "pass")
-        message = "No Israel-related mention was found in the available yfinance profile or recent news headlines."
+        message = "No Israel-related mention was found in the available profile or recent news headlines."
     else:
         status = _pill("NO DATA", "neutral")
-        message = "Not available from yfinance profile or recent news headlines."
+        message = "Not available from company profile or recent news headlines."
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Israel Connection Check</div>{status}</div><div class="muted-copy">{message}</div><div class="muted-copy" style="margin-top:0.5rem;">⚠️ This is a keyword-based check only, not a verified geopolitical audit.</div></div>', unsafe_allow_html=True)
 
 def _render_ethical_tab(data: dict, screening: dict) -> None:
@@ -1011,7 +1011,7 @@ def _render_ethical_tab(data: dict, screening: dict) -> None:
         industry_status, confidence, industry_kind = "FLAGGED", "Medium", "fail"
     else:
         industry_status, confidence, industry_kind = "CLEAR", "High", "pass"
-    st.markdown('''<div class="warning-banner"><strong>⚠️ LIMITED DATA SOURCE</strong><br>Ethical screening below is based only on publicly available yfinance data (sector, industry, company description, and basic news). This is NOT a comprehensive ethical audit. Always consult a qualified Islamic finance scholar.</div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="warning-banner"><strong>⚠️ LIMITED DATA SOURCE</strong><br>Ethical screening below is based only on available market data (sector, industry, company description, and basic news). This is NOT a comprehensive ethical audit. Always consult a qualified Islamic finance scholar.</div>''', unsafe_allow_html=True)
     flag_html = f'<div style="color:#F59E0B;margin-top:0.5rem;">Flagged keyword: {html.escape(prohibited_match)}</div>' if prohibited_match else ""
     st.markdown(f'<div class="ethical-card"><div class="ethical-card-header"><div class="ethical-title">Industry &amp; Sector Assessment</div>{_pill(industry_status, industry_kind)}</div><div class="muted-copy">Sector: {html.escape(sector)}</div><div class="muted-copy">Industry: {html.escape(industry)}</div><div class="muted-copy" style="margin-top:0.5rem;">Confidence level: {html.escape(confidence)}</div>{flag_html}</div>', unsafe_allow_html=True)
     _render_news_card(data)
@@ -1028,8 +1028,8 @@ def _render_ethical_tab(data: dict, screening: dict) -> None:
 
 
 def _render_details_tab(data: dict, screening: dict) -> None:
-    st.markdown('''<div class="overview-card"><div class="card-title">How iRizq Screens Stocks</div><div class="muted-copy">iRizq applies an AAOIFI-style screen using available business activity information and financial ratios such as debt, cash, and income ratios. This app uses yfinance data only, so results are educational and should be reviewed with qualified guidance.</div><div style="margin-top:0.7rem;"><a href="https://aaoifi.com" target="_blank" style="color:#C9A84C;text-decoration:none;">Learn more about AAOIFI standards →</a></div></div>''', unsafe_allow_html=True)
-    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ yfinance company profile</div><div class="muted-copy">✅ yfinance income statement</div><div class="muted-copy">✅ yfinance balance sheet</div><div class="muted-copy">✅ yfinance cash flow statement</div><div class="muted-copy">✅ yfinance news feed</div></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="overview-card"><div class="card-title">How iRizq Screens Stocks</div><div class="muted-copy">iRizq applies an AAOIFI-style screen using available business activity information and financial ratios such as debt, cash, and income ratios. This app uses available market data only, so results are educational and should be reviewed with qualified guidance.</div><div style="margin-top:0.7rem;"><a href="https://aaoifi.com" target="_blank" style="color:#C9A84C;text-decoration:none;">Learn more about AAOIFI standards →</a></div></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ Company profile</div><div class="muted-copy">✅ Income statement</div><div class="muted-copy">✅ Balance sheet</div><div class="muted-copy">✅ Cash flow statement</div><div class="muted-copy">✅ News feed</div></div>''', unsafe_allow_html=True)
     st.markdown('''<div class="overview-card"><div class="card-title">What is NOT Included</div><div class="muted-copy">❌ SEC 10-K / 10-Q filings</div><div class="muted-copy">❌ Segment revenue breakdowns</div><div class="muted-copy">❌ Subsidiary analysis</div><div class="muted-copy">❌ Verified geopolitical data</div><div class="muted-copy">❌ ESG scores</div><div class="muted-copy">❌ Shariah board certifications</div></div>''', unsafe_allow_html=True)
     debt_num, debt_den, debt_ratio = _metric_data(data, "debt")
     cash_num, cash_den, cash_ratio = _metric_data(data, "cash")
