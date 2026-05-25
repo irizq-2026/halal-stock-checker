@@ -329,42 +329,49 @@ IRIZQ_CSS = """
   /* Tab styling */
   .stTabs [data-baseweb="tab-list"] {
     background-color: #0D1B2A;
-    border-bottom: 1px solid #2A3F55;
-    gap: 4px;
+    border-bottom: none;
+    gap: 10px;
+    overflow-x: hidden !important;
   }
   .stTabs [data-baseweb="tab"] {
-    background-color: #0D1B2A;
-    color: #8A9BB0;
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 10px 14px;
+    background-color: #0A111D !important;
+    color: #F5F5F5 !important;
+    border: 1px solid #2A3F55 !important;
+    border-radius: 999px !important;
+    font-weight: 700;
+    font-size: 1.12rem;
+    padding: 0.65rem 1.25rem !important;
+    min-height: 44px;
     font-family: 'Inter', sans-serif;
+    justify-content: center !important;
   }
   .stTabs [aria-selected="true"] {
-    background-color: #1A2B3C !important;
-    color: #C9A84C !important;
-    border-bottom: 2px solid #C9A84C !important;
+    background-color: #C9A84C !important;
+    color: #0D1B2A !important;
+    border: 1px solid #C9A84C !important;
+    box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.28) !important;
   }
   .stTabs [data-baseweb="tab"] p {
-    font-size: 1rem !important;
-    line-height: 1.3 !important;
+    font-size: 1.12rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
   }
   @media (max-width: 480px) {
     .stTabs [data-baseweb="tab-list"] {
-      gap: 0 !important;
-      overflow-x: hidden !important;
+      gap: 6px !important;
       justify-content: space-between !important;
     }
     .stTabs [data-baseweb="tab"] {
       flex: 1 1 0 !important;
       min-width: 0 !important;
       max-width: 33.33% !important;
-      padding: 6px 2px !important;
-      justify-content: center !important;
+      padding: 0.55rem 0.25rem !important;
+      min-height: 40px !important;
     }
     .stTabs [data-baseweb="tab"] p {
-      font-size: 0.78rem !important;
-      line-height: 1.2 !important;
+      font-size: 0.92rem !important;
+      line-height: 1.15 !important;
       white-space: nowrap !important;
     }
   }
@@ -1164,9 +1171,9 @@ def _render_details_tab(data: dict, screening: dict) -> None:
 
 def render_results(data: dict, screening: dict) -> None:
     tab1, tab2, tab3 = st.tabs([
-        "🏠 Overview",
-        "📊 Financial",
-        "📖 Guide",
+        "Overview",
+        "Financial",
+        "Guide",
     ])
     with tab1:
         _render_overview_tab(data, screening)
