@@ -1353,7 +1353,7 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
     share_text = (
         f"I checked {company} ({symbol}) on:\n"
         "iRizq Halal Stock Checker\n"
-        "https://halal-stock-checker-irizq.streamlit.app/\n\n"
+        "https://stocks.irizq.com/\n\n"
         f"Result: {result}."
     )
     url = f"https://wa.me/?text={quote(share_text)}"
