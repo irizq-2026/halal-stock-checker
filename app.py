@@ -117,7 +117,7 @@ IRIZQ_CSS = """
     color: #F5F5F5;
   }
   .main .block-container {
-    padding: 1.5rem 1.5rem 3rem 1.5rem;
+    padding: max(16px, env(safe-area-inset-top)) 1rem 2rem 1rem;
     max-width: 720px;
     margin: 0 auto;
   }
@@ -132,6 +132,53 @@ IRIZQ_CSS = """
     font-weight: 400 !important;
     font-size: 0.95rem !important;
     margin-top: 0 !important;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.15rem 0 0.55rem 0;
+    margin: 0;
+  }
+  .app-header-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    object-fit: contain;
+    flex: 0 0 60px;
+  }
+  .app-header-brand {
+    color: #C9A84C;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.12rem;
+  }
+  .app-header-title {
+    color: #F5F5F5;
+    font-size: 1.18rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .app-header-subtitle {
+    color: #8A9BB0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 0.18rem;
+  }
+  div[data-testid="stTextInput"] {
+    margin-top: 0.2rem !important;
+  }
+  div[data-testid="stTextInput"] label {
+    margin-bottom: 0.2rem !important;
+  }
+  div[data-testid="stButton"] {
+    margin-top: 0.25rem !important;
+  }
+  div[data-testid="stExpander"] {
+    margin-top: 0.45rem !important;
   }
   h2 {
     color: #C9A84C !important;
@@ -576,17 +623,34 @@ RESULT_ICONS = {
 }
 
 
-def _linked_logo_html(logo_path: str) -> str:
+def _logo_data_uri(logo_path: str) -> str:
     try:
         with open(logo_path, "rb") as logo_file:
             encoded_logo = base64.b64encode(logo_file.read()).decode("ascii")
     except OSError:
         return ""
-    return (
-        '<a href="https://www.irizq.com" target="_blank">'
-        f'<img src="data:image/png;base64,{encoded_logo}" alt="iRizq" style="width:200px;">'
-        '</a>'
+    return f"data:image/png;base64,{encoded_logo}"
+
+
+def _app_header_html(logo_path: str) -> str:
+    logo_src = _logo_data_uri(logo_path)
+    logo_html = (
+        f'<img src="{logo_src}" alt="iRizq" class="app-header-logo">'
+        if logo_src
+        else ""
     )
+    return f'''
+    <a href="https://www.irizq.com" target="_blank" style="text-decoration:none;">
+      <div class="app-header">
+        {logo_html}
+        <div>
+          <div class="app-header-brand">iRizq</div>
+          <div class="app-header-title">Halal Stock Checker</div>
+          <div class="app-header-subtitle">AAOIFI-Based Screening</div>
+        </div>
+      </div>
+    </a>
+    '''
 
 
 def inject_head_and_styles() -> None:
@@ -1206,7 +1270,7 @@ def render_error(ticker: str, transient: bool = False) -> None:
         message = (
             f"Market data for <strong>{ticker.upper()}</strong> is temporarily unavailable "
             "(Yahoo Finance rate limit or network). Wait 10-20 seconds and click "
-            "<strong>Check Stock</strong> again."
+            "<strong>Check Status</strong> again."
         )
     else:
         message = (
@@ -1387,24 +1451,18 @@ def main() -> None:
     initialize_session_state()
     inject_head_and_styles()
 
-    logo_path = "static/logo.png"
+    logo_path = "static/icon.png" if os.path.exists("static/icon.png") else "static/logo.png"
     if os.path.exists(logo_path):
-        st.markdown(_linked_logo_html(logo_path), unsafe_allow_html=True)
-
-    st.title("Halal Stock Checker")
-    st.markdown(
-        '<h3><abbr title="Accounting and Auditing Organization for Islamic Financial Institutions" '
-        'style="text-decoration: underline dotted; cursor: help;">AAOIFI</abbr>-Based '
-        'Screening Powered by <a href="https://www.iRizq.com" target="_blank" '
-        'style="color:#C9A84C;text-decoration:none;">iRizq.com</a></h3>',
-        unsafe_allow_html=True,
-    )
-    with st.popover("What is AAOIFI?"):
+        st.markdown(_app_header_html(logo_path), unsafe_allow_html=True)
+    else:
         st.markdown(
-            "AAOIFI stands for **Accounting and Auditing Organization for "
-            "Islamic Financial Institutions**."
+            '<div class="app-header"><div>'
+            '<div class="app-header-brand">iRizq</div>'
+            '<div class="app-header-title">Halal Stock Checker</div>'
+            '<div class="app-header-subtitle">AAOIFI-Based Screening</div>'
+            '</div></div>',
+            unsafe_allow_html=True,
         )
-    st.markdown('<hr class="irizq-divider">', unsafe_allow_html=True)
 
     ticker = st.text_input(
         "Enter Stock Symbol:",
@@ -1413,7 +1471,13 @@ def main() -> None:
         key="ticker_input",
     ).strip().upper()
 
-    check_clicked = st.button("Check Stock", type="primary", use_container_width=True)
+    check_clicked = st.button("Check Status", type="primary", use_container_width=True)
+
+    with st.expander("What is AAOIFI?"):
+        st.markdown(
+            "AAOIFI stands for **Accounting and Auditing Organization for "
+            "Islamic Financial Institutions**."
+        )
 
     if check_clicked:
         if not ticker:
@@ -1425,7 +1489,7 @@ def main() -> None:
             run_screening_flow(ticker)
         else:
             st.markdown(
-                '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Stock to run a new screen.</div>',
+                '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
                 unsafe_allow_html=True,
             )
 
