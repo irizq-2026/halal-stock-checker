@@ -117,7 +117,7 @@ IRIZQ_CSS = """
     color: #F5F5F5;
   }
   .main .block-container {
-    padding: max(16px, env(safe-area-inset-top)) 1rem 2rem 1rem;
+    padding: 0 1rem 2rem 1rem;
     max-width: 720px;
     margin: 0 auto;
   }
@@ -136,40 +136,40 @@ IRIZQ_CSS = """
 
   .app-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.15rem 0 0.55rem 0;
+    text-align: center;
+    gap: 0;
+    padding: 0 0 0.75rem 0;
     margin: 0;
   }
   .app-header-logo {
-    width: 60px;
-    height: 60px;
+    width: 62px;
+    height: 62px;
     border-radius: 16px;
     object-fit: contain;
-    flex: 0 0 60px;
-  }
-  .app-header-brand {
-    color: #C9A84C;
-    font-size: 1rem;
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: 0.12rem;
+    margin-bottom: 0.55rem;
   }
   .app-header-title {
-    color: #F5F5F5;
-    font-size: 1.18rem;
+    color: #C9A84C;
+    font-size: 1.8rem;
     font-weight: 800;
-    line-height: 1.15;
+    line-height: 1.1;
   }
   .app-header-subtitle {
     color: #8A9BB0;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 500;
     line-height: 1.2;
-    margin-top: 0.18rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.85rem;
+  }
+  .app-header-subtitle a {
+    color: #C9A84C;
+    text-decoration: none;
   }
   div[data-testid="stTextInput"] {
-    margin-top: 0.2rem !important;
+    margin-top: 0.75rem !important;
   }
   div[data-testid="stTextInput"] label {
     margin-bottom: 0.2rem !important;
@@ -640,16 +640,11 @@ def _app_header_html(logo_path: str) -> str:
         else ""
     )
     return f'''
-    <a href="https://www.irizq.com" target="_blank" style="text-decoration:none;">
-      <div class="app-header">
-        {logo_html}
-        <div>
-          <div class="app-header-brand">iRizq</div>
-          <div class="app-header-title">Halal Stock Checker</div>
-          <div class="app-header-subtitle">AAOIFI-Based Screening</div>
-        </div>
-      </div>
-    </a>
+    <div class="app-header">
+      <a href="https://www.irizq.com" target="_blank" style="text-decoration:none;">{logo_html}</a>
+      <div class="app-header-title">Halal Stock Checker</div>
+      <div class="app-header-subtitle">AAOIFI-Based Screening Powered by <a href="https://www.iRizq.com" target="_blank">iRizq.com</a></div>
+    </div>
     '''
 
 
@@ -1456,11 +1451,11 @@ def main() -> None:
         st.markdown(_app_header_html(logo_path), unsafe_allow_html=True)
     else:
         st.markdown(
-            '<div class="app-header"><div>'
-            '<div class="app-header-brand">iRizq</div>'
+            '<div class="app-header">'
             '<div class="app-header-title">Halal Stock Checker</div>'
-            '<div class="app-header-subtitle">AAOIFI-Based Screening</div>'
-            '</div></div>',
+            '<div class="app-header-subtitle">AAOIFI-Based Screening Powered by '
+            '<a href="https://www.iRizq.com" target="_blank">iRizq.com</a></div>'
+            '</div>',
             unsafe_allow_html=True,
         )
 
