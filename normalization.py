@@ -86,6 +86,16 @@ class FactPoint:
     fiscal_period: str | None
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def _parse_date(value: Any) -> date | None:
     if not value:
         return None
@@ -295,7 +305,7 @@ def normalize_financials_for_filing(
                     "period_end": point.period_end,
                     "filed_date": point.filed_date,
                     "frame": point.frame,
-                    "raw_json": asdict(point),
+                    "raw_json": _json_safe(asdict(point)),
                 }
             )
 
