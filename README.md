@@ -1,6 +1,7 @@
-# Halal Stock Checker (AAOIFI)
+# Halal Stock Checker (AAOIFI, SEC-backed)
 
 An iRizq.com tool for screening US stocks against AAOIFI Islamic finance standards.
+Frontend UI and screening logic are unchanged; financial data now comes from a local SEC-backed Postgres cache.
 
 ## Live App
 
@@ -10,10 +11,11 @@ An iRizq.com tool for screening US stocks against AAOIFI Islamic finance standar
 
 - Business sector screening (prohibits banking, alcohol, gambling, etc.)
 - Financial ratio screening (debt, cash, non-halal income)
-- AAOIFI-standard thresholds
-- iRizq.com branded dark theme (navy + gold)
-- Mobile-friendly PWA — add to iPhone Home Screen via Safari
-- No login or data storage required
+- AAOIFI-standard thresholds (unchanged)
+- SEC EDGAR + SEC XBRL Company Facts ingestion
+- PostgreSQL cache for normalized facts and final screening results
+- Weekly refresh scheduler + manual admin refresh endpoint
+- Frontend requests served from local DB (no live SEC calls in user request path)
 
 ## How to Run Locally
 
@@ -21,8 +23,48 @@ An iRizq.com tool for screening US stocks against AAOIFI Islamic finance standar
 git clone [your-repo-url]
 cd halal-stock-checker
 pip install -r requirements.txt
+python init_db.py
+# optional: pre-load a ticker
+python run_weekly_refresh.py --ticker AAPL
 streamlit run app.py
 ```
+
+## Environment Variables
+
+```bash
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/halal_stocks
+SEC_USER_AGENT="HalalStockChecker your@email.com"
+SEC_TIMEOUT_SECONDS=20
+SEC_RATE_LIMIT_PER_SECOND=5
+SEC_MAX_RETRIES=4
+REFRESH_CRON_DAY_OF_WEEK=sun
+REFRESH_CRON_HOUR_UTC=3
+REFRESH_CRON_MINUTE_UTC=0
+REFRESH_MAX_FILINGS_PER_COMPANY=8
+ADMIN_API_TOKEN=your-admin-token
+LOG_LEVEL=INFO
+```
+
+## New Data Architecture
+
+```
+SEC filings index
+  -> latest 10-Q / 10-K
+  -> SEC company facts
+  -> normalize tags + TTM calculations
+  -> PostgreSQL (raw + normalized + halal result tables)
+  -> Streamlit UI / API reads cached results
+```
+
+### Core tables
+
+- `companies`
+- `filings`
+- `raw_financial_facts`
+- `normalized_financials`
+- `halal_screen_results`
+
+Migration SQL: `migrations/001_sec_financial_pipeline.sql`
 
 ## How to Deploy to Streamlit Cloud
 
@@ -66,6 +108,9 @@ This tool is for educational purposes only and does not constitute a fatwa or fi
 
 - Python 3.10+
 - Streamlit
-- yfinance
+- FastAPI (admin + cached screen API)
+- PostgreSQL + SQLAlchemy
+- APScheduler
+- SEC EDGAR APIs + SEC XBRL Company Facts
 - Deployed on Streamlit Cloud (free tier)
 - Branded for iRizq.com
