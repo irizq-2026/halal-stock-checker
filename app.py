@@ -10,9 +10,12 @@ from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
-import yfinance as yf
 
-from data import TransientDataError, fetch_stock_data as _fetch_stock_data
+from data import (
+    TransientDataError,
+    fetch_company_enrichment as _fetch_company_enrichment,
+    fetch_stock_data as _fetch_stock_data,
+)
 from rules import screen_stock
 
 
@@ -63,39 +66,8 @@ def _extract_news_item(item: dict) -> dict:
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_ui_enrichment_cached(symbol: str) -> dict:
-    """Fetch optional UI fields without changing screening logic."""
-    enrichment = {"info": {}, "news": [], "cashflow_available": False, "news_available": False}
-    try:
-        ticker = yf.Ticker(symbol)
-    except Exception:
-        return enrichment
-    try:
-        raw_info = ticker.info or {}
-        if isinstance(raw_info, dict):
-            enrichment["info"] = {
-                "website": raw_info.get("website") or "",
-                "exchange": raw_info.get("exchange") or raw_info.get("fullExchangeName") or "",
-                "longBusinessSummary": raw_info.get("longBusinessSummary") or "",
-                "sector": raw_info.get("sector") or raw_info.get("sectorDisp") or "",
-                "industry": raw_info.get("industry") or raw_info.get("industryDisp") or "",
-                "longName": raw_info.get("longName") or raw_info.get("shortName") or "",
-            }
-    except Exception:
-        pass
-    try:
-        raw_news = ticker.news or []
-        if isinstance(raw_news, list):
-            news_items = [news for news in (_extract_news_item(item) for item in raw_news[:5]) if news]
-            enrichment["news"] = news_items
-            enrichment["news_available"] = bool(news_items)
-    except Exception:
-        pass
-    try:
-        cashflow = ticker.cashflow
-        enrichment["cashflow_available"] = bool(cashflow is not None and getattr(cashflow, "empty", True) is False)
-    except Exception:
-        pass
-    return enrichment
+    """Fetch optional UI fields from local cached DB data only."""
+    return _fetch_company_enrichment(symbol)
 
 
 PWA_HEAD = """
@@ -1520,8 +1492,8 @@ def _render_details_tab(data: dict, screening: dict) -> None:
         unsafe_allow_html=True,
     )
     st.markdown('''<div class="overview-card"><div class="card-title">How iRizq Screens Stocks</div><div class="muted-copy">iRizq applies an AAOIFI-style screen using available business activity information and financial ratios such as debt, cash, and income ratios. This app uses available market data only, so results are educational and should be reviewed with qualified guidance.</div><div style="margin-top:0.7rem;"><a href="https://aaoifi.com" target="_blank" style="color:#C9A84C;text-decoration:none;">Learn more about AAOIFI standards →</a></div></div>''', unsafe_allow_html=True)
-    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ Company profile</div><div class="muted-copy">✅ Income statement</div><div class="muted-copy">✅ Balance sheet</div><div class="muted-copy">✅ Cash flow statement</div><div class="muted-copy">✅ News feed</div></div>''', unsafe_allow_html=True)
-    st.markdown('''<div class="overview-card"><div class="card-title">What is NOT Included</div><div class="muted-copy">❌ SEC 10-K / 10-Q filings</div><div class="muted-copy">❌ Segment revenue breakdowns</div><div class="muted-copy">❌ Subsidiary analysis</div><div class="muted-copy">❌ Verified geopolitical data</div><div class="muted-copy">❌ ESG scores</div><div class="muted-copy">❌ Shariah board certifications</div></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ SEC 10-K / 10-Q filings</div><div class="muted-copy">✅ SEC XBRL company facts</div><div class="muted-copy">✅ Company profile (cached)</div><div class="muted-copy">✅ Income statement (normalized)</div><div class="muted-copy">✅ Balance sheet (normalized)</div></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="overview-card"><div class="card-title">What is NOT Included</div><div class="muted-copy">❌ Segment revenue breakdowns</div><div class="muted-copy">❌ Subsidiary analysis</div><div class="muted-copy">❌ Verified geopolitical data</div><div class="muted-copy">❌ ESG scores</div><div class="muted-copy">❌ Shariah board certifications</div><div class="muted-copy">❌ Personalized fatwa guidance</div></div>''', unsafe_allow_html=True)
     debt_num, debt_den, debt_ratio = _metric_data(data, "debt")
     cash_num, cash_den, cash_ratio = _metric_data(data, "cash")
     income_num, income_den, income_ratio = _metric_data(data, "income")
@@ -1551,7 +1523,7 @@ def render_error(ticker: str, transient: bool = False) -> None:
     if transient:
         message = (
             f"Market data for <strong>{ticker.upper()}</strong> is temporarily unavailable "
-            "(Yahoo Finance rate limit or network). Wait 10-20 seconds and click "
+            "(data refresh or network issue). Wait 10-20 seconds and click "
             "<strong>Check Status</strong> again."
         )
     else:
