@@ -11,6 +11,7 @@ from sqlalchemy import delete, desc, select
 from sqlalchemy.orm import Session
 
 from db import session_scope
+from fmp_client import FmpClient
 from models import Company, Filing, HalalScreenResult, NormalizedFinancial, RawFinancialFact
 from normalization import normalize_financials_for_filing
 from rules import screen_stock
@@ -62,10 +63,17 @@ class RefreshSummary:
 class SecRefreshService:
     """Handles SEC -> normalize -> Postgres refresh operations."""
 
-    def __init__(self, session: Session, sec_client: SecApiClient | None = None) -> None:
+    def __init__(
+        self,
+        session: Session,
+        sec_client: SecApiClient | None = None,
+        fmp_client: FmpClient | None = None,
+    ) -> None:
         self.session = session
         self.sec_client = sec_client or SecApiClient()
+        self.fmp_client = fmp_client or FmpClient()
         self._ticker_mapping_cache: dict[str, dict[str, str]] | None = None
+        self._fmp_market_cap_cache: dict[str, tuple[float | None, dict[str, Any]]] = {}
 
     def _ticker_mapping(self) -> dict[str, dict[str, str]]:
         if self._ticker_mapping_cache is None:
@@ -239,6 +247,50 @@ class SecRefreshService:
         self.session.flush()
         return row
 
+    def _resolve_market_cap_with_fallback(
+        self,
+        ticker: str,
+        normalized_payload: dict[str, float | None],
+        mapped_tags: dict[str, Any],
+    ) -> None:
+        """Use SEC market cap when available; fallback to FMP otherwise."""
+        if normalized_payload.get("market_cap") is not None:
+            return
+
+        symbol = ticker.strip().upper()
+        if symbol in self._fmp_market_cap_cache:
+            fallback_value, fallback_meta = self._fmp_market_cap_cache[symbol]
+        else:
+            fallback_value, fallback_meta = self.fmp_client.resolve_market_cap(
+                symbol,
+                shares_hint=normalized_payload.get("shares_outstanding"),
+            )
+            self._fmp_market_cap_cache[symbol] = (fallback_value, fallback_meta)
+
+        if fallback_value is None:
+            market_cap_mapping = mapped_tags.get("market_cap") or {}
+            market_cap_mapping.update(
+                {
+                    "fallback_source": "financial_modeling_prep",
+                    "fallback_used": False,
+                    "fallback_details": fallback_meta,
+                }
+            )
+            mapped_tags["market_cap"] = market_cap_mapping
+            return
+
+        normalized_payload["market_cap"] = fallback_value
+        market_cap_mapping = mapped_tags.get("market_cap") or {}
+        market_cap_mapping.update(
+            {
+                "fallback_source": "financial_modeling_prep",
+                "fallback_used": True,
+                "fallback_value": fallback_value,
+                "fallback_details": fallback_meta,
+            }
+        )
+        mapped_tags["market_cap"] = market_cap_mapping
+
     def refresh_ticker(self, ticker: str, *, force: bool = False, max_filings: int = 8) -> RefreshSummary:
         company = self._ensure_company(ticker)
         if company is None:
@@ -301,6 +353,11 @@ class SecRefreshService:
             normalized_payload, mapped_tags, raw_rows = normalize_financials_for_filing(
                 company_facts,
                 filing.filing_date,
+            )
+            self._resolve_market_cap_with_fallback(
+                company.ticker,
+                normalized_payload,
+                mapped_tags,
             )
             self._store_raw_facts(company.id, filing.id, raw_rows)
             normalized = self._upsert_normalized(company.id, filing.id, normalized_payload, mapped_tags)

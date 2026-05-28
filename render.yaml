@@ -1,0 +1,12 @@
+services:
+  - type: cron
+    name: nightly-price-update
+    runtime: python
+    schedule: "0 2 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python jobs/nightly_price_update.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
