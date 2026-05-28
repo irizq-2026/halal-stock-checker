@@ -239,7 +239,7 @@ def _calculate_ttm(points: list[FactPoint], *, as_of_date: date | None) -> tuple
             point for point in candidates if point.filed_date is None or point.filed_date <= as_of_date
         ]
     if not candidates:
-        return None, {"method": "missing", "periods": []}
+        return None, {"method": "missing", "periods": [], "forms": [], "latest_period_end": None, "latest_filed_date": None}
 
     quarterly = _dedupe_by_period_end([point for point in candidates if _is_quarterly(point)])
     if len(quarterly) >= 4:
@@ -253,6 +253,8 @@ def _calculate_ttm(points: list[FactPoint], *, as_of_date: date | None) -> tuple
                     "method": "ttm_quarters",
                     "periods": [str(point.period_end) for point in latest_four if point.period_end],
                     "forms": [point.form for point in latest_four],
+                    "latest_period_end": str(latest_four[0].period_end) if latest_four[0].period_end else None,
+                    "latest_filed_date": str(latest_four[0].filed_date) if latest_four[0].filed_date else None,
                 },
             )
 
@@ -265,6 +267,8 @@ def _calculate_ttm(points: list[FactPoint], *, as_of_date: date | None) -> tuple
                 "method": "annual_fallback",
                 "periods": [str(point.period_end)] if point.period_end else [],
                 "forms": [point.form],
+                "latest_period_end": str(point.period_end) if point.period_end else None,
+                "latest_filed_date": str(point.filed_date) if point.filed_date else None,
             },
         )
 
@@ -279,6 +283,8 @@ def _calculate_ttm(points: list[FactPoint], *, as_of_date: date | None) -> tuple
             "method": "latest_fallback",
             "periods": [str(best.period_end)] if best.period_end else [],
             "forms": [best.form],
+            "latest_period_end": str(best.period_end) if best.period_end else None,
+            "latest_filed_date": str(best.filed_date) if best.filed_date else None,
         },
     )
 
@@ -312,21 +318,38 @@ def normalize_financials_for_filing(
     flow_fields = {"total_revenue", "interest_income", "operating_income", "net_income"}
     for field_name, tags in CANONICAL_TAGS.items():
         if field_name in flow_fields:
-            points: list[FactPoint] = []
             used_tag: str | None = None
+            selected_value: float | None = None
+            selected_metadata: dict[str, Any] = {
+                "method": "missing",
+                "periods": [],
+                "forms": [],
+                "latest_period_end": None,
+                "latest_filed_date": None,
+            }
+            selected_rank = (date.min, date.min, -1)
             for tag in tags:
-                bucket = facts_index.get(tag, [])
-                if bucket:
+                value, metadata = _calculate_ttm(facts_index.get(tag, []), as_of_date=filing_date)
+                if value is None:
+                    continue
+                latest_period_end = _parse_date(metadata.get("latest_period_end")) or date.min
+                latest_filed_date = _parse_date(metadata.get("latest_filed_date")) or date.min
+                method_score = 1 if metadata.get("method") == "ttm_quarters" else 0
+                rank = (latest_period_end, latest_filed_date, method_score)
+                if rank > selected_rank:
+                    selected_rank = rank
+                    selected_value = value
+                    selected_metadata = metadata
                     used_tag = tag
-                    points = bucket
-                    break
-            value, metadata = _calculate_ttm(points, as_of_date=filing_date)
-            normalized[field_name] = value
+
+            normalized[field_name] = selected_value
             mapped_tags[field_name] = {
                 "tag": used_tag,
-                "method": metadata.get("method"),
-                "periods": metadata.get("periods", []),
-                "forms": metadata.get("forms", []),
+                "method": selected_metadata.get("method"),
+                "periods": selected_metadata.get("periods", []),
+                "forms": selected_metadata.get("forms", []),
+                "latest_period_end": selected_metadata.get("latest_period_end"),
+                "latest_filed_date": selected_metadata.get("latest_filed_date"),
             }
             continue
 
@@ -336,6 +359,17 @@ def normalize_financials_for_filing(
             as_of_date=filing_date,
             prefer_quarterly=True,
         )
+        stale_discarded = False
+        stale_age_days: int | None = None
+        if field_name == "market_cap" and matched_point and filing_date:
+            reference_date = matched_point.period_end or matched_point.filed_date
+            if reference_date:
+                stale_age_days = (filing_date - reference_date).days
+                if stale_age_days > 550:
+                    stale_discarded = True
+                    matched_tag = None
+                    matched_point = None
+
         normalized[field_name] = matched_point.value if matched_point else None
         mapped_tags[field_name] = {
             "tag": matched_tag,
@@ -344,6 +378,8 @@ def normalize_financials_for_filing(
             "unit": matched_point.unit if matched_point else None,
             "form": matched_point.form if matched_point else None,
             "method": "latest_point_in_time",
+            "stale_discarded": stale_discarded,
+            "stale_age_days": stale_age_days,
         }
 
     return normalized, mapped_tags, raw_rows
