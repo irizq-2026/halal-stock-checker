@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -69,6 +70,33 @@ def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any
     }
 
 
+def _load_latest_price_market_cap(session: Session, ticker: str) -> dict[str, Any] | None:
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT
+                    close_price,
+                    price_date,
+                    shares_outstanding,
+                    market_cap,
+                    updated_at
+                FROM stock_prices
+                WHERE ticker = :ticker
+                ORDER BY price_date DESC
+                LIMIT 1
+                """
+            ),
+            {"ticker": ticker.upper().strip()},
+        )
+        .mappings()
+        .first()
+    )
+    if not row:
+        return None
+    return dict(row)
+
+
 def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
     """Fetch latest normalized cached financial data from Postgres only."""
     normalized_symbol = (symbol or "").strip().upper()
@@ -83,7 +111,19 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
                 f"No cached SEC data found for {normalized_symbol}.",
             )
         company, filing, normalized, result = row
-        return _build_stock_payload(company, filing, normalized, result)
+        payload = _build_stock_payload(company, filing, normalized, result)
+        if payload.get("market_cap") in (None, 0):
+            latest_price_row = _load_latest_price_market_cap(session, normalized_symbol)
+            if latest_price_row and latest_price_row.get("market_cap") not in (None, 0):
+                payload["market_cap"] = _to_float(latest_price_row.get("market_cap"))
+                payload["_data_source"]["market_cap_fallback"] = {
+                    "source": "stock_prices",
+                    "price_date": str(latest_price_row.get("price_date")) if latest_price_row.get("price_date") else None,
+                    "close_price": _to_float(latest_price_row.get("close_price")),
+                    "shares_outstanding": latest_price_row.get("shares_outstanding"),
+                    "updated_at": str(latest_price_row.get("updated_at")) if latest_price_row.get("updated_at") else None,
+                }
+        return payload
     except CachedDataNotReadyError:
         raise
     except (OperationalError, ProgrammingError) as exc:

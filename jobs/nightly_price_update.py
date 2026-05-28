@@ -20,7 +20,11 @@ if str(ROOT_DIR) not in sys.path:
 from db import SessionLocal
 from services.market_cap_calculator import calculate_and_store_market_caps
 from services.sec_fetcher import fetch_and_store_sec_shares
-from services.stooq_fetcher import download_stooq_zip, extract_latest_prices
+from services.stooq_fetcher import (
+    download_stooq_zip,
+    extract_latest_prices,
+    fetch_latest_prices_for_tickers,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -102,13 +106,30 @@ async def run_nightly_update() -> dict[str, Any]:
         else:
             logger.info("Skipping SEC refresh (not Sunday)")
 
-        logger.info("Downloading stooq price data...")
-        zip_bytes = await download_stooq_zip()
-        logger.info("Stooq zip downloaded successfully")
+        prices: dict[str, Any] = {}
+        try:
+            logger.info("Downloading stooq price data...")
+            zip_bytes = await download_stooq_zip()
+            logger.info("Stooq zip downloaded successfully")
 
-        logger.info("Extracting latest closing prices...")
-        prices = await extract_latest_prices(zip_bytes)
-        logger.info("Extracted prices for %s tickers", len(prices))
+            logger.info("Extracting latest closing prices...")
+            prices = await extract_latest_prices(zip_bytes)
+            logger.info("Extracted prices for %s tickers", len(prices))
+        except Exception:
+            logger.error("Stooq bulk zip flow failed; switching to quote API fallback", exc_info=True)
+            ticker_rows = await db_conn.fetch(
+                """
+                SELECT ticker
+                FROM sec_shares
+                WHERE shares_outstanding IS NOT NULL
+                ORDER BY ticker ASC
+                """
+            )
+            tickers = [str(row["ticker"]).upper().strip() for row in ticker_rows if row.get("ticker")]
+            if not tickers:
+                raise RuntimeError("No tickers available in sec_shares for stooq fallback fetch.")
+            prices = await fetch_latest_prices_for_tickers(tickers)
+            logger.info("Fallback stooq extraction returned %s tickers", len(prices))
 
         if not prices:
             raise RuntimeError("No prices extracted from stooq payload.")
