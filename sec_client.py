@@ -48,7 +48,6 @@ class SecApiClient:
             {
                 "User-Agent": settings.sec_user_agent,
                 "Accept-Encoding": "gzip, deflate",
-                "Host": "data.sec.gov",
             }
         )
         self._rate_limiter = RateLimiter(settings.sec_rate_limit_per_second)
