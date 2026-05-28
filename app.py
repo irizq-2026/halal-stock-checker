@@ -12,6 +12,8 @@ from urllib.parse import quote, urlparse
 import streamlit as st
 
 from data import (
+    CachedDataNotReadyError,
+    DatabaseUnavailableError,
     TransientDataError,
     fetch_company_enrichment as _fetch_company_enrichment,
     fetch_stock_data as _fetch_stock_data,
@@ -1519,8 +1521,23 @@ def render_results(data: dict, screening: dict) -> None:
         _render_details_tab(data, screening)
 
 
-def render_error(ticker: str, transient: bool = False) -> None:
-    if transient:
+def render_error(
+    ticker: str,
+    transient: bool = False,
+    database_unavailable: bool = False,
+    cache_missing: bool = False,
+) -> None:
+    if database_unavailable:
+        message = (
+            "Local SEC database is currently unavailable. "
+            "Please verify <strong>DATABASE_URL</strong> and database connectivity."
+        )
+    elif cache_missing:
+        message = (
+            f"No cached SEC filing data is available yet for <strong>{ticker.upper()}</strong>. "
+            "Ask an admin to run the refresh job, then try again."
+        )
+    elif transient:
         message = (
             f"Market data for <strong>{ticker.upper()}</strong> is temporarily unavailable "
             "(data refresh or network issue). Wait 10-20 seconds and click "
@@ -1699,6 +1716,13 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
         status_text.markdown("✅ Done!")
         progress_bar.progress(100)
         time.sleep(0.3)
+    except CachedDataNotReadyError:
+        clear_results_for_error(ticker)
+        render_error(ticker, cache_missing=True)
+    except DatabaseUnavailableError:
+        fetch_stock_data_cached.clear()
+        clear_results_for_error(ticker)
+        render_error(ticker, database_unavailable=True)
     except TransientDataError:
         fetch_stock_data_cached.clear()
         clear_results_for_error(ticker)

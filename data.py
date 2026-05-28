@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from db import SessionLocal
@@ -16,6 +17,14 @@ LOGGER = logging.getLogger(__name__)
 
 class TransientDataError(Exception):
     """Temporary storage issue — callers can retry later."""
+
+
+class DatabaseUnavailableError(TransientDataError):
+    """Database is unreachable or missing required schema."""
+
+
+class CachedDataNotReadyError(Exception):
+    """Ticker has not been loaded into the local SEC cache yet."""
 
 
 def _is_valid_symbol(symbol: str) -> bool:
@@ -70,9 +79,23 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
     try:
         row = latest_cached_screen_row(session, normalized_symbol)
         if row is None:
-            return None
+            raise CachedDataNotReadyError(
+                f"No cached SEC data found for {normalized_symbol}.",
+            )
         company, filing, normalized, result = row
         return _build_stock_payload(company, filing, normalized, result)
+    except CachedDataNotReadyError:
+        raise
+    except (OperationalError, ProgrammingError) as exc:
+        LOGGER.exception("Database unavailable while reading cached stock data for %s", normalized_symbol)
+        raise DatabaseUnavailableError(
+            "Local SEC cache is unavailable. Configure DATABASE_URL and ensure tables exist.",
+        ) from exc
+    except SQLAlchemyError as exc:
+        LOGGER.exception("Database error while reading cached stock data for %s", normalized_symbol)
+        raise DatabaseUnavailableError(
+            "Local SEC cache query failed. Please check database connectivity and schema.",
+        ) from exc
     except Exception as exc:
         LOGGER.exception("Failed to fetch cached stock data for %s", normalized_symbol)
         raise TransientDataError(str(exc)) from exc
