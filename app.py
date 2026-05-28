@@ -364,6 +364,38 @@ IRIZQ_CSS = """
     color: #8A9BB0;
     margin: 0.8rem 0;
   }
+  .aaoifi-info-box details {
+    background-color: #162032;
+    border: 1px solid #2A3F55;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.45rem;
+  }
+  .aaoifi-info-box summary {
+    color: #C9A84C;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+  .aaoifi-info-box summary::-webkit-details-marker {
+    display: none;
+  }
+  .aaoifi-info-box summary::before {
+    content: ">";
+    display: inline-block;
+    margin-right: 0.4rem;
+    transition: transform 0.15s ease;
+  }
+  .aaoifi-info-box details[open] summary::before {
+    transform: rotate(90deg);
+  }
+  .aaoifi-info-copy {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin-top: 0.55rem;
+  }
 
   div[data-testid="stPopover"] button {
     background-color: transparent !important;
@@ -1346,6 +1378,22 @@ def render_feedback_small() -> None:
     )
 
 
+def render_aaoifi_box() -> None:
+    st.markdown(
+        """
+        <div class="aaoifi-info-box">
+          <details>
+            <summary>What is AAOIFI?</summary>
+            <div class="aaoifi-info-copy">
+              AAOIFI stands for <strong>Accounting and Auditing Organization for Islamic Financial Institutions</strong>.
+            </div>
+          </details>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_whatsapp_share(data: dict, screening: dict) -> None:
     symbol = str(data.get("symbol", "")).upper()
     company = _company_name(data)
@@ -1468,12 +1516,6 @@ def main() -> None:
 
     check_clicked = st.button("Check Status", type="primary", use_container_width=True)
 
-    with st.expander("What is AAOIFI?"):
-        st.markdown(
-            "AAOIFI stands for **Accounting and Auditing Organization for "
-            "Islamic Financial Institutions**."
-        )
-
     if check_clicked:
         if not ticker:
             st.markdown(
@@ -1495,6 +1537,7 @@ def main() -> None:
     elif not st.session_state.has_results:
         render_disclaimer()
 
+    render_aaoifi_box()
     render_feedback_small()
 
 
