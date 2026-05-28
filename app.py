@@ -128,6 +128,74 @@ PWA_HEAD = """
 <meta name="twitter:image" content="https://www.irizq.com/images/irizq_mobile.png">
 """
 
+STATIC_INDEX_SOCIAL_HEAD = """
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Halal Stock Checker | iRizq">
+    <meta name="description" content="Check if a stock aligns with Islamic principles.">
+
+    <!-- Open Graph / WhatsApp / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://halal-stock-checker-irizq.streamlit.app/">
+    <meta property="og:title" content="Halal Stock Checker | iRizq">
+    <meta property="og:description" content="Check if a stock aligns with Islamic principles.">
+    <meta property="og:image" content="https://www.irizq.com/images/irizq_mobile.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="iRizq.com">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Halal Stock Checker | iRizq">
+    <meta name="twitter:description" content="Check if a stock aligns with Islamic principles.">
+    <meta name="twitter:image" content="https://www.irizq.com/images/irizq_mobile.png">
+"""
+
+
+def patch_streamlit_index_metadata() -> None:
+    """Patch Streamlit's static index so crawlers see the app title/metadata."""
+    try:
+        import streamlit.file_util as streamlit_file_util
+    except Exception:
+        return
+
+    try:
+        index_path = os.path.join(streamlit_file_util.get_static_dir(), "index.html")
+        if not os.path.exists(index_path):
+            return
+
+        with open(index_path, "r", encoding="utf-8") as streamlit_index:
+            index_html = streamlit_index.read()
+    except OSError:
+        return
+
+    updated_html = index_html.replace(
+        "<title>Streamlit</title>",
+        "<title>Halal Stock Checker | iRizq</title>",
+        1,
+    )
+    has_social_meta = (
+        'property="og:title" content="Halal Stock Checker | iRizq"' in updated_html
+    )
+    if not has_social_meta and "</head>" in updated_html:
+        updated_html = updated_html.replace(
+            "</head>",
+            f"{STATIC_INDEX_SOCIAL_HEAD}\n  </head>",
+            1,
+        )
+
+    if updated_html == index_html:
+        return
+
+    try:
+        with open(index_path, "w", encoding="utf-8") as streamlit_index:
+            streamlit_index.write(updated_html)
+    except OSError:
+        return
+
+
+# Ensure social crawlers receive non-default Streamlit metadata from the root HTML.
+patch_streamlit_index_metadata()
+
 IRIZQ_CSS = """
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
