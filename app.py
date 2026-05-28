@@ -106,6 +106,26 @@ PWA_HEAD = """
 <meta name="theme-color" content="#0D1B2A">
 <link rel="apple-touch-icon" href="/static/icon.png">
 <link rel="manifest" href="/static/manifest.json">
+
+<!-- Primary Meta Tags -->
+<meta name="title" content="Halal Stock Checker | iRizq">
+<meta name="description" content="Check if a stock aligns with Islamic principles.">
+
+<!-- Open Graph / WhatsApp / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://halal-stock-checker-irizq.streamlit.app/">
+<meta property="og:title" content="Halal Stock Checker | iRizq">
+<meta property="og:description" content="Check if a stock aligns with Islamic principles.">
+<meta property="og:image" content="https://www.irizq.com/images/irizq_mobile.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="iRizq.com">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Halal Stock Checker | iRizq">
+<meta name="twitter:description" content="Check if a stock aligns with Islamic principles.">
+<meta name="twitter:image" content="https://www.irizq.com/images/irizq_mobile.png">
 """
 
 IRIZQ_CSS = """
@@ -1264,6 +1284,173 @@ def _render_glossary_card() -> None:
 
 
 def _render_details_tab(data: dict, screening: dict) -> None:
+    st.markdown(
+        """
+  <div style="
+    background-color: #1A2B3C;
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin: 0 0 1.2rem 0;
+    border: 1px solid #2A3F55;
+    border-left: 4px solid #C9A84C;
+  ">
+    <div style="
+      color: #C9A84C;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.2rem;
+    ">
+      Why AAOIFI Standard?
+    </div>
+    <div style="
+      color: #8A9BB0;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      margin-bottom: 1.2rem;
+    ">
+      The global benchmark for Islamic finance screening
+    </div>
+
+    <!-- Bullet 1 -->
+    <div style="
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      align-items: flex-start;
+    ">
+      <span style="font-size: 1.2rem; line-height: 1;">🌍</span>
+      <div>
+        <div style="
+          color: #F5F5F5;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.92rem;
+          margin-bottom: 0.2rem;
+        ">Used in 45+ countries worldwide</div>
+        <div style="
+          color: #8A9BB0;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+          line-height: 1.5;
+        ">AAOIFI standards are adopted by regulators, financial
+        institutions, and Islamic banks across 45+ countries
+        including Bahrain, UAE, Pakistan, Sudan, and Malaysia.</div>
+      </div>
+    </div>
+
+    <!-- Bullet 2 -->
+    <div style="
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      align-items: flex-start;
+    ">
+      <span style="font-size: 1.2rem; line-height: 1;">👨‍🏫</span>
+      <div>
+        <div style="
+          color: #F5F5F5;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.92rem;
+          margin-bottom: 0.2rem;
+        ">Defined by leading Islamic finance scholars</div>
+        <div style="
+          color: #8A9BB0;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+          line-height: 1.5;
+        ">Developed and maintained by an international board of
+        recognized Shariah scholars with decades of expertise in
+        Islamic jurisprudence and modern finance.</div>
+      </div>
+    </div>
+
+    <!-- Bullet 3 -->
+    <div style="
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      align-items: flex-start;
+    ">
+      <span style="font-size: 1.2rem; line-height: 1;">🏆</span>
+      <div>
+        <div style="
+          color: #F5F5F5;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.92rem;
+          margin-bottom: 0.2rem;
+        ">Most widely used standard in the Islamic world</div>
+        <div style="
+          color: #8A9BB0;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+          line-height: 1.5;
+        ">The most broadly accepted halal screening methodology
+        globally, making it the most relevant choice for Muslim
+        investors anywhere in the world.</div>
+      </div>
+    </div>
+
+    <!-- Bullet 4 -->
+    <div style="
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+      align-items: flex-start;
+    ">
+      <span style="font-size: 1.2rem; line-height: 1;">🔒</span>
+      <div>
+        <div style="
+          color: #F5F5F5;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.92rem;
+          margin-bottom: 0.2rem;
+        ">Among the most rigorous and restrictive</div>
+        <div style="
+          color: #8A9BB0;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+          line-height: 1.5;
+        ">Applies strict financial thresholds — 33% debt ratio
+        and 5% non-permissible income limit — making it one of
+        the most conservative and trustworthy screening
+        frameworks available.</div>
+      </div>
+    </div>
+
+    <!-- Bullet 5 -->
+    <div style="
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+    ">
+      <span style="font-size: 1.2rem; line-height: 1;">📜</span>
+      <div>
+        <div style="
+          color: #F5F5F5;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.92rem;
+          margin-bottom: 0.2rem;
+        ">Recognized by major Islamic financial institutions</div>
+        <div style="
+          color: #8A9BB0;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+          line-height: 1.5;
+        ">Adopted by hundreds of Islamic banks, takaful operators,
+        and investment firms worldwide as the gold standard for
+        Shariah-compliant finance.</div>
+      </div>
+    </div>
+
+  </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown('''<div class="overview-card"><div class="card-title">How iRizq Screens Stocks</div><div class="muted-copy">iRizq applies an AAOIFI-style screen using available business activity information and financial ratios such as debt, cash, and income ratios. This app uses available market data only, so results are educational and should be reviewed with qualified guidance.</div><div style="margin-top:0.7rem;"><a href="https://aaoifi.com" target="_blank" style="color:#C9A84C;text-decoration:none;">Learn more about AAOIFI standards →</a></div></div>''', unsafe_allow_html=True)
     st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ Company profile</div><div class="muted-copy">✅ Income statement</div><div class="muted-copy">✅ Balance sheet</div><div class="muted-copy">✅ Cash flow statement</div><div class="muted-copy">✅ News feed</div></div>''', unsafe_allow_html=True)
     st.markdown('''<div class="overview-card"><div class="card-title">What is NOT Included</div><div class="muted-copy">❌ SEC 10-K / 10-Q filings</div><div class="muted-copy">❌ Segment revenue breakdowns</div><div class="muted-copy">❌ Subsidiary analysis</div><div class="muted-copy">❌ Verified geopolitical data</div><div class="muted-copy">❌ ESG scores</div><div class="muted-copy">❌ Shariah board certifications</div></div>''', unsafe_allow_html=True)
@@ -1486,7 +1673,7 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Halal Stock Checker | iRizq.com",
+        page_title="Halal Stock Checker | iRizq",
         page_icon="static/icon.png",
         layout="centered",
     )
