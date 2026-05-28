@@ -37,6 +37,9 @@ SEC_USER_AGENT="HalalStockChecker your@email.com"
 SEC_TIMEOUT_SECONDS=20
 SEC_RATE_LIMIT_PER_SECOND=5
 SEC_MAX_RETRIES=4
+FMP_API_KEY=your-fmp-api-key
+FMP_BASE_URL=https://financialmodelingprep.com/api
+FMP_TIMEOUT_SECONDS=15
 REFRESH_CRON_DAY_OF_WEEK=sun
 REFRESH_CRON_HOUR_UTC=3
 REFRESH_CRON_MINUTE_UTC=0
@@ -52,6 +55,7 @@ SEC filings index
   -> latest 10-Q / 10-K
   -> SEC company facts
   -> normalize tags + TTM calculations
+  -> market cap fallback (FMP) when SEC market cap is unavailable/stale
   -> PostgreSQL (raw + normalized + halal result tables)
   -> Streamlit UI / API reads cached results
 ```
