@@ -1,4 +1,4 @@
-"""Nightly stock price update job: SEC shares + Stooq prices."""
+"""Scheduled cache maintenance: SEC shares refresh + lazy price mode."""
 
 from __future__ import annotations
 
@@ -11,20 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from db import SessionLocal
-from services.market_cap_calculator import calculate_and_store_market_caps
 from services.sec_fetcher import fetch_and_store_sec_shares
-from services.stooq_fetcher import (
-    download_stooq_zip,
-    extract_latest_prices,
-    fetch_latest_prices_for_tickers,
-)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -106,42 +99,17 @@ async def run_nightly_update() -> dict[str, Any]:
         else:
             logger.info("Skipping SEC refresh (not Sunday)")
 
-        prices: dict[str, Any] = {}
-        try:
-            logger.info("Downloading stooq price data...")
-            zip_bytes = await download_stooq_zip()
-            logger.info("Stooq zip downloaded successfully")
-
-            logger.info("Extracting latest closing prices...")
-            prices = await extract_latest_prices(zip_bytes)
-            logger.info("Extracted prices for %s tickers", len(prices))
-        except Exception:
-            logger.error("Stooq bulk zip flow failed; switching to quote API fallback", exc_info=True)
-            ticker_rows = await db_conn.fetch(
-                """
-                SELECT ticker
-                FROM sec_shares
-                WHERE shares_outstanding IS NOT NULL
-                ORDER BY ticker ASC
-                """
-            )
-            tickers = [str(row["ticker"]).upper().strip() for row in ticker_rows if row.get("ticker")]
-            if not tickers:
-                raise RuntimeError("No tickers available in sec_shares for stooq fallback fetch.")
-            prices = await fetch_latest_prices_for_tickers(tickers)
-            logger.info("Fallback stooq extraction returned %s tickers", len(prices))
-
-        if not prices:
-            raise RuntimeError("No prices extracted from stooq payload.")
-
-        logger.info("Calculating market caps and storing...")
-        result = await calculate_and_store_market_caps(db_conn, prices)
-        logger.info("Market cap result: %s", result)
+        logger.info("Bulk price fetch disabled; prices refresh lazily per ticker via yfinance cache-aside.")
 
         end = datetime.now()
         duration = int((end - start).total_seconds())
         logger.info("=== Nightly update complete in %ss ===", duration)
-        return {"status": "success", "duration_seconds": duration, **result}
+        return {
+            "status": "success",
+            "duration_seconds": duration,
+            "price_mode": "lazy-per-ticker-yfinance",
+            "stored": 0,
+        }
 
     except Exception as exc:
         logger.error("Nightly update FAILED: %s", exc, exc_info=True)

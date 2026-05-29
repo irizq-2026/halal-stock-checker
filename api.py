@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from datetime import datetime
 from typing import Any
@@ -15,6 +16,7 @@ from jobs.nightly_price_update import get_db_connection, run_nightly_update
 from logging_setup import configure_logging
 from scheduler import start_scheduler
 from sec_refresh import latest_cached_screen_row, refresh_single_ticker, weekly_sec_refresh
+from services.yfinance_price_cache import get_cached_or_refresh_price_row
 
 configure_logging()
 
@@ -177,43 +179,24 @@ async def job_status() -> dict[str, Any]:
 @jobs_router.get("/market-cap/{ticker}")
 async def get_market_cap(ticker: str) -> dict[str, Any]:
     """
-    Returns the most recent market cap for a ticker.
-    Used by halal stock screener instead of yfinance.
+    Returns most recent market-cap inputs for a ticker.
+    Uses DB-first cache with per-ticker yfinance refresh fallback.
     """
     normalized_ticker = ticker.upper().strip()
-    db_conn = await get_db_connection()
-    try:
-        row = await db_conn.fetchrow(
-            """
-            SELECT
-                ticker,
-                close_price,
-                price_date,
-                shares_outstanding,
-                market_cap,
-                updated_at
-            FROM stock_prices
-            WHERE ticker = :ticker
-            ORDER BY price_date DESC
-            LIMIT 1
-            """,
-            {"ticker": normalized_ticker},
+    row = await asyncio.to_thread(get_cached_or_refresh_price_row, normalized_ticker)
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No price data found for {normalized_ticker}",
         )
-        if not row:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No price data found for {normalized_ticker}",
-            )
-        return {
-            "ticker": row["ticker"],
-            "close_price": float(row["close_price"]) if row["close_price"] is not None else None,
-            "price_date": str(row["price_date"]),
-            "shares_outstanding": row["shares_outstanding"],
-            "market_cap": float(row["market_cap"]) if row["market_cap"] is not None else None,
-            "updated_at": str(row["updated_at"]),
-        }
-    finally:
-        await db_conn.close()
+    return {
+        "ticker": row["ticker"],
+        "close_price": float(row["close_price"]) if row["close_price"] is not None else None,
+        "price_date": str(row["price_date"]),
+        "shares_outstanding": row["shares_outstanding"],
+        "market_cap": float(row["market_cap"]) if row["market_cap"] is not None else None,
+        "updated_at": str(row["updated_at"]),
+    }
 
 
 app.include_router(jobs_router)
