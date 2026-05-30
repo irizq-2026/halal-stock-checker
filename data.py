@@ -84,6 +84,10 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
                 f"No cached SEC data found for {normalized_symbol}.",
             )
         company, filing, normalized, result = row
+        if (result.data_source or "").strip().lower() == "sec_placeholder":
+            raise CachedDataNotReadyError(
+                f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
+            )
         payload = _build_stock_payload(company, filing, normalized, result)
         if payload.get("market_cap") in (None, 0):
             latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
