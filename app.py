@@ -10,7 +10,6 @@ from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from data import (
     CachedDataNotReadyError,
@@ -336,6 +335,37 @@ IRIZQ_CSS = """
     color: #8A9BB0;
     font-size: 0.8rem;
     padding: 0.72rem 0.9rem;
+  }
+  [class*="st-key-autocomplete_select_"] button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #F5F5F5 !important;
+    text-align: left !important;
+    width: 100% !important;
+    padding: 0.72rem 0.9rem !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #24384d !important;
+  }
+  [class*="st-key-autocomplete_select_"] button:hover {
+    background-color: #203046 !important;
+  }
+  [class*="st-key-autocomplete_select_"] button p {
+    white-space: pre-line !important;
+    line-height: 1.25 !important;
+    color: #F5F5F5 !important;
+    font-weight: 700 !important;
+    font-size: 0.93rem !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+  [class*="st-key-autocomplete_select_"] + div .autocomplete-item-name {
+    margin-top: -0.38rem;
+    margin-bottom: 0.38rem;
+    padding: 0 0.9rem;
+  }
+  [class*="st-key-autocomplete_select_"]:last-of-type button {
+    border-bottom: none !important;
   }
   .autocomplete-spacer {
     height: 16rem;
@@ -2182,72 +2212,55 @@ def _sync_autocomplete_state(raw_query: str) -> None:
     st.session_state.is_dropdown_open = True
 
 
+def _select_ticker_from_autocomplete(ticker: str) -> None:
+    selected = (ticker or "").strip().upper()
+    if not selected:
+        return
+    st.session_state.resolved_ticker = selected
+    st.session_state.pending_selection_ticker = selected
+    st.session_state.ticker_input_prefill = selected
+    st.session_state.is_dropdown_open = False
+    st.session_state.filtered_results = []
+    st.rerun()
+
+
+def _on_search_input_change() -> None:
+    raw = str(st.session_state.get("ticker_input_widget", "") or "")
+    st.session_state.ticker_input = raw
+    _sync_autocomplete_state(raw)
+
+
 def _render_autocomplete_dropdown() -> None:
     if not st.session_state.get("is_dropdown_open"):
         return
     filtered = st.session_state.get("filtered_results") or []
-    if filtered:
-        items_html = "".join(
-            (
-                f'<a class="autocomplete-item" href="?selected_stock={quote(stock["ticker"])}">'
-                f'<div class="autocomplete-item-symbol">{html.escape(stock["ticker"])}</div>'
-                f'<div class="autocomplete-item-name">{html.escape(stock["company_name"])}</div>'
-                "</a>"
-            )
-            for stock in filtered
-        )
-    else:
-        items_html = (
-            '<div class="autocomplete-empty">'
-            "No matches in the current local stock universe."
-            "</div>"
-        )
     suggestion_count = max(len(filtered), 1)
     spacer_height_rem = min(16.0, max(4.1, 3.1 * suggestion_count))
+    st.markdown('<div class="autocomplete-anchor"><div class="autocomplete-dropdown">', unsafe_allow_html=True)
+    if filtered:
+        for stock in filtered:
+            ticker = stock["ticker"]
+            company_name = stock["company_name"]
+            if st.button(
+                f"{ticker}\n",
+                key=f"autocomplete_select_{ticker}",
+                use_container_width=True,
+            ):
+                _select_ticker_from_autocomplete(ticker)
+            st.markdown(
+                f'<div class="autocomplete-item-name">{html.escape(company_name)}</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(
+            '<div class="autocomplete-empty">No matches in the current local stock universe.</div>',
+            unsafe_allow_html=True,
+        )
     st.markdown(
-        (
-            '<div class="autocomplete-anchor">'
-            f'<div id="irizq-autocomplete-dropdown" class="autocomplete-dropdown">{items_html}</div>'
-            "</div>"
-            f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>'
-        ),
+        '</div></div>'
+        f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>',
         unsafe_allow_html=True,
     )
-    components.html(
-        """
-        <script>
-        const parentDoc = window.parent && window.parent.document;
-        if (parentDoc && parentDoc.body && !parentDoc.body.dataset.irizqAutocompleteBound) {
-          parentDoc.body.dataset.irizqAutocompleteBound = "1";
-          parentDoc.addEventListener("pointerdown", (event) => {
-            const dropdown = parentDoc.getElementById("irizq-autocomplete-dropdown");
-            if (!dropdown) return;
-            const searchInput = parentDoc.querySelector('[data-testid="stTextInput"]');
-            const clickedInsideDropdown = dropdown.contains(event.target);
-            const clickedInsideInput = searchInput && searchInput.contains(event.target);
-            if (!clickedInsideDropdown && !clickedInsideInput) {
-              dropdown.style.display = "none";
-            }
-          }, true);
-        }
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
-
-
-def _consume_selected_stock_from_query_params() -> str | None:
-    selected = st.query_params.get("selected_stock")
-    if not selected:
-        return None
-    selected_value = selected[0] if isinstance(selected, list) else selected
-    try:
-        del st.query_params["selected_stock"]
-    except Exception:
-        pass
-    resolved = _resolve_ticker_from_search_query(str(selected_value))
-    return resolved
 
 
 def initialize_session_state() -> None:
@@ -2256,8 +2269,12 @@ def initialize_session_state() -> None:
         "screening": None,
         "last_ticker": "",
         "ticker_input": "",
+        "ticker_input_widget": "",
+        "ticker_input_prefill": "",
         "filtered_results": [],
         "is_dropdown_open": False,
+        "resolved_ticker": "",
+        "pending_selection_ticker": "",
         "tabs_reset_token": 0,
         "has_results": False,
     }
@@ -2350,23 +2367,30 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    selected_from_dropdown = _consume_selected_stock_from_query_params()
-    if selected_from_dropdown:
-        st.session_state.ticker_input = selected_from_dropdown
-        st.session_state.is_dropdown_open = False
-        st.session_state.filtered_results = []
+    if st.session_state.get("ticker_input_prefill"):
+        prefill_value = str(st.session_state.get("ticker_input_prefill") or "")
+        st.session_state.ticker_input_widget = prefill_value
+        st.session_state.ticker_input = prefill_value
+        st.session_state.ticker_input_prefill = ""
+
+    pending_selection = str(st.session_state.get("pending_selection_ticker") or "")
+    if pending_selection:
+        st.session_state.pending_selection_ticker = ""
         if (
-            selected_from_dropdown != st.session_state.last_ticker
+            pending_selection != st.session_state.last_ticker
             or not st.session_state.has_results
         ):
-            run_screening_flow(selected_from_dropdown)
+            run_screening_flow(pending_selection)
 
-    search_query = st.text_input(
+    st.text_input(
         "Search by Ticker or Company Name:",
         placeholder="e.g. AAPL or Apple Inc.",
         label_visibility="visible",
-        key="ticker_input",
-    ).strip()
+        key="ticker_input_widget",
+        on_change=_on_search_input_change,
+    )
+    search_query = str(st.session_state.get("ticker_input_widget", "") or "").strip()
+    st.session_state.ticker_input = search_query
 
     _sync_autocomplete_state(search_query)
     _render_autocomplete_dropdown()
@@ -2383,6 +2407,7 @@ def main() -> None:
             )
         else:
             resolved_ticker = _resolve_ticker_from_search_query(search_query)
+            st.session_state.resolved_ticker = resolved_ticker or ""
             if not resolved_ticker:
                 st.markdown(
                     '<div class="info-msg">No local compliance profile match was found. '
@@ -2393,7 +2418,6 @@ def main() -> None:
                 resolved_ticker != st.session_state.last_ticker
                 or not st.session_state.has_results
             ):
-                st.session_state.ticker_input = resolved_ticker
                 run_screening_flow(resolved_ticker)
             else:
                 st.markdown(
