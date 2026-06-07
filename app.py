@@ -706,39 +706,42 @@ IRIZQ_CSS = """
     color: #8A9BB0;
     font-style: italic;
   }
-  .calc-tree-section {
+  .calc-breakdown-box {
     background-color: #162032;
     border: 1px solid #2A3F55;
     border-radius: 10px;
-    padding: 0.7rem 0.75rem;
-    margin: 0.7rem 0;
+    padding: 0.55rem 0.7rem;
+    margin: 0.45rem 0 0.25rem 0;
   }
-  .calc-tree-title {
-    color: #C9A84C;
-    font-weight: 700;
-    font-size: 0.84rem;
-    margin-bottom: 0.45rem;
-  }
-  .calc-tree-row {
+  .calc-breakdown-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: 0.8rem;
-    margin: 0.18rem 0;
+    margin: 0.16rem 0;
   }
-  .calc-tree-label {
+  .calc-breakdown-label {
     color: #F5F5F5;
     font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+    white-space: normal;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
-  .calc-tree-value {
+  .calc-breakdown-value {
     color: #8A9BB0;
     font-size: 0.8rem;
     font-weight: 600;
     flex-shrink: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-breakdown-indent-1 {
+    margin-left: 1rem;
+  }
+  .calc-result-line {
+    color: #F5F5F5;
+    font-size: 0.82rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
   .calc-footer-advisory {
@@ -762,8 +765,9 @@ IRIZQ_CSS = """
     line-height: 1.4;
   }
   @media (max-width: 480px) {
-    .calc-tree-label,
-    .calc-tree-value {
+    .calc-breakdown-label,
+    .calc-breakdown-value,
+    .calc-result-line {
       font-size: 0.74rem;
     }
     .calc-footer-advisory,
@@ -1274,6 +1278,25 @@ def _format_money_calc(value: object) -> str:
     return f"{sign}${amount:.2f}"
 
 
+def _format_units_count(value: object) -> str:
+    amount = _calc_float(value)
+    if amount is None:
+        return NOT_AVAILABLE
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    if amount == 0:
+        return "0"
+    if amount >= 1_000_000_000_000:
+        return f"{sign}{amount / 1_000_000_000_000:.2f}T"
+    if amount >= 1_000_000_000:
+        return f"{sign}{amount / 1_000_000_000:.2f}B"
+    if amount >= 1_000_000:
+        return f"{sign}{amount / 1_000_000:.2f}M"
+    if amount >= 1_000:
+        return f"{sign}{amount:,.0f}"
+    return f"{sign}{amount:.0f}"
+
+
 def _nested_component_map(data: dict) -> dict[str, dict]:
     mapped_tags = ((data.get("_data_source") or {}).get("mapped_tags") or {})
     components = (mapped_tags.get("components") if isinstance(mapped_tags, dict) else None) or {}
@@ -1306,16 +1329,38 @@ def _nested_component_map(data: dict) -> dict[str, dict]:
     }
 
 
-def _calc_row_html(label: str, value: object) -> str:
+def _calc_row_html(label: str, value: object, *, depth: int = 0, units: bool = False) -> str:
+    value_label = _format_units_count(value) if units else _format_money_calc(value)
+    indent_cls = " calc-breakdown-indent-1" if depth > 0 else ""
     return (
-        '<div class="calc-tree-row">'
-        f'<span class="calc-tree-label">{html.escape(label)}</span>'
-        f'<span class="calc-tree-value">{html.escape(_format_money_calc(value))}</span>'
+        f'<div class="calc-breakdown-row{indent_cls}">'
+        f'<span class="calc-breakdown-label">{html.escape(label)}</span>'
+        f'<span class="calc-breakdown-value">{html.escape(value_label)}</span>'
         "</div>"
     )
 
 
-def _render_calculation_tree(data: dict, screening: dict) -> None:
+def _render_calc_rows(rows: list[dict[str, object]]) -> None:
+    body = "".join(
+        _calc_row_html(
+            str(row.get("label") or ""),
+            row.get("value"),
+            depth=int(row.get("depth") or 0),
+            units=bool(row.get("units")),
+        )
+        for row in rows
+    )
+    st.markdown(f'<div class="calc-breakdown-box">{body}</div>', unsafe_allow_html=True)
+
+
+def _calculation_details_for_metric(
+    data: dict,
+    metric: str,
+    numerator: float | None,
+    denominator: float | None,
+    numerator_label: str,
+    denominator_label: str,
+) -> tuple[str, list[dict[str, object]], str, list[dict[str, object]]]:
     components = _nested_component_map(data)
     valuation = components["valuation"]
     debt = components["debt"]
@@ -1355,70 +1400,91 @@ def _render_calculation_tree(data: dict, screening: dict) -> None:
             + (_calc_float(purging.get("equity_investment_dividends")) or 0.0)
         )
 
-    valuation_block = "".join(
-        [
-            _calc_row_html(valuation.get("baseline_label") or "Market Cap Baseline", data.get("market_cap")),
-            _calc_row_html("├── Shares Outstanding", valuation.get("shares_outstanding")),
-            _calc_row_html("└── Latest Closing Price", valuation.get("latest_closing_price")),
+    numerator_rows: list[dict[str, object]]
+    denominator_rows: list[dict[str, object]]
+    numerator_title = numerator_label
+    denominator_title = denominator_label
+
+    if metric == "debt":
+        numerator_title = "Total Debt"
+        denominator_title = "Market Cap"
+        numerator_rows = [
+            {"label": "Total Borrowed Capital", "value": debt.get("total_borrowed_capital", numerator)},
+            {"label": "Short-Term Borrowings", "value": short_term_borrowings},
+            {"label": "Commercial Paper", "value": debt.get("commercial_paper"), "depth": 1},
+            {"label": "Short-Term Notes Pay", "value": debt.get("short_term_notes_pay"), "depth": 1},
+            {"label": "Long-Term Borrowings", "value": long_term_borrowings},
+            {"label": "Current Long-Term Debt", "value": debt.get("current_long_term_debt"), "depth": 1},
+            {"label": "Noncurrent Debt Obligations", "value": debt.get("noncurrent_debt_obligations"), "depth": 1},
         ]
-    )
-    debt_block = "".join(
-        [
-            _calc_row_html("Total Borrowed Capital", debt.get("total_borrowed_capital")),
-            _calc_row_html("├── Short-Term Borrowings", short_term_borrowings),
-            _calc_row_html("│   ├── Commercial Paper", debt.get("commercial_paper")),
-            _calc_row_html("│   └── Short-Term Notes Pay", debt.get("short_term_notes_pay")),
-            _calc_row_html("└── Long-Term Borrowings", long_term_borrowings),
-            _calc_row_html("    ├── Current Long-Term Debt", debt.get("current_long_term_debt")),
-            _calc_row_html("    └── Noncurrent Debt Obligations", debt.get("noncurrent_debt_obligations")),
+    elif metric == "cash":
+        numerator_title = "Total Cash"
+        denominator_title = "Market Cap"
+        numerator_rows = [
+            {"label": "Total Interest-Earning Pools", "value": liquid.get("total_interest_earning_pools", numerator)},
+            {"label": "Cash & Cash Equivalents", "value": cash_and_equivalents},
+            {"label": "Bank Accounts / Cash", "value": liquid.get("bank_cash"), "depth": 1},
+            {"label": "Restricted Cash Reserves", "value": liquid.get("restricted_cash_reserves"), "depth": 1},
+            {"label": "Marketable Debt Securities", "value": marketable_pools},
+            {"label": "Short-Term Securities", "value": liquid.get("short_term_securities"), "depth": 1},
+            {"label": "Long-Term Bonds & Paper", "value": liquid.get("long_term_bonds_paper"), "depth": 1},
         ]
-    )
-    liquid_block = "".join(
-        [
-            _calc_row_html("Total Interest-Earning Pools", liquid.get("total_interest_earning_pools")),
-            _calc_row_html("├── Cash & Cash Equivalents", cash_and_equivalents),
-            _calc_row_html("│   ├── Bank Accounts / Cash", liquid.get("bank_cash")),
-            _calc_row_html("│   └── Restricted Cash Reserves", liquid.get("restricted_cash_reserves")),
-            _calc_row_html("└── Marketable Debt Securities", marketable_pools),
-            _calc_row_html("    ├── Short-Term Securities", liquid.get("short_term_securities")),
-            _calc_row_html("    └── Long-Term Bonds & Paper", liquid.get("long_term_bonds_paper")),
+    else:
+        numerator_title = "Total Annual Prohibited Revenue"
+        denominator_title = "Total Revenue"
+        numerator_rows = [
+            {"label": "Total Annual Prohibited Revenue", "value": purging.get("total_annual_prohibited_revenue", numerator)},
+            {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
+            {"label": "Passive Financial Yield", "value": passive_yield},
+            {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
+            {"label": "Equity Investment Dividends", "value": purging.get("equity_investment_dividends"), "depth": 1},
         ]
-    )
-    purging_block = "".join(
-        [
-            _calc_row_html("Total Annual Prohibited Revenue", purging.get("total_annual_prohibited_revenue")),
-            _calc_row_html("├── Core Prohibited Operations", purging.get("core_prohibited_operations")),
-            _calc_row_html("└── Passive Financial Yield", passive_yield),
-            _calc_row_html("    ├── Non-Operating Cash Interest", purging.get("non_operating_cash_interest")),
-            _calc_row_html("    └── Equity Investment Dividends", purging.get("equity_investment_dividends")),
+
+    baseline_label = valuation.get("baseline_label") or "Market Cap Baseline"
+    denominator_rows = [
+        {"label": baseline_label, "value": denominator if denominator is not None else data.get("market_cap")},
+        {"label": "Shares Outstanding", "value": valuation.get("shares_outstanding"), "depth": 1, "units": True},
+        {"label": "Latest Closing Price", "value": valuation.get("latest_closing_price"), "depth": 1},
+    ]
+    if metric == "income":
+        denominator_rows = [
+            {"label": "Total Revenue Baseline", "value": purging.get("total_revenue_baseline", denominator)},
         ]
+
+    return numerator_title, numerator_rows, denominator_title, denominator_rows
+
+
+def _result_line(numerator: float | None, denominator: float | None, ratio: float | None) -> str:
+    if ratio is None:
+        return f"Result: {NOT_AVAILABLE} = {_format_money_calc(numerator)} / {_format_money_calc(denominator)}"
+    return (
+        f"Result: {ratio * 100:.2f}% = {_format_money_calc(numerator)} / {_format_money_calc(denominator)}"
     )
 
-    _, _, income_ratio = _metric_data(data, "income")
-    ratio_pct = 0.0 if income_ratio is None else max(income_ratio * 100, 0.0)
-    donation = ratio_pct
-    company = _company_name(data)
-    advisory = (
-        f"Because {ratio_pct:.2f}% of {company}'s top-line revenue is derived from interest, "
-        f"Shariah standards advise donating ${donation:.2f} out of every $100 you receive in "
-        "dividends to purify your income or profit."
-    )
 
+def _render_metric_calculation(
+    data: dict,
+    metric: str,
+    numerator: float | None,
+    denominator: float | None,
+    ratio: float | None,
+    numerator_label: str,
+    denominator_label: str,
+) -> None:
+    numerator_title, numerator_rows, denominator_title, denominator_rows = _calculation_details_for_metric(
+        data,
+        metric,
+        numerator,
+        denominator,
+        numerator_label,
+        denominator_label,
+    )
+    with st.expander(f"Numerator: {numerator_title} = {_format_money_calc(numerator)}", expanded=False):
+        _render_calc_rows(numerator_rows)
+    with st.expander(f"Denominator: {denominator_title} = {_format_money_calc(denominator)}", expanded=False):
+        _render_calc_rows(denominator_rows)
     st.markdown(
-        (
-            '<div class="calc-tree-section"><div class="calc-tree-title">📊 1. VALUATION DENOMINATOR</div>'
-            f"{valuation_block}</div>"
-            '<div class="calc-tree-section"><div class="calc-tree-title">🛑 2. RATIO 1: INTEREST-BEARING DEBT</div>'
-            f"{debt_block}</div>"
-            '<div class="calc-tree-section"><div class="calc-tree-title">💧 3. RATIO 2: LIQUID ASSETS</div>'
-            f"{liquid_block}</div>"
-            '<div class="calc-tree-section"><div class="calc-tree-title">💵 4. RATIO 3: PURGING REVENUE</div>'
-            f"{purging_block}</div>"
-            f'<div class="calc-footer-advisory">🧼 <strong>Your Purification Estimator</strong><br>{html.escape(advisory)}</div>'
-            '<div class="calc-footer-note">⚠️ Note: Calculations can vary compared to other Halal stock '
-            "screeners depending on the specific accounting data points they choose to include. "
-            "Our platform's calculations strictly adhere to the AAOIFI compliance frameworks.</div>"
-        ),
+        f'<div class="calc-result-line">{html.escape(_result_line(numerator, denominator, ratio))}</div>',
         unsafe_allow_html=True,
     )
 
@@ -1445,7 +1511,15 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
           <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}
         </div>''', unsafe_allow_html=True)
     with st.expander("View Calculation"):
-        _render_calculation_tree(data, st.session_state.screening or {})
+        _render_metric_calculation(
+            data,
+            metric,
+            numerator,
+            denominator,
+            ratio,
+            numerator_label,
+            denominator_label,
+        )
 
 
 def _plain_english_financial_summary(data: dict, screening: dict) -> str:
@@ -1469,11 +1543,48 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
     return f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
 
 
+def _render_purification_estimator_card(data: dict, screening: dict) -> None:
+    company = _company_name(data)
+    interest_income = _calc_float(data.get("interest_income"))
+    _, _, income_ratio = _metric_data(data, "income")
+    if (interest_income or 0.0) > 0 and income_ratio is not None and income_ratio > 0:
+        ratio_pct = income_ratio * 100
+        donation = ratio_pct
+        body = (
+            f"Because {ratio_pct:.2f}% of {company}'s top-line revenue is derived from interest, "
+            f"Shariah standards advise donating ${donation:.2f} out of every $100 you receive in "
+            "dividends to purify your income or profit."
+        )
+    else:
+        body = (
+            "No interest income was found in the available data. Please review the income statement in detail, "
+            "as it is sometimes reported differently, to ensure no purification is needed."
+        )
+    st.markdown(
+        f'<div class="plain-english"><strong>Your Purification Estimator</strong><br>{html.escape(body)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_methodology_notice_card() -> None:
+    st.markdown(
+        (
+            '<div class="plain-english"><strong>Methodology Notice</strong><br>'
+            "Note: Calculations can vary compared to other Halal stock screeners depending on the "
+            "specific accounting data points they choose to include. Our platform's calculations "
+            "strictly adhere to the AAOIFI compliance frameworks.</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def _render_financial_tab(data: dict, screening: dict) -> None:
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
+    _render_purification_estimator_card(data, screening)
     st.markdown(f'<div class="plain-english"><strong>Summary</strong><br>{html.escape(_plain_english_financial_summary(data, screening))}</div>', unsafe_allow_html=True)
+    _render_methodology_notice_card()
 
 
 def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
