@@ -34,10 +34,10 @@ class Settings:
     )
     sec_user_agent: str = os.getenv(
         "SEC_USER_AGENT",
-        "HalalStockChecker support@example.com",
+        "iRizq Stock Checker salam@iRizq.com",
     )
     sec_timeout_seconds: float = _env_float("SEC_TIMEOUT_SECONDS", 20.0)
-    sec_rate_limit_per_second: float = _env_float("SEC_RATE_LIMIT_PER_SECOND", 5.0)
+    sec_rate_limit_per_second: float = _env_float("SEC_RATE_LIMIT_PER_SECOND", 10.0)
     sec_max_retries: int = _env_int("SEC_MAX_RETRIES", 4)
     fmp_api_key: str = os.getenv("FMP_API_KEY", "")
     fmp_base_url: str = os.getenv("FMP_BASE_URL", "https://financialmodelingprep.com/api")
