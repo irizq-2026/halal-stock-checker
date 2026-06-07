@@ -646,7 +646,7 @@ IRIZQ_CSS = """
     .stTabs [data-baseweb="tab"] {
       flex: 1 1 0 !important;
       min-width: 0 !important;
-      max-width: 33.33% !important;
+      max-width: 25% !important;
       padding: 0.55rem 0.25rem !important;
       min-height: 40px !important;
     }
@@ -1332,7 +1332,14 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
         financial_kind, financial_label = "questionable", "QUESTIONABLE"
     else:
         financial_kind, financial_label = "pass", "HALAL"
-    rows = [("Business Activity", _pill("HALAL" if business_kind == "pass" else "NOT HALAL" if business_kind == "fail" else "QUESTIONABLE", business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(_display_result(data, screening)))]
+    ethical_flags = _ethical_flag_count(data)
+    ethical_badge = _pill(f"{ethical_flags} Flags", "questionable") if ethical_flags > 0 else _pill("Clear", "pass")
+    rows = [
+        ("Business Activity", _pill("HALAL" if business_kind == "pass" else "NOT HALAL" if business_kind == "fail" else "QUESTIONABLE", business_kind)),
+        ("Financial Screening", _pill(financial_label, financial_kind)),
+        ("Ethical Insights", ethical_badge),
+        ("Overall", _status_badge(_display_result(data, screening))),
+    ]
     body = "".join(f'<div class="glance-row"><span class="glance-label">{html.escape(label)}</span>{badge}</div>' for label, badge in rows)
     st.markdown(f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>', unsafe_allow_html=True)
 
@@ -1739,6 +1746,78 @@ def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
     return None
 
 
+def _to_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return False
+
+
+def _ethical_insights_payload(data: dict) -> dict[str, object]:
+    raw = data.get("ethical_insights")
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "official_bds": _to_bool(raw.get("official_bds")),
+        "afsc": _to_bool(raw.get("afsc")),
+        "un_ohchr": _to_bool(raw.get("un_ohchr")),
+        "who_profits": _to_bool(raw.get("who_profits")),
+        "sources_reviewed": raw.get("sources_reviewed"),
+    }
+
+
+def _ethical_flag_count(data: dict) -> int:
+    insights = _ethical_insights_payload(data)
+    return sum(
+        1
+        for key in ("official_bds", "afsc", "un_ohchr", "who_profits")
+        if insights.get(key)
+    )
+
+
+def _render_ethical_insights_section(data: dict) -> None:
+    insights = _ethical_insights_payload(data)
+    rows = [
+        ("Official BDS Target", "official_bds"),
+        ("AFSC Investigate Database", "afsc"),
+        ("UN OHCHR Database", "un_ohchr"),
+        ("Who Profits Database", "who_profits"),
+    ]
+    tooltip = "Based on publicly available ethical databases"
+    row_html = "".join(
+        (
+            '<div class="glance-row">'
+            f'<span class="glance-label">{html.escape(label)} <span title="{html.escape(tooltip)}" '
+            'style="color:#8A9BB0;font-weight:600;">ⓘ</span></span>'
+            f'{_pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Not Listed", "pass")}'
+            "</div>"
+        )
+        for label, key in rows
+    )
+    sources_reviewed = insights.get("sources_reviewed")
+    sources_html = ""
+    if sources_reviewed is not None:
+        sources_html = (
+            f'<div class="muted-copy" style="margin-top:0.75rem;">Sources Reviewed: '
+            f"{html.escape(str(sources_reviewed))}</div>"
+        )
+    st.markdown(
+        (
+            '<div class="overview-card"><div class="card-title">Ethical Insights</div>'
+            '<div class="muted-copy">Educational ethical screening based on publicly available databases.</div>'
+            f"{row_html}{sources_html}</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_ethical_insights_tab(data: dict, screening: dict) -> None:
+    _render_ethical_insights_section(data)
+
+
 def _render_news_card(data: dict) -> None:
     news_items = data.get("_ui_news") or []
     if not news_items:
@@ -2003,9 +2082,10 @@ def render_results(data: dict, screening: dict) -> None:
     # Streamlit tabs keep their selected index across reruns. Changing the
     # invisible suffix after a new screen remounts the tabs back to Overview.
     reset_suffix = "​" * int(st.session_state.get("tabs_reset_token", 0))
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         f"Overview{reset_suffix}",
         f"Financial{reset_suffix}",
+        f"Ethical{reset_suffix}",
         f"Guide{reset_suffix}",
     ])
     with tab1:
@@ -2013,6 +2093,8 @@ def render_results(data: dict, screening: dict) -> None:
     with tab2:
         _render_financial_tab(data, screening)
     with tab3:
+        _render_ethical_insights_tab(data, screening)
+    with tab4:
         _render_details_tab(data, screening)
 
 
