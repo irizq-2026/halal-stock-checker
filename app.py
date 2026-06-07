@@ -1230,13 +1230,13 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
         if metric == "debt":
             return data.get("total_debt"), data.get("market_cap"), None
         if metric == "cash":
-            return data.get("cash"), data.get("market_cap"), None
+            return _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap"), None
         return data.get("interest_income"), data.get("total_revenue"), None
 
     if metric == "debt":
         numerator, denominator = data.get("total_debt"), data.get("market_cap")
     elif metric == "cash":
-        numerator, denominator = data.get("cash"), data.get("market_cap")
+        numerator, denominator = _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap")
     else:
         numerator, denominator = data.get("interest_income"), data.get("total_revenue")
     if numerator is None or denominator in (None, 0):
@@ -1329,6 +1329,48 @@ def _nested_component_map(data: dict) -> dict[str, dict]:
     }
 
 
+def _sum_present(values: list[float | None]) -> float | None:
+    present = [value for value in values if value is not None]
+    if not present:
+        return None
+    return sum(present)
+
+
+def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
+    liquid = _nested_component_map(data)["liquid_assets"]
+
+    bank_cash = _calc_float(liquid.get("bank_cash"))
+    restricted_cash = _calc_float(liquid.get("restricted_cash_reserves"))
+    short_term_securities = _calc_float(liquid.get("short_term_securities"))
+    long_term_bonds = _calc_float(liquid.get("long_term_bonds_paper"))
+
+    cash_and_equivalents = _calc_float(liquid.get("cash_and_cash_equivalents"))
+    if cash_and_equivalents is None:
+        cash_and_equivalents = _sum_present([bank_cash, restricted_cash])
+
+    # Always prefer a strict recompute from short-term + long-term securities.
+    marketable_debt_securities = _sum_present([short_term_securities, long_term_bonds])
+    if marketable_debt_securities is None:
+        marketable_debt_securities = _calc_float(liquid.get("marketable_debt_securities"))
+
+    # Ratio 2 numerator should include both parent buckets.
+    total_interest_earning_pools = _sum_present([cash_and_equivalents, marketable_debt_securities])
+    if total_interest_earning_pools is None:
+        total_interest_earning_pools = _calc_float(liquid.get("total_interest_earning_pools"))
+    if total_interest_earning_pools is None:
+        total_interest_earning_pools = _calc_float(data.get("cash"))
+
+    return {
+        "cash_and_equivalents": cash_and_equivalents,
+        "marketable_debt_securities": marketable_debt_securities,
+        "total_interest_earning_pools": total_interest_earning_pools,
+        "bank_cash": bank_cash,
+        "restricted_cash_reserves": restricted_cash,
+        "short_term_securities": short_term_securities,
+        "long_term_bonds_paper": long_term_bonds,
+    }
+
+
 def _calc_row_html(label: str, value: object, *, depth: int = 0, units: bool = False) -> str:
     value_label = _format_units_count(value) if units else _format_money_calc(value)
     indent_cls = " calc-breakdown-indent-1" if depth > 0 else ""
@@ -1380,18 +1422,9 @@ def _calculation_details_for_metric(
             + (_calc_float(debt.get("noncurrent_debt_obligations")) or 0.0)
         )
 
-    cash_and_equivalents = _calc_float(liquid.get("cash_and_cash_equivalents"))
-    if cash_and_equivalents is None:
-        cash_and_equivalents = (
-            (_calc_float(liquid.get("bank_cash")) or 0.0)
-            + (_calc_float(liquid.get("restricted_cash_reserves")) or 0.0)
-        )
-    marketable_pools = _calc_float(liquid.get("marketable_debt_securities"))
-    if marketable_pools is None:
-        marketable_pools = (
-            (_calc_float(liquid.get("short_term_securities")) or 0.0)
-            + (_calc_float(liquid.get("long_term_bonds_paper")) or 0.0)
-        )
+    liquid_totals = _resolve_liquid_component_totals(data)
+    cash_and_equivalents = liquid_totals["cash_and_equivalents"]
+    marketable_pools = liquid_totals["marketable_debt_securities"]
 
     passive_yield = _calc_float(purging.get("passive_financial_yield"))
     if passive_yield is None:
@@ -1421,13 +1454,13 @@ def _calculation_details_for_metric(
         numerator_title = "Total Cash"
         denominator_title = "Market Cap"
         numerator_rows = [
-            {"label": "Total Interest-Earning Pools", "value": liquid.get("total_interest_earning_pools", numerator)},
+            {"label": "Total Interest-Earning Pools", "value": liquid_totals["total_interest_earning_pools"]},
             {"label": "Cash & Cash Equivalents", "value": cash_and_equivalents},
-            {"label": "Bank Accounts / Cash", "value": liquid.get("bank_cash"), "depth": 1},
-            {"label": "Restricted Cash Reserves", "value": liquid.get("restricted_cash_reserves"), "depth": 1},
+            {"label": "Bank Accounts / Cash", "value": liquid_totals["bank_cash"], "depth": 1},
+            {"label": "Restricted Cash Reserves", "value": liquid_totals["restricted_cash_reserves"], "depth": 1},
             {"label": "Marketable Debt Securities", "value": marketable_pools},
-            {"label": "Short-Term Securities", "value": liquid.get("short_term_securities"), "depth": 1},
-            {"label": "Long-Term Bonds & Paper", "value": liquid.get("long_term_bonds_paper"), "depth": 1},
+            {"label": "Short-Term Securities", "value": liquid_totals["short_term_securities"], "depth": 1},
+            {"label": "Long-Term Bonds & Paper", "value": liquid_totals["long_term_bonds_paper"], "depth": 1},
         ]
     else:
         numerator_title = "Total Annual Prohibited Revenue"
