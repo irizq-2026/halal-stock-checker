@@ -10,6 +10,7 @@ from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
+from streamlit_searchbox import st_searchbox
 
 from data import (
     CachedDataNotReadyError,
@@ -2192,6 +2193,14 @@ def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
     return candidates[0]["ticker"]
 
 
+def _searchbox_local_stock_options(search_query: str) -> list[tuple[str, str]]:
+    matches = _filter_local_stock_candidates(search_query)
+    return [
+        (f'{stock["company_name"]} ({stock["ticker"]})', stock["ticker"])
+        for stock in matches
+    ]
+
+
 def _sync_autocomplete_state(raw_query: str) -> None:
     query = (raw_query or "").strip()
     if not query:
@@ -2367,33 +2376,16 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    if st.session_state.get("ticker_input_prefill"):
-        prefill_value = str(st.session_state.get("ticker_input_prefill") or "")
-        st.session_state.ticker_input_widget = prefill_value
-        st.session_state.ticker_input = prefill_value
-        st.session_state.ticker_input_prefill = ""
-
-    pending_selection = str(st.session_state.get("pending_selection_ticker") or "")
-    if pending_selection:
-        st.session_state.pending_selection_ticker = ""
-        if (
-            pending_selection != st.session_state.last_ticker
-            or not st.session_state.has_results
-        ):
-            run_screening_flow(pending_selection)
-
-    st.text_input(
-        "Search by Ticker or Company Name:",
+    selected = st_searchbox(
+        search_function=_searchbox_local_stock_options,
+        label="Search by Ticker or Company Name:",
         placeholder="e.g. AAPL or Apple Inc.",
-        label_visibility="visible",
-        key="ticker_input_widget",
-        on_change=_on_search_input_change,
+        key="stock_searchbox",
     )
-    search_query = str(st.session_state.get("ticker_input_widget", "") or "").strip()
+    search_query = str(selected or "").strip()
+    if selected:
+        st.session_state.resolved_ticker = search_query
     st.session_state.ticker_input = search_query
-
-    _sync_autocomplete_state(search_query)
-    _render_autocomplete_dropdown()
 
     check_clicked = st.button("Check Status", type="primary", use_container_width=True)
 
