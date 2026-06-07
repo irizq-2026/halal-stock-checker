@@ -1534,8 +1534,8 @@ def render_error(
         )
     elif cache_missing:
         message = (
-            f"No cached SEC filing data is available yet for <strong>{ticker.upper()}</strong>. "
-            "Ask an admin to run the refresh job, then try again."
+            f"Recent SEC data is currently unavailable for <strong>{ticker.upper()}</strong>. "
+            "This ticker may not have a recent 10-Q/10-K filing or SEC company-facts coverage yet."
         )
     elif transient:
         message = (
