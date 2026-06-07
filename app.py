@@ -1839,7 +1839,7 @@ a government or regulatory list.""",
 
     popover_supported = hasattr(st, "popover")
     for index, (label, key, title, body) in enumerate(rows):
-        label_col, info_col, status_col = st.columns([6, 1, 2], gap="small")
+        label_col, info_col, status_col = st.columns([5, 1, 2], gap="small")
         with label_col:
             st.markdown(f'<div class="glance-label" style="padding-top:0.35rem;">{html.escape(label)}</div>', unsafe_allow_html=True)
         with info_col:
@@ -1853,7 +1853,11 @@ a government or regulatory list.""",
                     st.write(body)
         with status_col:
             st.markdown(
-                _pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Clear", "pass"),
+                (
+                    '<div style="display:flex;justify-content:flex-end;">'
+                    f'{_pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Clear", "pass")}'
+                    "</div>"
+                ),
                 unsafe_allow_html=True,
             )
         if index < len(rows) - 1:
