@@ -1781,37 +1781,90 @@ def _ethical_flag_count(data: dict) -> int:
 def _render_ethical_insights_section(data: dict) -> None:
     insights = _ethical_insights_payload(data)
     rows = [
-        ("Official BDS Target", "official_bds"),
-        ("AFSC Investigate Database", "afsc"),
-        ("UN OHCHR Database", "un_ohchr"),
-        ("Who Profits Database", "who_profits"),
-    ]
-    tooltip = "Based on publicly available ethical databases"
-    row_html = "".join(
         (
-            '<div class="glance-row">'
-            f'<span class="glance-label">{html.escape(label)} <span title="{html.escape(tooltip)}" '
-            'style="color:#8A9BB0;font-weight:600;">ⓘ</span></span>'
-            f'{_pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Not Listed", "pass")}'
-            "</div>"
-        )
-        for label, key in rows
-    )
-    sources_reviewed = insights.get("sources_reviewed")
-    sources_html = ""
-    if sources_reviewed is not None:
-        sources_html = (
-            f'<div class="muted-copy" style="margin-top:0.75rem;">Sources Reviewed: '
-            f"{html.escape(str(sources_reviewed))}</div>"
-        )
+            "Official BDS Target",
+            "official_bds",
+            "About the BDS Target List",
+            """The Boycott, Divestment and Sanctions (BDS) movement is a 
+Palestinian-led campaign that calls for economic and political pressure 
+related to Israeli government policies toward Palestinians. Companies on 
+this list are those the BDS movement has identified as having direct 
+involvement in or material support of activities they oppose. This is not 
+a legal or regulatory finding. Users should research independently and 
+reach their own conclusions based on their values.""",
+        ),
+        (
+            "AFSC Investigate Database",
+            "afsc",
+            "About AFSC Investigate",
+            """The American Friends Service Committee (AFSC) is a Quaker humanitarian 
+organization. Their Investigate database tracks companies they identify as 
+profiting from military occupation or human rights violations, primarily 
+in the context of the Israeli-Palestinian conflict. Inclusion is based on 
+AFSC's own research methodology and does not represent a legal or 
+regulatory determination. It is one of several civil society tools used 
+by ethical investors.""",
+        ),
+        (
+            "UN OHCHR Database",
+            "un_ohchr",
+            "About the UN OHCHR Database",
+            """The United Nations Office of the High Commissioner for Human Rights 
+(OHCHR) maintains a database of companies with operations in Israeli 
+settlements in the occupied West Bank, including East Jerusalem, as 
+mandated by UN Human Rights Council Resolution 31/36. Inclusion means 
+the UN has identified a business presence in settlements. This is not a 
+sanctions list or legal finding, but is a significant intergovernmental 
+reference used by ethical investors worldwide.""",
+        ),
+        (
+            "Who Profits Database",
+            "who_profits",
+            "About Who Profits",
+            """Who Profits is an independent Israeli research center that documents 
+commercial involvement in the Israeli military occupation of Palestinian 
+and Syrian territories. Their database covers companies involved in 
+settlement construction, military supply, natural resource extraction, 
+and occupation infrastructure. It is a civil society research tool, not 
+a government or regulatory list.""",
+        ),
+    ]
     st.markdown(
         (
             '<div class="overview-card"><div class="card-title">Ethical Insights</div>'
-            '<div class="muted-copy">Educational ethical screening based on publicly available databases.</div>'
-            f"{row_html}{sources_html}</div>"
+            '<div class="muted-copy">Educational ethical screening based on publicly available databases.</div></div>'
         ),
         unsafe_allow_html=True,
     )
+
+    popover_supported = hasattr(st, "popover")
+    for index, (label, key, title, body) in enumerate(rows):
+        label_col, info_col, status_col = st.columns([6, 1, 2], gap="small")
+        with label_col:
+            st.markdown(f'<div class="glance-label" style="padding-top:0.35rem;">{html.escape(label)}</div>', unsafe_allow_html=True)
+        with info_col:
+            if popover_supported:
+                with st.popover("ⓘ"):
+                    st.markdown(f"**{title}**")
+                    st.write(body)
+            else:
+                with st.expander("ⓘ"):
+                    st.markdown(f"**{title}**")
+                    st.write(body)
+        with status_col:
+            st.markdown(
+                _pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Clear", "pass"),
+                unsafe_allow_html=True,
+            )
+        if index < len(rows) - 1:
+            st.markdown("<hr class='irizq-divider' style='margin:0.35rem 0 0.4rem 0;'>", unsafe_allow_html=True)
+
+    sources_reviewed = insights.get("sources_reviewed")
+    if sources_reviewed is not None:
+        st.markdown(
+            f'<div class="muted-copy" style="margin-top:0.75rem;">Sources Reviewed: {html.escape(str(sources_reviewed))}</div>',
+            unsafe_allow_html=True,
+        )
 
 
 def _render_ethical_insights_tab(data: dict, screening: dict) -> None:
