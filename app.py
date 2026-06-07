@@ -10,6 +10,7 @@ from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from data import (
     CachedDataNotReadyError,
@@ -2211,6 +2212,28 @@ def _render_autocomplete_dropdown() -> None:
             f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>'
         ),
         unsafe_allow_html=True,
+    )
+    components.html(
+        """
+        <script>
+        const parentDoc = window.parent && window.parent.document;
+        if (parentDoc && parentDoc.body && !parentDoc.body.dataset.irizqAutocompleteBound) {
+          parentDoc.body.dataset.irizqAutocompleteBound = "1";
+          parentDoc.addEventListener("pointerdown", (event) => {
+            const dropdown = parentDoc.getElementById("irizq-autocomplete-dropdown");
+            if (!dropdown) return;
+            const searchInput = parentDoc.querySelector('[data-testid="stTextInput"]');
+            const clickedInsideDropdown = dropdown.contains(event.target);
+            const clickedInsideInput = searchInput && searchInput.contains(event.target);
+            if (!clickedInsideDropdown && !clickedInsideInput) {
+              dropdown.style.display = "none";
+            }
+          }, true);
+        }
+        </script>
+        """,
+        height=0,
+        width=0,
     )
 
 
