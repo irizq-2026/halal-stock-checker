@@ -706,6 +706,71 @@ IRIZQ_CSS = """
     color: #8A9BB0;
     font-style: italic;
   }
+  .calc-tree-section {
+    background-color: #162032;
+    border: 1px solid #2A3F55;
+    border-radius: 10px;
+    padding: 0.7rem 0.75rem;
+    margin: 0.7rem 0;
+  }
+  .calc-tree-title {
+    color: #C9A84C;
+    font-weight: 700;
+    font-size: 0.84rem;
+    margin-bottom: 0.45rem;
+  }
+  .calc-tree-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin: 0.18rem 0;
+  }
+  .calc-tree-label {
+    color: #F5F5F5;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-tree-value {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-footer-advisory {
+    background-color: #1A2B3C;
+    border-left: 4px solid #C9A84C;
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-top: 0.8rem;
+    color: #F5F5F5;
+    font-size: 0.83rem;
+    line-height: 1.45;
+  }
+  .calc-footer-note {
+    background-color: #162032;
+    border: 1px solid #2A3F55;
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    margin-top: 0.55rem;
+    color: #8A9BB0;
+    font-size: 0.79rem;
+    line-height: 1.4;
+  }
+  @media (max-width: 480px) {
+    .calc-tree-label,
+    .calc-tree-value {
+      font-size: 0.74rem;
+    }
+    .calc-footer-advisory,
+    .calc-footer-note {
+      font-size: 0.74rem;
+    }
+  }
 
 </style>
 """
@@ -1178,6 +1243,186 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
         return numerator, denominator, None
 
 
+def _calc_float(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if out != out:
+        return None
+    return out
+
+
+def _format_money_calc(value: object) -> str:
+    amount = _calc_float(value)
+    if amount is None:
+        return NOT_AVAILABLE
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    if amount == 0:
+        return "$0.00"
+    if amount >= 1_000_000_000_000:
+        return f"{sign}${amount / 1_000_000_000_000:.2f}T"
+    if amount >= 1_000_000_000:
+        return f"{sign}${amount / 1_000_000_000:.2f}B"
+    if amount >= 1_000_000:
+        return f"{sign}${amount / 1_000_000:.2f}M"
+    if amount >= 1_000:
+        return f"{sign}${amount:,.2f}"
+    return f"{sign}${amount:.2f}"
+
+
+def _nested_component_map(data: dict) -> dict[str, dict]:
+    mapped_tags = ((data.get("_data_source") or {}).get("mapped_tags") or {})
+    components = (mapped_tags.get("components") if isinstance(mapped_tags, dict) else None) or {}
+    valuation_fallback = ((data.get("_data_source") or {}).get("market_cap_fallback") or {})
+
+    valuation = dict(components.get("valuation") or {})
+    valuation.setdefault("baseline_label", "Market Cap Baseline")
+    if valuation.get("shares_outstanding") is None:
+        valuation["shares_outstanding"] = valuation_fallback.get("shares_outstanding")
+    if valuation.get("latest_closing_price") is None:
+        valuation["latest_closing_price"] = valuation_fallback.get("close_price")
+
+    debt = dict(components.get("debt") or {})
+    debt.setdefault("total_borrowed_capital", data.get("total_debt"))
+
+    liquid = dict(components.get("liquid_assets") or {})
+    liquid.setdefault("total_interest_earning_pools", data.get("cash"))
+
+    purging = dict(components.get("purging") or {})
+    purging.setdefault("total_annual_prohibited_revenue", data.get("interest_income"))
+    purging.setdefault("total_revenue_baseline", data.get("total_revenue"))
+    if purging.get("core_prohibited_operations") is None:
+        purging["core_prohibited_operations"] = 0.0
+
+    return {
+        "valuation": valuation,
+        "debt": debt,
+        "liquid_assets": liquid,
+        "purging": purging,
+    }
+
+
+def _calc_row_html(label: str, value: object) -> str:
+    return (
+        '<div class="calc-tree-row">'
+        f'<span class="calc-tree-label">{html.escape(label)}</span>'
+        f'<span class="calc-tree-value">{html.escape(_format_money_calc(value))}</span>'
+        "</div>"
+    )
+
+
+def _render_calculation_tree(data: dict, screening: dict) -> None:
+    components = _nested_component_map(data)
+    valuation = components["valuation"]
+    debt = components["debt"]
+    liquid = components["liquid_assets"]
+    purging = components["purging"]
+
+    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
+    if short_term_borrowings is None:
+        short_term_borrowings = (
+            (_calc_float(debt.get("commercial_paper")) or 0.0)
+            + (_calc_float(debt.get("short_term_notes_pay")) or 0.0)
+        )
+    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
+    if long_term_borrowings is None:
+        long_term_borrowings = (
+            (_calc_float(debt.get("current_long_term_debt")) or 0.0)
+            + (_calc_float(debt.get("noncurrent_debt_obligations")) or 0.0)
+        )
+
+    cash_and_equivalents = _calc_float(liquid.get("cash_and_cash_equivalents"))
+    if cash_and_equivalents is None:
+        cash_and_equivalents = (
+            (_calc_float(liquid.get("bank_cash")) or 0.0)
+            + (_calc_float(liquid.get("restricted_cash_reserves")) or 0.0)
+        )
+    marketable_pools = _calc_float(liquid.get("marketable_debt_securities"))
+    if marketable_pools is None:
+        marketable_pools = (
+            (_calc_float(liquid.get("short_term_securities")) or 0.0)
+            + (_calc_float(liquid.get("long_term_bonds_paper")) or 0.0)
+        )
+
+    passive_yield = _calc_float(purging.get("passive_financial_yield"))
+    if passive_yield is None:
+        passive_yield = (
+            (_calc_float(purging.get("non_operating_cash_interest")) or 0.0)
+            + (_calc_float(purging.get("equity_investment_dividends")) or 0.0)
+        )
+
+    valuation_block = "".join(
+        [
+            _calc_row_html(valuation.get("baseline_label") or "Market Cap Baseline", data.get("market_cap")),
+            _calc_row_html("├── Shares Outstanding", valuation.get("shares_outstanding")),
+            _calc_row_html("└── Latest Closing Price", valuation.get("latest_closing_price")),
+        ]
+    )
+    debt_block = "".join(
+        [
+            _calc_row_html("Total Borrowed Capital", debt.get("total_borrowed_capital")),
+            _calc_row_html("├── Short-Term Borrowings", short_term_borrowings),
+            _calc_row_html("│   ├── Commercial Paper", debt.get("commercial_paper")),
+            _calc_row_html("│   └── Short-Term Notes Pay", debt.get("short_term_notes_pay")),
+            _calc_row_html("└── Long-Term Borrowings", long_term_borrowings),
+            _calc_row_html("    ├── Current Long-Term Debt", debt.get("current_long_term_debt")),
+            _calc_row_html("    └── Noncurrent Debt Obligations", debt.get("noncurrent_debt_obligations")),
+        ]
+    )
+    liquid_block = "".join(
+        [
+            _calc_row_html("Total Interest-Earning Pools", liquid.get("total_interest_earning_pools")),
+            _calc_row_html("├── Cash & Cash Equivalents", cash_and_equivalents),
+            _calc_row_html("│   ├── Bank Accounts / Cash", liquid.get("bank_cash")),
+            _calc_row_html("│   └── Restricted Cash Reserves", liquid.get("restricted_cash_reserves")),
+            _calc_row_html("└── Marketable Debt Securities", marketable_pools),
+            _calc_row_html("    ├── Short-Term Securities", liquid.get("short_term_securities")),
+            _calc_row_html("    └── Long-Term Bonds & Paper", liquid.get("long_term_bonds_paper")),
+        ]
+    )
+    purging_block = "".join(
+        [
+            _calc_row_html("Total Annual Prohibited Revenue", purging.get("total_annual_prohibited_revenue")),
+            _calc_row_html("├── Core Prohibited Operations", purging.get("core_prohibited_operations")),
+            _calc_row_html("└── Passive Financial Yield", passive_yield),
+            _calc_row_html("    ├── Non-Operating Cash Interest", purging.get("non_operating_cash_interest")),
+            _calc_row_html("    └── Equity Investment Dividends", purging.get("equity_investment_dividends")),
+        ]
+    )
+
+    _, _, income_ratio = _metric_data(data, "income")
+    ratio_pct = 0.0 if income_ratio is None else max(income_ratio * 100, 0.0)
+    donation = ratio_pct
+    company = _company_name(data)
+    advisory = (
+        f"Because {ratio_pct:.2f}% of {company}'s top-line revenue is derived from interest, "
+        f"Shariah standards advise donating ${donation:.2f} out of every $100 you receive in "
+        "dividends to purify your income or profit."
+    )
+
+    st.markdown(
+        (
+            '<div class="calc-tree-section"><div class="calc-tree-title">📊 1. VALUATION DENOMINATOR</div>'
+            f"{valuation_block}</div>"
+            '<div class="calc-tree-section"><div class="calc-tree-title">🛑 2. RATIO 1: INTEREST-BEARING DEBT</div>'
+            f"{debt_block}</div>"
+            '<div class="calc-tree-section"><div class="calc-tree-title">💧 3. RATIO 2: LIQUID ASSETS</div>'
+            f"{liquid_block}</div>"
+            '<div class="calc-tree-section"><div class="calc-tree-title">💵 4. RATIO 3: PURGING REVENUE</div>'
+            f"{purging_block}</div>"
+            f'<div class="calc-footer-advisory">🧼 <strong>Your Purification Estimator</strong><br>{html.escape(advisory)}</div>'
+            '<div class="calc-footer-note">⚠️ Note: Calculations can vary compared to other Halal stock '
+            "screeners depending on the specific accounting data points they choose to include. "
+            "Our platform's calculations strictly adhere to the AAOIFI compliance frameworks.</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def _render_metric_card(title: str, metric: str, threshold: float, questionable_floor: float, numerator_label: str, denominator_label: str, what_it_means: str, why_it_matters: str, note: str = "") -> None:
     data = st.session_state.stock_data or {}
     numerator, denominator, ratio = _metric_data(data, metric)
@@ -1200,12 +1445,7 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
           <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}
         </div>''', unsafe_allow_html=True)
     with st.expander("View Calculation"):
-        st.markdown(f"**Numerator:** {numerator_label} = {_format_money(numerator)}")
-        st.markdown(f"**Denominator:** {denominator_label} = {_format_money(denominator)}")
-        if core_interest_business:
-            st.markdown("**Result:** Not applicable for this business type")
-        else:
-            st.markdown(f"**Result:** {NOT_AVAILABLE}" if ratio is None else f"**Result:** {ratio * 100:.1f}% = {_format_money(numerator)} / {_format_money(denominator)}")
+        _render_calculation_tree(data, st.session_state.screening or {})
 
 
 def _plain_english_financial_summary(data: dict, screening: dict) -> str:
