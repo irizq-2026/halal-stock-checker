@@ -40,6 +40,15 @@ NEWS_FLAG_KEYWORDS = (
 WEAPONS_KEYWORDS = ("defense", "aerospace", "weapon", "military", "arms")
 ISRAEL_KEYWORDS = ("israel", "israeli", "tel aviv", "jerusalem", "idf", "gaza", "west bank")
 
+# Local search universe intentionally constrained to currently validated profiles only.
+LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
+    {"ticker": "AAPL", "company_name": "Apple Inc."},
+    {"ticker": "MSFT", "company_name": "Microsoft Corporation"},
+    {"ticker": "TSLA", "company_name": "Tesla, Inc."},
+    {"ticker": "JPM", "company_name": "JPMorgan Chase & Co."},
+    {"ticker": "XOM", "company_name": "Exxon Mobil Corporation"},
+)
+
 
 def _extract_news_item(item: dict) -> dict:
     if not isinstance(item, dict):
@@ -275,6 +284,76 @@ IRIZQ_CSS = """
   }
   .stButton > button:hover {
     background-color: #E8C96A !important;
+  }
+  .autocomplete-anchor {
+    position: relative;
+    width: 100%;
+    height: 0;
+    z-index: 40;
+  }
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 0.18rem;
+    left: 0;
+    right: 0;
+    background: rgba(22, 32, 50, 0.96);
+    border: 1px solid #2A3F55;
+    border-radius: 12px;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .autocomplete-item {
+    display: block;
+    padding: 0.72rem 0.9rem;
+    text-decoration: none;
+    border-bottom: 1px solid #24384d;
+    transition: background-color 0.15s ease;
+  }
+  .autocomplete-item:last-child {
+    border-bottom: none;
+  }
+  .autocomplete-item:hover {
+    background-color: #203046;
+  }
+  .autocomplete-item-symbol {
+    color: #F5F5F5;
+    font-size: 0.93rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .autocomplete-item-name {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    margin-top: 0.1rem;
+    line-height: 1.25;
+  }
+  .autocomplete-empty {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    padding: 0.72rem 0.9rem;
+  }
+  .autocomplete-spacer {
+    height: 16rem;
+  }
+  @media (max-width: 480px) {
+    .autocomplete-dropdown {
+      max-height: 14.5rem;
+      left: -0.1rem;
+      right: -0.1rem;
+    }
+    .autocomplete-item {
+      padding: 0.7rem 0.82rem;
+    }
+    .autocomplete-item-symbol {
+      font-size: 0.88rem;
+    }
+    .autocomplete-item-name {
+      font-size: 0.76rem;
+    }
   }
   .result-card {
     background-color: #1A2B3C;
@@ -2043,12 +2122,119 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
         ''', unsafe_allow_html=True)
 
 
+def _filter_local_stock_candidates(raw_query: str) -> list[dict[str, str]]:
+    query = (raw_query or "").strip().lower()
+    if not query:
+        return []
+    matches = [
+        stock
+        for stock in LOCAL_SEARCH_STOCKS
+        if query in stock["ticker"].lower() or query in stock["company_name"].lower()
+    ]
+    return sorted(
+        matches,
+        key=lambda stock: (
+            0 if stock["ticker"].lower().startswith(query) else 1,
+            0 if stock["company_name"].lower().startswith(query) else 1,
+            stock["ticker"],
+        ),
+    )
+
+
+def _find_exact_local_match(raw_query: str) -> dict[str, str] | None:
+    query = (raw_query or "").strip().lower()
+    if not query:
+        return None
+    for stock in LOCAL_SEARCH_STOCKS:
+        if query == stock["ticker"].lower() or query == stock["company_name"].lower():
+            return stock
+    return None
+
+
+def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
+    exact = _find_exact_local_match(raw_query)
+    if exact:
+        return exact["ticker"]
+    candidates = _filter_local_stock_candidates(raw_query)
+    if not candidates:
+        return None
+    return candidates[0]["ticker"]
+
+
+def _sync_autocomplete_state(raw_query: str) -> None:
+    query = (raw_query or "").strip()
+    if not query:
+        st.session_state.filtered_results = []
+        st.session_state.is_dropdown_open = False
+        return
+    exact = _find_exact_local_match(query)
+    if (
+        exact
+        and st.session_state.get("has_results")
+        and st.session_state.get("last_ticker") == exact["ticker"]
+    ):
+        st.session_state.filtered_results = []
+        st.session_state.is_dropdown_open = False
+        return
+    filtered = _filter_local_stock_candidates(query)
+    st.session_state.filtered_results = filtered
+    st.session_state.is_dropdown_open = True
+
+
+def _render_autocomplete_dropdown() -> None:
+    if not st.session_state.get("is_dropdown_open"):
+        return
+    filtered = st.session_state.get("filtered_results") or []
+    if filtered:
+        items_html = "".join(
+            (
+                f'<a class="autocomplete-item" href="?selected_stock={quote(stock["ticker"])}">'
+                f'<div class="autocomplete-item-symbol">{html.escape(stock["ticker"])}</div>'
+                f'<div class="autocomplete-item-name">{html.escape(stock["company_name"])}</div>'
+                "</a>"
+            )
+            for stock in filtered
+        )
+    else:
+        items_html = (
+            '<div class="autocomplete-empty">'
+            "No matches in the current local stock universe."
+            "</div>"
+        )
+    suggestion_count = max(len(filtered), 1)
+    spacer_height_rem = min(16.0, max(4.1, 3.1 * suggestion_count))
+    st.markdown(
+        (
+            '<div class="autocomplete-anchor">'
+            f'<div id="irizq-autocomplete-dropdown" class="autocomplete-dropdown">{items_html}</div>'
+            "</div>"
+            f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>'
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _consume_selected_stock_from_query_params() -> str | None:
+    selected = st.query_params.get("selected_stock")
+    if not selected:
+        return None
+    selected_value = selected[0] if isinstance(selected, list) else selected
+    try:
+        del st.query_params["selected_stock"]
+    except Exception:
+        pass
+    resolved = _resolve_ticker_from_search_query(str(selected_value))
+    return resolved
+
+
 def initialize_session_state() -> None:
     defaults = {
         "stock_data": None,
         "screening": None,
         "last_ticker": "",
         "ticker_input": "",
+        "filtered_results": [],
+        "is_dropdown_open": False,
         "tabs_reset_token": 0,
         "has_results": False,
     }
@@ -2141,28 +2327,56 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    ticker = st.text_input(
-        "Enter Stock Symbol:",
-        placeholder="e.g. AAPL",
+    selected_from_dropdown = _consume_selected_stock_from_query_params()
+    if selected_from_dropdown:
+        st.session_state.ticker_input = selected_from_dropdown
+        st.session_state.is_dropdown_open = False
+        st.session_state.filtered_results = []
+        if (
+            selected_from_dropdown != st.session_state.last_ticker
+            or not st.session_state.has_results
+        ):
+            run_screening_flow(selected_from_dropdown)
+
+    search_query = st.text_input(
+        "Search by Ticker or Company Name:",
+        placeholder="e.g. AAPL or Apple Inc.",
         label_visibility="visible",
         key="ticker_input",
-    ).strip().upper()
+    ).strip()
+
+    _sync_autocomplete_state(search_query)
+    _render_autocomplete_dropdown()
 
     check_clicked = st.button("Check Status", type="primary", use_container_width=True)
 
     if check_clicked:
-        if not ticker:
+        st.session_state.is_dropdown_open = False
+        st.session_state.filtered_results = []
+        if not search_query:
             st.markdown(
-                '<div class="info-msg">Please enter a US stock ticker symbol to continue.</div>',
+                '<div class="info-msg">Please enter a stock ticker or company name to continue.</div>',
                 unsafe_allow_html=True,
             )
-        elif ticker != st.session_state.last_ticker or not st.session_state.has_results:
-            run_screening_flow(ticker)
         else:
-            st.markdown(
-                '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
-                unsafe_allow_html=True,
-            )
+            resolved_ticker = _resolve_ticker_from_search_query(search_query)
+            if not resolved_ticker:
+                st.markdown(
+                    '<div class="info-msg">No local compliance profile match was found. '
+                    'Currently available: AAPL, MSFT, TSLA, JPM, XOM.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif (
+                resolved_ticker != st.session_state.last_ticker
+                or not st.session_state.has_results
+            ):
+                st.session_state.ticker_input = resolved_ticker
+                run_screening_flow(resolved_ticker)
+            else:
+                st.markdown(
+                    '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
+                    unsafe_allow_html=True,
+                )
 
 
     if st.session_state.has_results and st.session_state.stock_data and st.session_state.screening:
