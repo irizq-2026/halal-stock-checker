@@ -47,11 +47,33 @@ ACCOUNTS_RECEIVABLE_CONCEPTS = (
     "AccountsReceivableNetCurrent",
     "ReceivablesNetCurrent",
 )
+SHORT_TERM_NOTES_PAY_CONCEPTS = (
+    "NotesPayableCurrent",
+    "DebtCurrent",
+)
+RESTRICTED_CASH_CONCEPTS = (
+    "RestrictedCashAndCashEquivalentsAtCarryingValue",
+    "RestrictedCashAndCashEquivalentsCurrent",
+    "RestrictedCash",
+)
+LONG_TERM_SECURITIES_CONCEPTS = (
+    "MarketableSecuritiesNoncurrent",
+    "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+)
 INTEREST_INCOME_CONCEPTS = (
     "InvestmentIncomeInterest",
     "InterestIncomeOperating",
     "InterestAndDividendIncomeOperating",
     "InterestAndFeeIncomeLoansAndLeases",
+)
+NON_OPERATING_INTEREST_CONCEPTS = (
+    "InvestmentIncomeInterest",
+    "InterestIncomeOperating",
+    "InterestAndFeeIncomeLoansAndLeases",
+)
+DIVIDEND_INCOME_CONCEPTS = (
+    "InvestmentIncomeDividend",
+    "DividendIncome",
 )
 TOTAL_REVENUE_CONCEPTS = (
     "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -64,7 +86,11 @@ ALL_REQUIRED_CONCEPTS = tuple(
         DEBT_CONCEPTS
         + CASH_CONCEPTS
         + ACCOUNTS_RECEIVABLE_CONCEPTS
+        + SHORT_TERM_NOTES_PAY_CONCEPTS
+        + RESTRICTED_CASH_CONCEPTS
+        + LONG_TERM_SECURITIES_CONCEPTS
         + INTEREST_INCOME_CONCEPTS
+        + DIVIDEND_INCOME_CONCEPTS
         + TOTAL_REVENUE_CONCEPTS
     )
 )
@@ -83,6 +109,7 @@ RAW_FACTS_VALUE_LIMIT = 10**18
 RATIO_NUMERIC_LIMIT = 10**4
 PLACEHOLDER_ACCESSION = "NO-DATA-PLACEHOLDER"
 PLACEHOLDER_FILING_TYPE = "NO-DATA"
+SUPPORTED_FORMS = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
 
 
 def _normalize_cik(cik: str | int) -> str:
@@ -96,6 +123,36 @@ def _parse_date(raw: Any) -> date | None:
         return datetime.strptime(str(raw), "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _latest_supported_filing(submissions: dict[str, Any]) -> dict[str, Any] | None:
+    recent = ((submissions.get("filings") or {}).get("recent") or {})
+    forms = recent.get("form") or []
+    accessions = recent.get("accessionNumber") or []
+    filing_dates = recent.get("filingDate") or []
+    total = min(len(forms), len(accessions), len(filing_dates))
+    rows: list[dict[str, Any]] = []
+    for idx in range(total):
+        form = str(forms[idx] or "").upper().strip()
+        if form not in SUPPORTED_FORMS:
+            continue
+        filing_date = _parse_date(filing_dates[idx])
+        if filing_date is None:
+            continue
+        accession = str(accessions[idx] or "").strip()
+        if not accession:
+            continue
+        rows.append(
+            {
+                "filing_type": form,
+                "accession_number": accession,
+                "filing_date": filing_date,
+            }
+        )
+    if not rows:
+        return None
+    rows.sort(key=lambda row: row["filing_date"], reverse=True)
+    return rows[0]
 
 
 def _to_float(raw: Any) -> float | None:
@@ -160,6 +217,18 @@ class TickerEdgarPacket:
     placeholder_reason: str | None
     has_10k: bool
     has_20f: bool
+    sic_code: str | None
+    sic_description: str | None
+    component_breakdown: dict[str, Any]
+
+
+@dataclass
+class YFinanceSnapshot:
+    market_cap: float | None
+    sector: str | None
+    industry: str | None
+    shares_outstanding: float | None
+    latest_closing_price: float | None
 
 
 @dataclass
@@ -508,6 +577,78 @@ def _points_to_raw_rows(points: list[ConceptPoint]) -> list[dict[str, Any]]:
     return rows
 
 
+def _sum_optional(*values: float | None) -> float | None:
+    present = [value for value in values if value is not None]
+    if not present:
+        return None
+    return sum(present)
+
+
+def _build_component_breakdown(
+    *,
+    total_debt: float | None,
+    total_cash: float | None,
+    total_revenue: float | None,
+    interest_income: float | None,
+    commercial_paper: float | None,
+    short_term_notes_pay: float | None,
+    current_long_term_debt: float | None,
+    noncurrent_debt_obligations: float | None,
+    bank_cash: float | None,
+    restricted_cash_reserves: float | None,
+    short_term_securities: float | None,
+    long_term_bonds_paper: float | None,
+    non_operating_cash_interest: float | None,
+    equity_investment_dividends: float | None,
+) -> dict[str, Any]:
+    short_term_borrowings = _sum_optional(commercial_paper, short_term_notes_pay)
+    long_term_borrowings = _sum_optional(current_long_term_debt, noncurrent_debt_obligations)
+    cash_and_equivalents = _sum_optional(bank_cash, restricted_cash_reserves)
+    marketable_debt_securities = _sum_optional(short_term_securities, long_term_bonds_paper)
+    passive_financial_yield = _sum_optional(non_operating_cash_interest, equity_investment_dividends)
+    total_annual_prohibited_revenue = interest_income
+
+    return {
+        "valuation": {
+            "baseline_label": "Market Cap Baseline",
+            "shares_outstanding": None,
+            "latest_closing_price": None,
+        },
+        "debt": {
+            "total_borrowed_capital": total_debt,
+            "short_term_borrowings": short_term_borrowings,
+            "commercial_paper": commercial_paper,
+            "short_term_notes_pay": short_term_notes_pay,
+            "long_term_borrowings": long_term_borrowings,
+            "current_long_term_debt": current_long_term_debt,
+            "noncurrent_debt_obligations": noncurrent_debt_obligations,
+        },
+        "liquid_assets": {
+            "total_interest_earning_pools": total_cash,
+            "cash_and_cash_equivalents": cash_and_equivalents,
+            "bank_cash": bank_cash,
+            "restricted_cash_reserves": restricted_cash_reserves,
+            "marketable_debt_securities": marketable_debt_securities,
+            "short_term_securities": short_term_securities,
+            "long_term_bonds_paper": long_term_bonds_paper,
+        },
+        "purging": {
+            "total_annual_prohibited_revenue": total_annual_prohibited_revenue,
+            "core_prohibited_operations": None,
+            "passive_financial_yield": passive_financial_yield,
+            "non_operating_cash_interest": non_operating_cash_interest,
+            "equity_investment_dividends": equity_investment_dividends,
+            "total_revenue_baseline": total_revenue,
+        },
+    }
+
+
+def _is_core_interest_profile(sector: str | None, industry: str | None) -> bool:
+    profile = f"{sector or ''} {industry or ''}".lower()
+    keywords = ("bank", "banking", "insurance", "insurer", "reinsurance")
+    return any(keyword in profile for keyword in keywords)
+
+
 async def _fetch_ticker_packet(
     client: AsyncEdgarClient,
     mapping: dict[str, dict[str, str]],
@@ -544,11 +685,32 @@ async def _fetch_ticker_packet(
             placeholder_reason="CIK not found in SEC ticker map.",
             has_10k=False,
             has_20f=False,
+            sic_code=None,
+            sic_description=None,
+            component_breakdown=_build_component_breakdown(
+                total_debt=None,
+                total_cash=None,
+                total_revenue=None,
+                interest_income=None,
+                commercial_paper=None,
+                short_term_notes_pay=None,
+                current_long_term_debt=None,
+                noncurrent_debt_obligations=None,
+                bank_cash=None,
+                restricted_cash_reserves=None,
+                short_term_securities=None,
+                long_term_bonds_paper=None,
+                non_operating_cash_interest=None,
+                equity_investment_dividends=None,
+            ),
         )
 
     cik = mapped["cik"]
     submissions = await client.fetch_submissions(cik) or {}
     company_name = str(submissions.get("name") or mapped["company_name"]).strip() or symbol
+    sic_code = str(submissions.get("sic") or "").strip() or None
+    sic_description = str(submissions.get("sicDescription") or "").strip() or None
+    latest_filing = _latest_supported_filing(submissions)
 
     recent_forms_raw = (((submissions.get("filings") or {}).get("recent") or {}).get("form") or [])
     recent_forms = {str(form or "").upper().strip() for form in recent_forms_raw if form}
@@ -572,6 +734,23 @@ async def _fetch_ticker_packet(
     ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
     revenue_selection = _select_first_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
     interest_selection = _select_first_income(rows_by_concept, INTEREST_INCOME_CONCEPTS)
+    non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
+    dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
+
+    commercial_paper_selection = _select_first_balance(rows_by_concept, ("CommercialPaper",))
+    short_term_notes_selection = _select_first_balance(
+        rows_by_concept,
+        ("ShortTermBorrowings",) + SHORT_TERM_NOTES_PAY_CONCEPTS,
+    )
+    current_long_term_debt_selection = _select_first_balance(rows_by_concept, ("LongTermDebtCurrent",))
+    noncurrent_debt_selection = _select_first_balance(rows_by_concept, ("LongTermDebt",))
+    bank_cash_selection = _select_first_balance(rows_by_concept, ("CashAndCashEquivalentsAtCarryingValue",))
+    restricted_cash_selection = _select_sum_balance(rows_by_concept, RESTRICTED_CASH_CONCEPTS)
+    short_term_securities_selection = _select_sum_balance(
+        rows_by_concept,
+        ("ShortTermInvestments", "MarketableSecuritiesCurrent"),
+    )
+    long_term_bonds_selection = _select_sum_balance(rows_by_concept, LONG_TERM_SECURITIES_CONCEPTS)
 
     selected_points = (
         debt_selection.points
@@ -579,6 +758,16 @@ async def _fetch_ticker_packet(
         + ar_selection.points
         + revenue_selection.points
         + interest_selection.points
+        + non_operating_interest_selection.points
+        + dividend_selection.points
+        + commercial_paper_selection.points
+        + short_term_notes_selection.points
+        + current_long_term_debt_selection.points
+        + noncurrent_debt_selection.points
+        + bank_cash_selection.points
+        + restricted_cash_selection.points
+        + short_term_securities_selection.points
+        + long_term_bonds_selection.points
     )
 
     missing_fields: list[str] = []
@@ -612,9 +801,13 @@ async def _fetch_ticker_packet(
         default=None,
     )
 
-    primary_date = max(
-        [dt for dt in (balance_sheet_date, income_statement_date) if dt],
-        default=datetime.now(UTC).date(),
+    primary_date = (
+        latest_filing["filing_date"]
+        if latest_filing is not None
+        else max(
+            [dt for dt in (balance_sheet_date, income_statement_date) if dt],
+            default=datetime.now(UTC).date(),
+        )
     )
     primary_point = max(
         selected_points,
@@ -625,11 +818,19 @@ async def _fetch_ticker_packet(
         default=None,
     )
     primary_accession = (
-        primary_point.accession_number
-        if primary_point and primary_point.accession_number
-        else f"EDGAR-XBRL-{primary_date.isoformat()}"
+        str(latest_filing.get("accession_number"))
+        if latest_filing is not None and latest_filing.get("accession_number")
+        else (
+            primary_point.accession_number
+            if primary_point and primary_point.accession_number
+            else f"EDGAR-XBRL-{primary_date.isoformat()}"
+        )
     )
-    primary_form = primary_point.form if primary_point and primary_point.form else "10-K"
+    primary_form = (
+        str(latest_filing.get("filing_type"))
+        if latest_filing is not None and latest_filing.get("filing_type")
+        else (primary_point.form if primary_point and primary_point.form else "10-K")
+    )
 
     return TickerEdgarPacket(
         ticker=symbol,
@@ -650,6 +851,24 @@ async def _fetch_ticker_packet(
         placeholder_reason=placeholder_reason,
         has_10k=has_10k,
         has_20f=has_20f,
+        sic_code=sic_code,
+        sic_description=sic_description,
+        component_breakdown=_build_component_breakdown(
+            total_debt=debt_selection.value,
+            total_cash=cash_selection.value,
+            total_revenue=revenue_selection.value,
+            interest_income=interest_selection.value,
+            commercial_paper=commercial_paper_selection.value,
+            short_term_notes_pay=short_term_notes_selection.value,
+            current_long_term_debt=current_long_term_debt_selection.value,
+            noncurrent_debt_obligations=noncurrent_debt_selection.value,
+            bank_cash=bank_cash_selection.value,
+            restricted_cash_reserves=restricted_cash_selection.value,
+            short_term_securities=short_term_securities_selection.value,
+            long_term_bonds_paper=long_term_bonds_selection.value,
+            non_operating_cash_interest=non_operating_interest_selection.value,
+            equity_investment_dividends=dividend_selection.value,
+        ),
     )
 
 
@@ -732,7 +951,9 @@ class SecRefreshService:
         company_id: int,
         filing_id: int,
         packet: TickerEdgarPacket,
-        market_cap: float | None,
+        yfinance_data: YFinanceSnapshot,
+        sector: str | None,
+        industry: str | None,
     ) -> NormalizedFinancial:
         row = self.session.scalar(
             select(NormalizedFinancial).where(
@@ -749,16 +970,34 @@ class SecRefreshService:
         row.total_debt = packet.total_debt
         row.cash_and_equivalents = packet.total_cash
         row.total_assets = None
-        row.market_cap = market_cap
+        row.market_cap = yfinance_data.market_cap
         row.operating_income = None
         row.net_income = None
-        row.shares_outstanding = None
+        row.shares_outstanding = yfinance_data.shares_outstanding
+
+        components = dict(packet.component_breakdown or {})
+        valuation = dict(components.get("valuation") or {})
+        valuation["shares_outstanding"] = yfinance_data.shares_outstanding
+        valuation["latest_closing_price"] = yfinance_data.latest_closing_price
+        valuation["baseline_label"] = "Market Cap Baseline" if yfinance_data.market_cap is not None else "Total Assets Baseline"
+        components["valuation"] = valuation
+
+        purging = dict(components.get("purging") or {})
+        core_prohibited = packet.total_revenue if _is_core_interest_profile(sector, industry) else 0.0
+        purging["core_prohibited_operations"] = core_prohibited
+        total_annual = _sum_optional(core_prohibited, purging.get("passive_financial_yield"))
+        purging["total_annual_prohibited_revenue"] = total_annual
+        components["purging"] = purging
+
         row.source_metadata_json = {
             "data_source": "edgar_xbrl",
             "balance_sheet_date": packet.balance_sheet_date.isoformat() if packet.balance_sheet_date else None,
             "income_statement_date": packet.income_statement_date.isoformat() if packet.income_statement_date else None,
             "accounts_receivable": packet.accounts_receivable,
             "missing_fields": packet.missing_fields,
+            "sic_code": packet.sic_code,
+            "sic_description": packet.sic_description,
+            "components": components,
             "concept_counts": {
                 "selected_points": len(packet.points),
             },
@@ -847,22 +1086,36 @@ class SecRefreshService:
         self.session.flush()
         return row
 
-    def _fetch_yfinance_snapshot(self, ticker: str, audit: RunAudit) -> tuple[float | None, str | None, str | None]:
+    def _fetch_yfinance_snapshot(self, ticker: str, audit: RunAudit) -> YFinanceSnapshot:
         market_cap: float | None = None
         sector: str | None = None
         industry: str | None = None
+        shares_outstanding: float | None = None
+        latest_closing_price: float | None = None
         try:
             info = yf.Ticker(ticker).info or {}
             market_cap = _to_float(info.get("marketCap"))
             sector = str(info.get("sector") or "").strip() or None
             industry = str(info.get("industry") or "").strip() or None
+            shares_outstanding = _to_float(info.get("sharesOutstanding"))
+            latest_closing_price = _to_float(
+                info.get("regularMarketPrice")
+                or info.get("currentPrice")
+                or info.get("previousClose")
+            )
             if market_cap is None:
                 audit.record_yfinance_error(ticker, "marketCap missing")
         except Exception as exc:  # pragma: no cover - network path
             audit.record_yfinance_error(ticker, str(exc))
         finally:
             time.sleep(0.1)
-        return market_cap, sector, industry
+        return YFinanceSnapshot(
+            market_cap=market_cap,
+            sector=sector,
+            industry=industry,
+            shares_outstanding=shares_outstanding,
+            latest_closing_price=latest_closing_price,
+        )
 
     async def _fetch_packets(self, tickers: list[str], audit: RunAudit) -> dict[str, TickerEdgarPacket]:
         if not tickers:
@@ -886,11 +1139,13 @@ class SecRefreshService:
         audit: RunAudit,
     ) -> RefreshSummary:
         company = self._ensure_company(packet)
-        market_cap, sector, industry = self._fetch_yfinance_snapshot(packet.ticker, audit)
-        if sector:
-            company.sector = sector
-        if industry:
-            company.industry = industry
+        yfinance_data = self._fetch_yfinance_snapshot(packet.ticker, audit)
+        if yfinance_data.sector:
+            company.sector = yfinance_data.sector
+        if yfinance_data.industry:
+            company.industry = yfinance_data.industry
+        sector_value = company.sector
+        industry_value = company.industry
 
         placeholder_reason = packet.placeholder_reason
         if packet.cik is None:
@@ -917,7 +1172,9 @@ class SecRefreshService:
                 company.id,
                 filing.id,
                 packet,
-                market_cap,
+                yfinance_data,
+                sector_value,
+                industry_value,
             )
             self._store_raw_facts(company.id, filing.id, [])
             self._upsert_screen_result(
@@ -948,7 +1205,9 @@ class SecRefreshService:
             company.id,
             filing.id,
             packet,
-            market_cap,
+            yfinance_data,
+            sector_value,
+            industry_value,
         )
         raw_rows = _points_to_raw_rows(packet.points)
         self._store_raw_facts(company.id, filing.id, raw_rows)
