@@ -1837,29 +1837,102 @@ a government or regulatory list.""",
         unsafe_allow_html=True,
     )
 
-    popover_supported = hasattr(st, "popover")
+    st.markdown(
+        """
+        <style>
+        .ethical-tooltip-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            padding: 10px 0;
+        }
+        .ethical-tooltip-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .ethical-tooltip-label {
+            font-size: 15px;
+            color: #ccc;
+            line-height: 1.3;
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .tooltip-icon {
+            color: #a89060;
+            font-size: 15px;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #1e2d3d;
+            color: #ddd;
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid #a89060;
+            border-radius: 8px;
+            padding: 12px 14px;
+            width: 280px;
+            position: absolute;
+            z-index: 9999;
+            left: 20px;
+            top: -10px;
+            transition: opacity 0.2s;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .badge-clear {
+            background-color: #1a6b3a;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-listed {
+            background-color: #8b1a1a;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     for index, (label, key, title, body) in enumerate(rows):
-        label_col, info_col, status_col = st.columns([5, 1, 2], gap="small")
-        with label_col:
-            st.markdown(f'<div class="glance-label" style="padding-top:0.35rem;">{html.escape(label)}</div>', unsafe_allow_html=True)
-        with info_col:
-            if popover_supported:
-                with st.popover("ⓘ"):
-                    st.markdown(f"**{title}**")
-                    st.write(body)
-            else:
-                with st.expander("ⓘ"):
-                    st.markdown(f"**{title}**")
-                    st.write(body)
-        with status_col:
-            st.markdown(
-                (
-                    '<div style="display:flex;justify-content:flex-end;">'
-                    f'{_pill("🔴 Listed", "fail") if insights.get(key) else _pill("🟢 Clear", "pass")}'
-                    "</div>"
-                ),
-                unsafe_allow_html=True,
-            )
+        is_listed = bool(insights.get(key))
+        badge_class = "badge-listed" if is_listed else "badge-clear"
+        badge_text = "● Listed" if is_listed else "● Clear"
+        safe_title = html.escape(title)
+        safe_body = html.escape(body.strip()).replace("\n", "<br>")
+        st.markdown(
+            f"""
+            <div class="ethical-tooltip-row">
+                <div class="ethical-tooltip-left">
+                    <span class="ethical-tooltip-label">{html.escape(label)}</span>
+                    <span class="tooltip-container">
+                        <span class="tooltip-icon">ⓘ</span>
+                        <span class="tooltip-text"><strong>{safe_title}</strong><br><br>{safe_body}</span>
+                    </span>
+                </div>
+                <span class="{badge_class}">{badge_text}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         if index < len(rows) - 1:
             st.markdown("<hr class='irizq-divider' style='margin:0.35rem 0 0.4rem 0;'>", unsafe_allow_html=True)
 
