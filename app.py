@@ -1285,11 +1285,11 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     financial_quarter_label = "Q1 2025"
     data_last_updated_html = """
     <div style="font-size: 13px; color: #888; line-height: 1.8;">
-        <strong style="color: #aaa;">Data Last Updated</strong><br>
-        Stock Price &amp; Market Cap: &nbsp;<span style="color: #ccc;">
+        <strong style="color: #888;">Data Last Updated</strong><br>
+        Stock Price &amp; Market Cap: &nbsp;<span style="color: #888;">
             {stock_date}
         </span><br>
-        Financial Data (SEC): &nbsp;<span style="color: #ccc;">
+        Financial Data (SEC): &nbsp;<span style="color: #888;">
             {financial_date}
         </span>
     </div>
