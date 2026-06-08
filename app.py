@@ -2617,6 +2617,12 @@ def main() -> None:
         placeholder="e.g. AAPL or Apple Inc.",
         key="stock_searchbox",
     )
+    st.markdown(
+        "<p style='font-size: 12px; color: #888; margin-top: -10px;'>"
+        "Screens US-listed stocks only. ETFs, index funds, and foreign "
+        "stocks are not supported.</p>",
+        unsafe_allow_html=True
+    )
     search_query = str(selected or "").strip()
     if selected:
         st.session_state.resolved_ticker = search_query
