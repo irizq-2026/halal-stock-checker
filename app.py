@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import datetime
 import html
 import os
 import time
@@ -1274,6 +1275,28 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
+    # ── DATA FRESHNESS DATES — update these manually ──────────────────
+    # stock_last_updated:      update every Sunday after price download
+    # financial_last_updated:  update each quarter after SEC data download
+    # financial_quarter_label: e.g. "Q1 2025", "Q2 2025" etc.
+    # ──────────────────────────────────────────────────────────────────
+    stock_last_updated = datetime.date(2025, 6, 1)
+    financial_last_updated = datetime.date(2025, 3, 31)
+    financial_quarter_label = "Q1 2025"
+    data_last_updated_html = """
+    <div style="font-size: 13px; color: #888; line-height: 1.8;">
+        <strong style="color: #aaa;">Data Last Updated</strong><br>
+        📈 Stock Price &amp; Market Cap: &nbsp;<span style="color: #ccc;">
+            {stock_date}
+        </span><br>
+        📋 Financial Data (SEC): &nbsp;<span style="color: #ccc;">
+            {financial_date}
+        </span>
+    </div>
+    """.format(
+        stock_date=stock_last_updated.strftime("%B %d, %Y"),
+        financial_date=financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})",
+    )
     st.markdown(f'''
         <div class="overview-card">
           <div style="display:flex;gap:0.9rem;align-items:center;">
@@ -1287,7 +1310,7 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
             <div class="muted-copy">Screening criteria passed</div>
             <div class="muted-copy" style="margin-top:0.35rem;">Passed: {html.escape(passed_copy)}</div>
           </div>
-          <div class="muted-copy" style="margin-top:0.8rem;">Last Updated: {html.escape(date.today().strftime("%B %d, %Y"))}</div>
+          <div class="muted-copy" style="margin-top:0.8rem;">{data_last_updated_html}</div>
         </div>
         ''', unsafe_allow_html=True)
     _render_at_a_glance(data, screening)
