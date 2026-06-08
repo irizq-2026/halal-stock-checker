@@ -1286,10 +1286,10 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     data_last_updated_html = """
     <div style="font-size: 13px; color: #888; line-height: 1.8;">
         <strong style="color: #aaa;">Data Last Updated</strong><br>
-        📈 Stock Price &amp; Market Cap: &nbsp;<span style="color: #ccc;">
+        Stock Price &amp; Market Cap: &nbsp;<span style="color: #ccc;">
             {stock_date}
         </span><br>
-        📋 Financial Data (SEC): &nbsp;<span style="color: #ccc;">
+        Financial Data (SEC): &nbsp;<span style="color: #ccc;">
             {financial_date}
         </span>
     </div>
@@ -1315,6 +1315,7 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
         ''', unsafe_allow_html=True)
     _render_at_a_glance(data, screening)
     _render_quick_summary(data, screening)
+    _render_purification_estimator_card(data, screening)
 
 def _render_quick_summary(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
@@ -1743,7 +1744,7 @@ def _render_purification_estimator_card(data: dict, screening: dict) -> None:
 def _render_methodology_notice_card() -> None:
     st.markdown(
         (
-            '<div class="plain-english"><strong>Methodology Notice</strong><br>'
+            '<div class="plain-english" style="background-color:#2a2010;border-left:3px solid #a89060;"><strong>Methodology Notice</strong><br>'
             "Note: Calculations can vary compared to other Halal stock screeners depending on the "
             "specific accounting data points they choose to include. Our platform's calculations "
             "strictly adhere to the AAOIFI compliance frameworks.</div>"
@@ -1756,7 +1757,6 @@ def _render_financial_tab(data: dict, screening: dict) -> None:
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
-    _render_purification_estimator_card(data, screening)
     st.markdown(f'<div class="plain-english"><strong>Summary</strong><br>{html.escape(_plain_english_financial_summary(data, screening))}</div>', unsafe_allow_html=True)
     _render_methodology_notice_card()
 
