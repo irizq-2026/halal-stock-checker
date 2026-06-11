@@ -6,16 +6,26 @@ import logging
 import re
 from typing import Any
 
+from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from db import SessionLocal
 from sec_refresh import latest_cached_screen_row
+from services.yfinance_price_cache import get_cached_or_refresh_price_row
 
 LOGGER = logging.getLogger(__name__)
 
 
 class TransientDataError(Exception):
     """Temporary storage issue — callers can retry later."""
+
+
+class DatabaseUnavailableError(TransientDataError):
+    """Database is unreachable or missing required schema."""
+
+
+class CachedDataNotReadyError(Exception):
+    """Ticker has not been loaded into the local SEC cache yet."""
 
 
 def _is_valid_symbol(symbol: str) -> bool:
@@ -70,9 +80,39 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
     try:
         row = latest_cached_screen_row(session, normalized_symbol)
         if row is None:
-            return None
+            raise CachedDataNotReadyError(
+                f"No cached SEC data found for {normalized_symbol}.",
+            )
         company, filing, normalized, result = row
-        return _build_stock_payload(company, filing, normalized, result)
+        if (result.data_source or "").strip().lower() == "sec_placeholder":
+            raise CachedDataNotReadyError(
+                f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
+            )
+        payload = _build_stock_payload(company, filing, normalized, result)
+        if payload.get("market_cap") in (None, 0):
+            latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
+            if latest_price_row and latest_price_row.get("market_cap") not in (None, 0):
+                payload["market_cap"] = _to_float(latest_price_row.get("market_cap"))
+                payload["_data_source"]["market_cap_fallback"] = {
+                    "source": "stock_prices",
+                    "price_date": str(latest_price_row.get("price_date")) if latest_price_row.get("price_date") else None,
+                    "close_price": _to_float(latest_price_row.get("close_price")),
+                    "shares_outstanding": latest_price_row.get("shares_outstanding"),
+                    "updated_at": str(latest_price_row.get("updated_at")) if latest_price_row.get("updated_at") else None,
+                }
+        return payload
+    except CachedDataNotReadyError:
+        raise
+    except (OperationalError, ProgrammingError) as exc:
+        LOGGER.exception("Database unavailable while reading cached stock data for %s", normalized_symbol)
+        raise DatabaseUnavailableError(
+            "Local SEC cache is unavailable. Configure DATABASE_URL and ensure tables exist.",
+        ) from exc
+    except SQLAlchemyError as exc:
+        LOGGER.exception("Database error while reading cached stock data for %s", normalized_symbol)
+        raise DatabaseUnavailableError(
+            "Local SEC cache query failed. Please check database connectivity and schema.",
+        ) from exc
     except Exception as exc:
         LOGGER.exception("Failed to fetch cached stock data for %s", normalized_symbol)
         raise TransientDataError(str(exc)) from exc

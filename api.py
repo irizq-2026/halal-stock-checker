@@ -2,21 +2,27 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 from datetime import datetime
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 from config import settings
 from db import SessionLocal
+from jobs.nightly_price_update import get_db_connection, run_nightly_update
 from logging_setup import configure_logging
 from scheduler import start_scheduler
 from sec_refresh import latest_cached_screen_row, refresh_single_ticker, weekly_sec_refresh
+from services.yfinance_price_cache import get_cached_or_refresh_price_row
 
 configure_logging()
 
 app = FastAPI(title="Halal Stock Checker API", version="1.0.0")
+jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
+CRON_SECRET = os.getenv("CRON_SECRET", "change-me-in-production")
 
 
 class RefreshRequest(BaseModel):
@@ -122,3 +128,75 @@ def trigger_refresh(body: RefreshRequest) -> dict[str, Any]:
         "count": len(summaries),
         "summaries": [summary.__dict__ for summary in summaries],
     }
+
+
+@jobs_router.post("/nightly-update")
+async def trigger_nightly_update(x_cron_secret: str | None = Header(default=None)) -> dict[str, Any]:
+    """
+    Triggers the nightly price update job.
+    Protected by CRON_SECRET header.
+    Called by Render cron job nightly.
+    """
+    if x_cron_secret != CRON_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return await run_nightly_update()
+
+
+@jobs_router.get("/status")
+async def job_status() -> dict[str, Any]:
+    """
+    Returns the most recent price update status.
+    Shows latest price_date and ticker count in DB.
+    """
+    db_conn = await get_db_connection()
+    try:
+        latest = await db_conn.fetchrow(
+            """
+            SELECT MAX(price_date) AS latest_price_date
+            FROM stock_prices
+            """
+        )
+        latest_date = latest.get("latest_price_date") if latest else None
+        ticker_count = 0
+        if latest_date:
+            count_row = await db_conn.fetchrow(
+                """
+                SELECT COUNT(*) AS ticker_count
+                FROM stock_prices
+                WHERE price_date = :latest_price_date
+                """,
+                {"latest_price_date": latest_date},
+            )
+            ticker_count = int((count_row or {}).get("ticker_count") or 0)
+        return {
+            "latest_price_date": str(latest_date) if latest_date else None,
+            "ticker_count": ticker_count,
+        }
+    finally:
+        await db_conn.close()
+
+
+@jobs_router.get("/market-cap/{ticker}")
+async def get_market_cap(ticker: str) -> dict[str, Any]:
+    """
+    Returns most recent market-cap inputs for a ticker.
+    Uses DB-first cache with per-ticker yfinance refresh fallback.
+    """
+    normalized_ticker = ticker.upper().strip()
+    row = await asyncio.to_thread(get_cached_or_refresh_price_row, normalized_ticker)
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No price data found for {normalized_ticker}",
+        )
+    return {
+        "ticker": row["ticker"],
+        "close_price": float(row["close_price"]) if row["close_price"] is not None else None,
+        "price_date": str(row["price_date"]),
+        "shares_outstanding": row["shares_outstanding"],
+        "market_cap": float(row["market_cap"]) if row["market_cap"] is not None else None,
+        "updated_at": str(row["updated_at"]),
+    }
+
+
+app.include_router(jobs_router)

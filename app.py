@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import datetime
 import html
 import os
 import time
@@ -10,8 +11,11 @@ from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
+from streamlit_searchbox import st_searchbox
 
 from data import (
+    CachedDataNotReadyError,
+    DatabaseUnavailableError,
     TransientDataError,
     fetch_company_enrichment as _fetch_company_enrichment,
     fetch_stock_data as _fetch_stock_data,
@@ -37,6 +41,15 @@ NEWS_FLAG_KEYWORDS = (
 )
 WEAPONS_KEYWORDS = ("defense", "aerospace", "weapon", "military", "arms")
 ISRAEL_KEYWORDS = ("israel", "israeli", "tel aviv", "jerusalem", "idf", "gaza", "west bank")
+
+# Local search universe intentionally constrained to currently validated profiles only.
+LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
+    {"ticker": "AAPL", "company_name": "Apple Inc."},
+    {"ticker": "MSFT", "company_name": "Microsoft Corporation"},
+    {"ticker": "TSLA", "company_name": "Tesla, Inc."},
+    {"ticker": "JPM", "company_name": "JPMorgan Chase & Co."},
+    {"ticker": "XOM", "company_name": "Exxon Mobil Corporation"},
+)
 
 
 def _extract_news_item(item: dict) -> dict:
@@ -273,6 +286,107 @@ IRIZQ_CSS = """
   }
   .stButton > button:hover {
     background-color: #E8C96A !important;
+  }
+  .autocomplete-anchor {
+    position: relative;
+    width: 100%;
+    height: 0;
+    z-index: 40;
+  }
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 0.18rem;
+    left: 0;
+    right: 0;
+    background: rgba(22, 32, 50, 0.96);
+    border: 1px solid #2A3F55;
+    border-radius: 12px;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .autocomplete-item {
+    display: block;
+    padding: 0.72rem 0.9rem;
+    text-decoration: none;
+    border-bottom: 1px solid #24384d;
+    transition: background-color 0.15s ease;
+  }
+  .autocomplete-item:last-child {
+    border-bottom: none;
+  }
+  .autocomplete-item:hover {
+    background-color: #203046;
+  }
+  .autocomplete-item-symbol {
+    color: #F5F5F5;
+    font-size: 0.93rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .autocomplete-item-name {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    margin-top: 0.1rem;
+    line-height: 1.25;
+  }
+  .autocomplete-empty {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    padding: 0.72rem 0.9rem;
+  }
+  [class*="st-key-autocomplete_select_"] button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #F5F5F5 !important;
+    text-align: left !important;
+    width: 100% !important;
+    padding: 0.72rem 0.9rem !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #24384d !important;
+  }
+  [class*="st-key-autocomplete_select_"] button:hover {
+    background-color: #203046 !important;
+  }
+  [class*="st-key-autocomplete_select_"] button p {
+    white-space: pre-line !important;
+    line-height: 1.25 !important;
+    color: #F5F5F5 !important;
+    font-weight: 700 !important;
+    font-size: 0.93rem !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+  [class*="st-key-autocomplete_select_"] + div .autocomplete-item-name {
+    margin-top: -0.38rem;
+    margin-bottom: 0.38rem;
+    padding: 0 0.9rem;
+  }
+  [class*="st-key-autocomplete_select_"]:last-of-type button {
+    border-bottom: none !important;
+  }
+  .autocomplete-spacer {
+    height: 16rem;
+  }
+  @media (max-width: 480px) {
+    .autocomplete-dropdown {
+      max-height: 14.5rem;
+      left: -0.1rem;
+      right: -0.1rem;
+    }
+    .autocomplete-item {
+      padding: 0.7rem 0.82rem;
+    }
+    .autocomplete-item-symbol {
+      font-size: 0.88rem;
+    }
+    .autocomplete-item-name {
+      font-size: 0.76rem;
+    }
   }
   .result-card {
     background-color: #1A2B3C;
@@ -533,7 +647,7 @@ IRIZQ_CSS = """
     .stTabs [data-baseweb="tab"] {
       flex: 1 1 0 !important;
       min-width: 0 !important;
-      max-width: 33.33% !important;
+      max-width: 25% !important;
       padding: 0.55rem 0.25rem !important;
       min-height: 40px !important;
     }
@@ -703,6 +817,75 @@ IRIZQ_CSS = """
   .missing-data {
     color: #8A9BB0;
     font-style: italic;
+  }
+  .calc-breakdown-box {
+    background-color: #162032;
+    border: 1px solid #2A3F55;
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+    margin: 0.45rem 0 0.25rem 0;
+  }
+  .calc-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin: 0.16rem 0;
+  }
+  .calc-breakdown-label {
+    color: #F5F5F5;
+    font-size: 0.8rem;
+    min-width: 0;
+    white-space: normal;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-breakdown-value {
+    color: #8A9BB0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-breakdown-indent-1 {
+    margin-left: 1rem;
+  }
+  .calc-result-line {
+    color: #F5F5F5;
+    font-size: 0.82rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .calc-footer-advisory {
+    background-color: #1A2B3C;
+    border-left: 4px solid #C9A84C;
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-top: 0.8rem;
+    color: #F5F5F5;
+    font-size: 0.83rem;
+    line-height: 1.45;
+  }
+  .calc-footer-note {
+    background-color: #162032;
+    border: 1px solid #2A3F55;
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    margin-top: 0.55rem;
+    color: #8A9BB0;
+    font-size: 0.79rem;
+    line-height: 1.4;
+  }
+  @media (max-width: 480px) {
+    .calc-breakdown-label,
+    .calc-breakdown-value,
+    .calc-result-line {
+      font-size: 0.74rem;
+    }
+    .calc-footer-advisory,
+    .calc-footer-note {
+      font-size: 0.74rem;
+    }
   }
 
 </style>
@@ -1092,6 +1275,28 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
+    # ── DATA FRESHNESS DATES — update these manually ──────────────────
+    # stock_last_updated:      update every Sunday after price download
+    # financial_last_updated:  update each quarter after SEC data download
+    # financial_quarter_label: e.g. "Q1 2025", "Q2 2025" etc.
+    # ──────────────────────────────────────────────────────────────────
+    stock_last_updated = datetime.date(2025, 6, 1)
+    financial_last_updated = datetime.date(2025, 3, 31)
+    financial_quarter_label = "Q1 2025"
+    data_last_updated_html = """
+    <div style="font-size: 13px; color: #888; line-height: 1.8;">
+        <strong style="color: #888;">Data Last Updated</strong><br>
+        Stock Price &amp; Market Cap: &nbsp;<span style="color: #888;">
+            {stock_date}
+        </span><br>
+        Financial Data (SEC): &nbsp;<span style="color: #888;">
+            {financial_date}
+        </span>
+    </div>
+    """.format(
+        stock_date=stock_last_updated.strftime("%B %d, %Y"),
+        financial_date=financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})",
+    )
     st.markdown(f'''
         <div class="overview-card">
           <div style="display:flex;gap:0.9rem;align-items:center;">
@@ -1105,11 +1310,12 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
             <div class="muted-copy">Screening criteria passed</div>
             <div class="muted-copy" style="margin-top:0.35rem;">Passed: {html.escape(passed_copy)}</div>
           </div>
-          <div class="muted-copy" style="margin-top:0.8rem;">Last Updated: {html.escape(date.today().strftime("%B %d, %Y"))}</div>
+          <div class="muted-copy" style="margin-top:0.8rem;">{data_last_updated_html}</div>
         </div>
         ''', unsafe_allow_html=True)
     _render_at_a_glance(data, screening)
     _render_quick_summary(data, screening)
+    _render_purification_estimator_card(data, screening)
 
 def _render_quick_summary(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
@@ -1150,7 +1356,14 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
         financial_kind, financial_label = "questionable", "QUESTIONABLE"
     else:
         financial_kind, financial_label = "pass", "HALAL"
-    rows = [("Business Activity", _pill("HALAL" if business_kind == "pass" else "NOT HALAL" if business_kind == "fail" else "QUESTIONABLE", business_kind)), ("Financial Screening", _pill(financial_label, financial_kind)), ("Ethical Filters", _pill("LIMITED", "limited")), ("Overall", _status_badge(_display_result(data, screening)))]
+    ethical_flags = _ethical_flag_count(data)
+    ethical_badge = _pill(f"{ethical_flags} Flags", "questionable") if ethical_flags > 0 else _pill("Clear", "pass")
+    rows = [
+        ("Business Activity", _pill("HALAL" if business_kind == "pass" else "NOT HALAL" if business_kind == "fail" else "QUESTIONABLE", business_kind)),
+        ("Financial Screening", _pill(financial_label, financial_kind)),
+        ("Ethical Insights", ethical_badge),
+        ("Overall", _status_badge(_display_result(data, screening))),
+    ]
     body = "".join(f'<div class="glance-row"><span class="glance-label">{html.escape(label)}</span>{badge}</div>' for label, badge in rows)
     st.markdown(f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>', unsafe_allow_html=True)
 
@@ -1159,13 +1372,13 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
         if metric == "debt":
             return data.get("total_debt"), data.get("market_cap"), None
         if metric == "cash":
-            return data.get("cash"), data.get("market_cap"), None
+            return _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap"), None
         return data.get("interest_income"), data.get("total_revenue"), None
 
     if metric == "debt":
         numerator, denominator = data.get("total_debt"), data.get("market_cap")
     elif metric == "cash":
-        numerator, denominator = data.get("cash"), data.get("market_cap")
+        numerator, denominator = _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap")
     else:
         numerator, denominator = data.get("interest_income"), data.get("total_revenue")
     if numerator is None or denominator in (None, 0):
@@ -1176,20 +1389,279 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
         return numerator, denominator, None
 
 
-def _income_ratio_disclaimer(data: dict) -> str | None:
-    data_source = data.get("_data_source")
-    if not isinstance(data_source, dict):
+def _calc_float(value: object) -> float | None:
+    if value is None:
         return None
-    mapped_tags = data_source.get("mapped_tags")
-    if not isinstance(mapped_tags, dict):
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
         return None
-    interest_meta = mapped_tags.get("interest_income")
-    if not isinstance(interest_meta, dict):
+    if out != out:
         return None
-    disclaimer = interest_meta.get("fallback_disclaimer")
-    if not disclaimer:
+    return out
+
+
+def _format_money_calc(value: object) -> str:
+    amount = _calc_float(value)
+    if amount is None:
+        return NOT_AVAILABLE
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    if amount == 0:
+        return "$0.00"
+    if amount >= 1_000_000_000_000:
+        return f"{sign}${amount / 1_000_000_000_000:.2f}T"
+    if amount >= 1_000_000_000:
+        return f"{sign}${amount / 1_000_000_000:.2f}B"
+    if amount >= 1_000_000:
+        return f"{sign}${amount / 1_000_000:.2f}M"
+    if amount >= 1_000:
+        return f"{sign}${amount:,.2f}"
+    return f"{sign}${amount:.2f}"
+
+
+def _format_units_count(value: object) -> str:
+    amount = _calc_float(value)
+    if amount is None:
+        return NOT_AVAILABLE
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    if amount == 0:
+        return "0"
+    if amount >= 1_000_000_000_000:
+        return f"{sign}{amount / 1_000_000_000_000:.2f}T"
+    if amount >= 1_000_000_000:
+        return f"{sign}{amount / 1_000_000_000:.2f}B"
+    if amount >= 1_000_000:
+        return f"{sign}{amount / 1_000_000:.2f}M"
+    if amount >= 1_000:
+        return f"{sign}{amount:,.0f}"
+    return f"{sign}{amount:.0f}"
+
+
+def _nested_component_map(data: dict) -> dict[str, dict]:
+    mapped_tags = ((data.get("_data_source") or {}).get("mapped_tags") or {})
+    components = (mapped_tags.get("components") if isinstance(mapped_tags, dict) else None) or {}
+    valuation_fallback = ((data.get("_data_source") or {}).get("market_cap_fallback") or {})
+
+    valuation = dict(components.get("valuation") or {})
+    valuation.setdefault("baseline_label", "Market Cap Baseline")
+    if valuation.get("shares_outstanding") is None:
+        valuation["shares_outstanding"] = valuation_fallback.get("shares_outstanding")
+    if valuation.get("latest_closing_price") is None:
+        valuation["latest_closing_price"] = valuation_fallback.get("close_price")
+
+    debt = dict(components.get("debt") or {})
+    debt.setdefault("total_borrowed_capital", data.get("total_debt"))
+
+    liquid = dict(components.get("liquid_assets") or {})
+    liquid.setdefault("total_interest_earning_pools", data.get("cash"))
+
+    purging = dict(components.get("purging") or {})
+    purging.setdefault("total_annual_prohibited_revenue", data.get("interest_income"))
+    purging.setdefault("total_revenue_baseline", data.get("total_revenue"))
+    if purging.get("core_prohibited_operations") is None:
+        purging["core_prohibited_operations"] = 0.0
+
+    return {
+        "valuation": valuation,
+        "debt": debt,
+        "liquid_assets": liquid,
+        "purging": purging,
+    }
+
+
+def _sum_present(values: list[float | None]) -> float | None:
+    present = [value for value in values if value is not None]
+    if not present:
         return None
-    return str(disclaimer)
+    return sum(present)
+
+
+def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
+    liquid = _nested_component_map(data)["liquid_assets"]
+
+    bank_cash = _calc_float(liquid.get("bank_cash"))
+    restricted_cash = _calc_float(liquid.get("restricted_cash_reserves"))
+    short_term_securities = _calc_float(liquid.get("short_term_securities"))
+    long_term_bonds = _calc_float(liquid.get("long_term_bonds_paper"))
+
+    cash_and_equivalents = _calc_float(liquid.get("cash_and_cash_equivalents"))
+    if cash_and_equivalents is None:
+        cash_and_equivalents = _sum_present([bank_cash, restricted_cash])
+
+    # Always prefer a strict recompute from short-term + long-term securities.
+    marketable_debt_securities = _sum_present([short_term_securities, long_term_bonds])
+    if marketable_debt_securities is None:
+        marketable_debt_securities = _calc_float(liquid.get("marketable_debt_securities"))
+
+    # Ratio 2 numerator should include both parent buckets.
+    total_interest_earning_pools = _sum_present([cash_and_equivalents, marketable_debt_securities])
+    if total_interest_earning_pools is None:
+        total_interest_earning_pools = _calc_float(liquid.get("total_interest_earning_pools"))
+    if total_interest_earning_pools is None:
+        total_interest_earning_pools = _calc_float(data.get("cash"))
+
+    return {
+        "cash_and_equivalents": cash_and_equivalents,
+        "marketable_debt_securities": marketable_debt_securities,
+        "total_interest_earning_pools": total_interest_earning_pools,
+        "bank_cash": bank_cash,
+        "restricted_cash_reserves": restricted_cash,
+        "short_term_securities": short_term_securities,
+        "long_term_bonds_paper": long_term_bonds,
+    }
+
+
+def _calc_row_html(label: str, value: object, *, depth: int = 0, units: bool = False) -> str:
+    value_label = _format_units_count(value) if units else _format_money_calc(value)
+    indent_cls = " calc-breakdown-indent-1" if depth > 0 else ""
+    return (
+        f'<div class="calc-breakdown-row{indent_cls}">'
+        f'<span class="calc-breakdown-label">{html.escape(label)}</span>'
+        f'<span class="calc-breakdown-value">{html.escape(value_label)}</span>'
+        "</div>"
+    )
+
+
+def _render_calc_rows(rows: list[dict[str, object]]) -> None:
+    body = "".join(
+        _calc_row_html(
+            str(row.get("label") or ""),
+            row.get("value"),
+            depth=int(row.get("depth") or 0),
+            units=bool(row.get("units")),
+        )
+        for row in rows
+    )
+    st.markdown(f'<div class="calc-breakdown-box">{body}</div>', unsafe_allow_html=True)
+
+
+def _calculation_details_for_metric(
+    data: dict,
+    metric: str,
+    numerator: float | None,
+    denominator: float | None,
+    numerator_label: str,
+    denominator_label: str,
+) -> tuple[str, list[dict[str, object]], str, list[dict[str, object]]]:
+    components = _nested_component_map(data)
+    valuation = components["valuation"]
+    debt = components["debt"]
+    liquid = components["liquid_assets"]
+    purging = components["purging"]
+
+    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
+    if short_term_borrowings is None:
+        short_term_borrowings = (
+            (_calc_float(debt.get("commercial_paper")) or 0.0)
+            + (_calc_float(debt.get("short_term_notes_pay")) or 0.0)
+        )
+    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
+    if long_term_borrowings is None:
+        long_term_borrowings = (
+            (_calc_float(debt.get("current_long_term_debt")) or 0.0)
+            + (_calc_float(debt.get("noncurrent_debt_obligations")) or 0.0)
+        )
+
+    liquid_totals = _resolve_liquid_component_totals(data)
+    cash_and_equivalents = liquid_totals["cash_and_equivalents"]
+    marketable_pools = liquid_totals["marketable_debt_securities"]
+
+    passive_yield = _calc_float(purging.get("passive_financial_yield"))
+    if passive_yield is None:
+        passive_yield = (
+            (_calc_float(purging.get("non_operating_cash_interest")) or 0.0)
+            + (_calc_float(purging.get("equity_investment_dividends")) or 0.0)
+        )
+
+    numerator_rows: list[dict[str, object]]
+    denominator_rows: list[dict[str, object]]
+    numerator_title = numerator_label
+    denominator_title = denominator_label
+
+    if metric == "debt":
+        numerator_title = "Total Debt"
+        denominator_title = "Market Cap"
+        numerator_rows = [
+            {"label": "Total Borrowed Capital", "value": debt.get("total_borrowed_capital", numerator)},
+            {"label": "Short-Term Borrowings", "value": short_term_borrowings},
+            {"label": "Commercial Paper", "value": debt.get("commercial_paper"), "depth": 1},
+            {"label": "Short-Term Notes Pay", "value": debt.get("short_term_notes_pay"), "depth": 1},
+            {"label": "Long-Term Borrowings", "value": long_term_borrowings},
+            {"label": "Current Long-Term Debt", "value": debt.get("current_long_term_debt"), "depth": 1},
+            {"label": "Noncurrent Debt Obligations", "value": debt.get("noncurrent_debt_obligations"), "depth": 1},
+        ]
+    elif metric == "cash":
+        numerator_title = "Total Cash"
+        denominator_title = "Market Cap"
+        numerator_rows = [
+            {"label": "Total Interest-Earning Pools", "value": liquid_totals["total_interest_earning_pools"]},
+            {"label": "Cash & Cash Equivalents", "value": cash_and_equivalents},
+            {"label": "Bank Accounts / Cash", "value": liquid_totals["bank_cash"], "depth": 1},
+            {"label": "Restricted Cash Reserves", "value": liquid_totals["restricted_cash_reserves"], "depth": 1},
+            {"label": "Marketable Debt Securities", "value": marketable_pools},
+            {"label": "Short-Term Securities", "value": liquid_totals["short_term_securities"], "depth": 1},
+            {"label": "Long-Term Bonds & Paper", "value": liquid_totals["long_term_bonds_paper"], "depth": 1},
+        ]
+    else:
+        numerator_title = "Total Annual Prohibited Revenue"
+        denominator_title = "Total Revenue"
+        numerator_rows = [
+            {"label": "Total Annual Prohibited Revenue", "value": purging.get("total_annual_prohibited_revenue", numerator)},
+            {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
+            {"label": "Passive Financial Yield", "value": passive_yield},
+            {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
+            {"label": "Equity Investment Dividends", "value": purging.get("equity_investment_dividends"), "depth": 1},
+        ]
+
+    baseline_label = valuation.get("baseline_label") or "Market Cap Baseline"
+    denominator_rows = [
+        {"label": baseline_label, "value": denominator if denominator is not None else data.get("market_cap")},
+        {"label": "Shares Outstanding", "value": valuation.get("shares_outstanding"), "depth": 1, "units": True},
+        {"label": "Latest Closing Price", "value": valuation.get("latest_closing_price"), "depth": 1},
+    ]
+    if metric == "income":
+        denominator_rows = [
+            {"label": "Total Revenue Baseline", "value": purging.get("total_revenue_baseline", denominator)},
+        ]
+
+    return numerator_title, numerator_rows, denominator_title, denominator_rows
+
+
+def _result_line(numerator: float | None, denominator: float | None, ratio: float | None) -> str:
+    if ratio is None:
+        return f"Result: {NOT_AVAILABLE} = {_format_money_calc(numerator)} / {_format_money_calc(denominator)}"
+    return (
+        f"Result: {ratio * 100:.2f}% = {_format_money_calc(numerator)} / {_format_money_calc(denominator)}"
+    )
+
+
+def _render_metric_calculation(
+    data: dict,
+    metric: str,
+    numerator: float | None,
+    denominator: float | None,
+    ratio: float | None,
+    numerator_label: str,
+    denominator_label: str,
+) -> None:
+    numerator_title, numerator_rows, denominator_title, denominator_rows = _calculation_details_for_metric(
+        data,
+        metric,
+        numerator,
+        denominator,
+        numerator_label,
+        denominator_label,
+    )
+    with st.expander(f"Numerator: {numerator_title} = {_format_money_calc(numerator)}", expanded=False):
+        _render_calc_rows(numerator_rows)
+    with st.expander(f"Denominator: {denominator_title} = {_format_money_calc(denominator)}", expanded=False):
+        _render_calc_rows(denominator_rows)
+    st.markdown(
+        f'<div class="calc-result-line">{html.escape(_result_line(numerator, denominator, ratio))}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _render_metric_card(title: str, metric: str, threshold: float, questionable_floor: float, numerator_label: str, denominator_label: str, what_it_means: str, why_it_matters: str, note: str = "") -> None:
@@ -1219,12 +1691,15 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
           <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}{disclaimer_html}
         </div>''', unsafe_allow_html=True)
     with st.expander("View Calculation"):
-        st.markdown(f"**Numerator:** {numerator_label} = {_format_money(numerator)}")
-        st.markdown(f"**Denominator:** {denominator_label} = {_format_money(denominator)}")
-        if core_interest_business:
-            st.markdown("**Result:** Not applicable for this business type")
-        else:
-            st.markdown(f"**Result:** {NOT_AVAILABLE}" if ratio is None else f"**Result:** {ratio * 100:.1f}% = {_format_money(numerator)} / {_format_money(denominator)}")
+        _render_metric_calculation(
+            data,
+            metric,
+            numerator,
+            denominator,
+            ratio,
+            numerator_label,
+            denominator_label,
+        )
 
 
 def _plain_english_financial_summary(data: dict, screening: dict) -> str:
@@ -1248,11 +1723,47 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
     return f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
 
 
+def _render_purification_estimator_card(data: dict, screening: dict) -> None:
+    company = _company_name(data)
+    interest_income = _calc_float(data.get("interest_income"))
+    _, _, income_ratio = _metric_data(data, "income")
+    if (interest_income or 0.0) > 0 and income_ratio is not None and income_ratio > 0:
+        ratio_pct = income_ratio * 100
+        donation = ratio_pct
+        body = (
+            f"Because {ratio_pct:.2f}% of {company}'s top-line revenue is derived from interest, "
+            f"Shariah standards advise donating ${donation:.2f} out of every $100 you receive in "
+            "dividends to purify your income or profit."
+        )
+    else:
+        body = (
+            "No interest income was found in the available data. Please review the income statement in detail, "
+            "as it is sometimes reported differently, to ensure no purification is needed."
+        )
+    st.markdown(
+        f'<div class="plain-english"><strong>Your Purification Estimator</strong><br>{html.escape(body)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_methodology_notice_card() -> None:
+    st.markdown(
+        (
+            '<div class="plain-english" style="background-color:#2a2010;border-left:3px solid #a89060;"><strong>Methodology Notice</strong><br>'
+            "Note: Calculations can vary compared to other Halal stock screeners depending on the "
+            "specific accounting data points they choose to include. Our platform's calculations "
+            "strictly adhere to the AAOIFI compliance frameworks.</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def _render_financial_tab(data: dict, screening: dict) -> None:
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
     st.markdown(f'<div class="plain-english"><strong>Summary</strong><br>{html.escape(_plain_english_financial_summary(data, screening))}</div>', unsafe_allow_html=True)
+    _render_methodology_notice_card()
 
 
 def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
@@ -1261,6 +1772,208 @@ def _contains_keyword(text: str, keywords: tuple[str, ...]) -> str | None:
         if keyword in lowered:
             return keyword
     return None
+
+
+def _to_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return False
+
+
+def _ethical_insights_payload(data: dict) -> dict[str, object]:
+    raw = data.get("ethical_insights")
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "official_bds": _to_bool(raw.get("official_bds")),
+        "afsc": _to_bool(raw.get("afsc")),
+        "un_ohchr": _to_bool(raw.get("un_ohchr")),
+        "who_profits": _to_bool(raw.get("who_profits")),
+        "sources_reviewed": raw.get("sources_reviewed"),
+    }
+
+
+def _ethical_flag_count(data: dict) -> int:
+    insights = _ethical_insights_payload(data)
+    return sum(
+        1
+        for key in ("official_bds", "afsc", "un_ohchr", "who_profits")
+        if insights.get(key)
+    )
+
+
+def _render_ethical_insights_section(data: dict) -> None:
+    insights = _ethical_insights_payload(data)
+    rows = [
+        (
+            "Official BDS Target",
+            "official_bds",
+            "About the BDS Target List",
+            """The Boycott, Divestment and Sanctions (BDS) movement is a 
+Palestinian-led campaign that calls for economic and political pressure 
+related to Israeli government policies toward Palestinians. Companies on 
+this list are those the BDS movement has identified as having direct 
+involvement in or material support of activities they oppose. This is not 
+a legal or regulatory finding. Users should research independently and 
+reach their own conclusions based on their values.""",
+        ),
+        (
+            "AFSC Investigate Database",
+            "afsc",
+            "About AFSC Investigate",
+            """The American Friends Service Committee (AFSC) is a Quaker humanitarian 
+organization. Their Investigate database tracks companies they identify as 
+profiting from military occupation or human rights violations, primarily 
+in the context of the Israeli-Palestinian conflict. Inclusion is based on 
+AFSC's own research methodology and does not represent a legal or 
+regulatory determination. It is one of several civil society tools used 
+by ethical investors.""",
+        ),
+        (
+            "UN OHCHR Database",
+            "un_ohchr",
+            "About the UN OHCHR Database",
+            """The United Nations Office of the High Commissioner for Human Rights 
+(OHCHR) maintains a database of companies with operations in Israeli 
+settlements in the occupied West Bank, including East Jerusalem, as 
+mandated by UN Human Rights Council Resolution 31/36. Inclusion means 
+the UN has identified a business presence in settlements. This is not a 
+sanctions list or legal finding, but is a significant intergovernmental 
+reference used by ethical investors worldwide.""",
+        ),
+        (
+            "Who Profits Database",
+            "who_profits",
+            "About Who Profits",
+            """Who Profits is an independent Israeli research center that documents 
+commercial involvement in the Israeli military occupation of Palestinian 
+and Syrian territories. Their database covers companies involved in 
+settlement construction, military supply, natural resource extraction, 
+and occupation infrastructure. It is a civil society research tool, not 
+a government or regulatory list.""",
+        ),
+    ]
+    st.markdown(
+        (
+            '<div class="overview-card"><div class="card-title">Ethical Insights</div>'
+            '<div class="muted-copy">Educational ethical screening based on publicly available databases.</div></div>'
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <style>
+        .ethical-tooltip-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            padding: 10px 0;
+        }
+        .ethical-tooltip-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .ethical-tooltip-label {
+            font-size: 15px;
+            color: #ccc;
+            line-height: 1.3;
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .tooltip-icon {
+            color: #a89060;
+            font-size: 15px;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #1e2d3d;
+            color: #ddd;
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid #a89060;
+            border-radius: 8px;
+            padding: 12px 14px;
+            width: 280px;
+            position: absolute;
+            z-index: 9999;
+            left: 20px;
+            top: -10px;
+            transition: opacity 0.2s;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .badge-clear {
+            background-color: #1a6b3a;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-listed {
+            background-color: #8b1a1a;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    for index, (label, key, title, body) in enumerate(rows):
+        is_listed = bool(insights.get(key))
+        badge_class = "badge-listed" if is_listed else "badge-clear"
+        badge_text = "● Listed" if is_listed else "● Clear"
+        safe_title = html.escape(title)
+        safe_body = html.escape(body.strip()).replace("\n", "<br>")
+        st.markdown(
+            f"""
+            <div class="ethical-tooltip-row">
+                <div class="ethical-tooltip-left">
+                    <span class="ethical-tooltip-label">{html.escape(label)}</span>
+                    <span class="tooltip-container">
+                        <span class="tooltip-icon">ⓘ</span>
+                        <span class="tooltip-text"><strong>{safe_title}</strong><br><br>{safe_body}</span>
+                    </span>
+                </div>
+                <span class="{badge_class}">{badge_text}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if index < len(rows) - 1:
+            st.markdown("<hr class='irizq-divider' style='margin:0.35rem 0 0.4rem 0;'>", unsafe_allow_html=True)
+
+    sources_reviewed = insights.get("sources_reviewed")
+    if sources_reviewed is not None:
+        st.markdown(
+            f'<div class="muted-copy" style="margin-top:0.75rem;">Sources Reviewed: {html.escape(str(sources_reviewed))}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_ethical_insights_tab(data: dict, screening: dict) -> None:
+    _render_ethical_insights_section(data)
 
 
 def _render_news_card(data: dict) -> None:
@@ -1527,9 +2240,10 @@ def render_results(data: dict, screening: dict) -> None:
     # Streamlit tabs keep their selected index across reruns. Changing the
     # invisible suffix after a new screen remounts the tabs back to Overview.
     reset_suffix = "​" * int(st.session_state.get("tabs_reset_token", 0))
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         f"Overview{reset_suffix}",
         f"Financial{reset_suffix}",
+        f"Ethical{reset_suffix}",
         f"Guide{reset_suffix}",
     ])
     with tab1:
@@ -1537,11 +2251,28 @@ def render_results(data: dict, screening: dict) -> None:
     with tab2:
         _render_financial_tab(data, screening)
     with tab3:
+        _render_ethical_insights_tab(data, screening)
+    with tab4:
         _render_details_tab(data, screening)
 
 
-def render_error(ticker: str, transient: bool = False) -> None:
-    if transient:
+def render_error(
+    ticker: str,
+    transient: bool = False,
+    database_unavailable: bool = False,
+    cache_missing: bool = False,
+) -> None:
+    if database_unavailable:
+        message = (
+            "Local SEC database is currently unavailable. "
+            "Please verify <strong>DATABASE_URL</strong> and database connectivity."
+        )
+    elif cache_missing:
+        message = (
+            f"Recent SEC data is currently unavailable for <strong>{ticker.upper()}</strong>. "
+            "This ticker may not have a recent 10-Q/10-K filing or SEC company-facts coverage yet."
+        )
+    elif transient:
         message = (
             f"Market data for <strong>{ticker.upper()}</strong> is temporarily unavailable "
             "(data refresh or network issue). Wait 10-20 seconds and click "
@@ -1663,12 +2394,136 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
         ''', unsafe_allow_html=True)
 
 
+def _filter_local_stock_candidates(raw_query: str) -> list[dict[str, str]]:
+    query = (raw_query or "").strip().lower()
+    if not query:
+        return []
+    matches = [
+        stock
+        for stock in LOCAL_SEARCH_STOCKS
+        if query in stock["ticker"].lower() or query in stock["company_name"].lower()
+    ]
+    return sorted(
+        matches,
+        key=lambda stock: (
+            0 if stock["ticker"].lower().startswith(query) else 1,
+            0 if stock["company_name"].lower().startswith(query) else 1,
+            stock["ticker"],
+        ),
+    )
+
+
+def _find_exact_local_match(raw_query: str) -> dict[str, str] | None:
+    query = (raw_query or "").strip().lower()
+    if not query:
+        return None
+    for stock in LOCAL_SEARCH_STOCKS:
+        if query == stock["ticker"].lower() or query == stock["company_name"].lower():
+            return stock
+    return None
+
+
+def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
+    exact = _find_exact_local_match(raw_query)
+    if exact:
+        return exact["ticker"]
+    candidates = _filter_local_stock_candidates(raw_query)
+    if not candidates:
+        return None
+    return candidates[0]["ticker"]
+
+
+def _searchbox_local_stock_options(search_query: str) -> list[tuple[str, str]]:
+    matches = _filter_local_stock_candidates(search_query)
+    return [
+        (f'{stock["company_name"]} ({stock["ticker"]})', stock["ticker"])
+        for stock in matches
+    ]
+
+
+def _sync_autocomplete_state(raw_query: str) -> None:
+    query = (raw_query or "").strip()
+    if not query:
+        st.session_state.filtered_results = []
+        st.session_state.is_dropdown_open = False
+        return
+    exact = _find_exact_local_match(query)
+    if (
+        exact
+        and st.session_state.get("has_results")
+        and st.session_state.get("last_ticker") == exact["ticker"]
+    ):
+        st.session_state.filtered_results = []
+        st.session_state.is_dropdown_open = False
+        return
+    filtered = _filter_local_stock_candidates(query)
+    st.session_state.filtered_results = filtered
+    st.session_state.is_dropdown_open = True
+
+
+def _select_ticker_from_autocomplete(ticker: str) -> None:
+    selected = (ticker or "").strip().upper()
+    if not selected:
+        return
+    st.session_state.resolved_ticker = selected
+    st.session_state.pending_selection_ticker = selected
+    st.session_state.ticker_input_prefill = selected
+    st.session_state.is_dropdown_open = False
+    st.session_state.filtered_results = []
+    st.rerun()
+
+
+def _on_search_input_change() -> None:
+    raw = str(st.session_state.get("ticker_input_widget", "") or "")
+    st.session_state.ticker_input = raw
+    _sync_autocomplete_state(raw)
+
+
+def _render_autocomplete_dropdown() -> None:
+    if not st.session_state.get("is_dropdown_open"):
+        return
+    filtered = st.session_state.get("filtered_results") or []
+    suggestion_count = max(len(filtered), 1)
+    spacer_height_rem = min(16.0, max(4.1, 3.1 * suggestion_count))
+    st.markdown('<div class="autocomplete-anchor"><div class="autocomplete-dropdown">', unsafe_allow_html=True)
+    if filtered:
+        for stock in filtered:
+            ticker = stock["ticker"]
+            company_name = stock["company_name"]
+            if st.button(
+                f"{ticker}\n",
+                key=f"autocomplete_select_{ticker}",
+                use_container_width=True,
+            ):
+                _select_ticker_from_autocomplete(ticker)
+            st.markdown(
+                f'<div class="autocomplete-item-name">{html.escape(company_name)}</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(
+            '<div class="autocomplete-empty">No matches in the current local stock universe.</div>',
+            unsafe_allow_html=True,
+        )
+    st.markdown(
+        '</div></div>'
+        f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def initialize_session_state() -> None:
     defaults = {
         "stock_data": None,
         "screening": None,
         "last_ticker": "",
         "ticker_input": "",
+        "ticker_input_widget": "",
+        "ticker_input_prefill": "",
+        "filtered_results": [],
+        "is_dropdown_open": False,
+        "resolved_ticker": "",
+        "pending_selection_ticker": "",
         "tabs_reset_token": 0,
         "has_results": False,
     }
@@ -1720,6 +2575,13 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
         status_text.markdown("✅ Done!")
         progress_bar.progress(100)
         time.sleep(0.3)
+    except CachedDataNotReadyError:
+        clear_results_for_error(ticker)
+        render_error(ticker, cache_missing=True)
+    except DatabaseUnavailableError:
+        fetch_stock_data_cached.clear()
+        clear_results_for_error(ticker)
+        render_error(ticker, database_unavailable=True)
     except TransientDataError:
         fetch_stock_data_cached.clear()
         clear_results_for_error(ticker)
@@ -1754,28 +2616,52 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    ticker = st.text_input(
-        "Enter Stock Symbol:",
-        placeholder="e.g. AAPL",
-        label_visibility="visible",
-        key="ticker_input",
-    ).strip().upper()
+    selected = st_searchbox(
+        search_function=_searchbox_local_stock_options,
+        label="Search by Ticker or Company Name:",
+        placeholder="e.g. AAPL or Apple Inc.",
+        key="stock_searchbox",
+    )
+    st.markdown(
+        "<p style='font-size: 12px; color: #888; margin-top: -10px;'>"
+        "Screens US-listed stocks only. ETFs, index funds, and foreign "
+        "stocks are not supported.</p>",
+        unsafe_allow_html=True
+    )
+    search_query = str(selected or "").strip()
+    if selected:
+        st.session_state.resolved_ticker = search_query
+    st.session_state.ticker_input = search_query
 
     check_clicked = st.button("Check Status", type="primary", use_container_width=True)
 
     if check_clicked:
-        if not ticker:
+        st.session_state.is_dropdown_open = False
+        st.session_state.filtered_results = []
+        if not search_query:
             st.markdown(
-                '<div class="info-msg">Please enter a US stock ticker symbol to continue.</div>',
+                '<div class="info-msg">Please enter a stock ticker or company name to continue.</div>',
                 unsafe_allow_html=True,
             )
-        elif ticker != st.session_state.last_ticker or not st.session_state.has_results:
-            run_screening_flow(ticker)
         else:
-            st.markdown(
-                '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
-                unsafe_allow_html=True,
-            )
+            resolved_ticker = _resolve_ticker_from_search_query(search_query)
+            st.session_state.resolved_ticker = resolved_ticker or ""
+            if not resolved_ticker:
+                st.markdown(
+                    '<div class="info-msg">No local compliance profile match was found. '
+                    'Currently available: AAPL, MSFT, TSLA, JPM, XOM.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif (
+                resolved_ticker != st.session_state.last_ticker
+                or not st.session_state.has_results
+            ):
+                run_screening_flow(resolved_ticker)
+            else:
+                st.markdown(
+                    '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
+                    unsafe_allow_html=True,
+                )
 
 
     if st.session_state.has_results and st.session_state.stock_data and st.session_state.screening:
