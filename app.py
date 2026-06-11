@@ -2716,31 +2716,54 @@ def _render_streamlit_admin_page() -> None:
         st.error(st.session_state.analytics_error)
         return
 
-    def _resolved_admin_password() -> str:
-        secret_password = ""
-        try:
-            # Streamlit Community Cloud commonly stores secrets here.
-            secret_password = str(st.secrets.get("ANALYTICS_ADMIN_PASSWORD", "") or "").strip()
-        except Exception:
-            secret_password = ""
-        env_password = str(settings.analytics_admin_password or "").strip()
-        for candidate in (secret_password, env_password):
-            normalized = candidate.strip().strip('"').strip("'")
-            if normalized:
-                return normalized
-        return "change-me"
+    def _normalize_password(raw: object) -> str:
+        return str(raw or "").strip().strip('"').strip("'")
 
-    expected_password = _resolved_admin_password()
+    def _resolved_admin_password() -> tuple[str, str]:
+        candidates: list[tuple[str, object]] = []
+        try:
+            candidates.extend(
+                [
+                    ("st.secrets.ANALYTICS_ADMIN_PASSWORD", st.secrets.get("ANALYTICS_ADMIN_PASSWORD")),
+                    ("st.secrets.analytics_admin_password", st.secrets.get("analytics_admin_password")),
+                ]
+            )
+            analytics_block = st.secrets.get("analytics")
+            if hasattr(analytics_block, "get"):
+                candidates.extend(
+                    [
+                        ("st.secrets.analytics.admin_password", analytics_block.get("admin_password")),
+                        ("st.secrets.analytics.password", analytics_block.get("password")),
+                    ]
+                )
+        except Exception:
+            pass
+
+        candidates.extend(
+            [
+                ("os.getenv(ANALYTICS_ADMIN_PASSWORD)", os.getenv("ANALYTICS_ADMIN_PASSWORD")),
+                ("config.settings.analytics_admin_password", settings.analytics_admin_password),
+            ]
+        )
+
+        for source, raw in candidates:
+            normalized = _normalize_password(raw)
+            if normalized and normalized != "change-me":
+                return normalized, source
+        return "change-me", "default-fallback"
+
+    expected_password, password_source = _resolved_admin_password()
     if expected_password == "change-me":
         st.warning(
             "Admin password is still using default fallback. "
-            "Set ANALYTICS_ADMIN_PASSWORD in Streamlit Secrets or environment variables."
+            "Set ANALYTICS_ADMIN_PASSWORD in Streamlit Secrets or environment variables, then restart app."
         )
+    st.caption(f"Password source detected: {password_source}")
 
     if not st.session_state.get("admin_authenticated"):
         password = st.text_input("Admin Password", type="password", key="admin_password_input")
         if st.button("Login to Admin", type="primary", use_container_width=True):
-            entered = str(password or "").strip().strip('"').strip("'")
+            entered = _normalize_password(password)
             if entered and entered == expected_password:
                 st.session_state.admin_authenticated = True
                 st.rerun()
