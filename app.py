@@ -1726,17 +1726,23 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
             "Standard debt, cash, and interest-income ratios can be misleading for this business type, "
             "so the business activity screen should drive the result."
         )
+    fallback_disclaimer = _income_ratio_disclaimer(data)
     statuses = _financial_statuses(screening)
     failing = [name for name, status in statuses.items() if status == "fail"]
     close = [name for name, status in statuses.items() if status == "questionable"]
     missing = [name for name, status in statuses.items() if status == "unavailable"]
+    base_summary: str
     if failing:
-        return f"{company}'s financials exceed the allowed limit for {', '.join(failing)}. That makes the stock fail the financial screen even if other ratios look acceptable."
-    if close:
-        return f"{company}'s financials are mostly within the allowable limits. The {', '.join(close)} ratio is close to its threshold, which makes the result questionable."
-    if missing:
-        return f"{company}'s available financial ratios look acceptable, but some data is missing. Because the available data is incomplete, a scholar should review it before investing."
-    return f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
+        base_summary = f"{company}'s financials exceed the allowed limit for {', '.join(failing)}. That makes the stock fail the financial screen even if other ratios look acceptable."
+    elif close:
+        base_summary = f"{company}'s financials are mostly within the allowable limits. The {', '.join(close)} ratio is close to its threshold, which makes the result questionable."
+    elif missing:
+        base_summary = f"{company}'s available financial ratios look acceptable, but some data is missing. Because the available data is incomplete, a scholar should review it before investing."
+    else:
+        base_summary = f"{company}'s financials are within the allowable limits. Debt, cash, and interest income levels are below the AAOIFI-style thresholds used by this tool."
+    if fallback_disclaimer:
+        return f"{fallback_disclaimer} {base_summary}"
+    return base_summary
 
 
 def _render_purification_estimator_card(data: dict, screening: dict) -> None:

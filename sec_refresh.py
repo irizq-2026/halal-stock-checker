@@ -32,6 +32,10 @@ FIELD_ACCOUNTS_RECEIVABLE = "accounts_receivable"
 FIELD_TOTAL_REVENUE = "total_revenue"
 FIELD_INTEREST_INCOME = "interest_income"
 
+INTEREST_PRIMARY_CONCEPT = "InvestmentIncomeInterest"
+INTEREST_BUNDLED_CONCEPT = "InvestmentIncomeInterestAndDividend"
+INTEREST_UPPER_BOUNDARY_CONCEPT = "NonoperatingIncomeExpense"
+
 DEBT_CONCEPTS = (
     "LongTermDebt",
     "LongTermDebtCurrent",
@@ -61,7 +65,9 @@ LONG_TERM_SECURITIES_CONCEPTS = (
     "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
 )
 INTEREST_INCOME_CONCEPTS = (
-    "InvestmentIncomeInterest",
+    INTEREST_PRIMARY_CONCEPT,
+    INTEREST_BUNDLED_CONCEPT,
+    INTEREST_UPPER_BOUNDARY_CONCEPT,
     "InterestIncomeOperating",
     "InterestAndDividendIncomeOperating",
     "InterestAndFeeIncomeLoansAndLeases",
@@ -207,6 +213,10 @@ class TickerEdgarPacket:
     accounts_receivable: float | None
     total_revenue: float | None
     interest_income: float | None
+    interest_income_source: str | None
+    interest_income_method: str
+    interest_income_fallback_step: str | None
+    interest_income_disclaimer: str | None
     balance_sheet_date: date | None
     income_statement_date: date | None
     primary_filing_type: str
@@ -541,6 +551,74 @@ def _select_first_income(rows_by_concept: dict[str, list[ConceptPoint]], concept
     )
 
 
+def _is_non_zero(value: float | None) -> bool:
+    return value is not None and value != 0.0
+
+
+def _quarter_label(period_end: date) -> str:
+    quarter = ((period_end.month - 1) // 3) + 1
+    return f"Q{quarter} {period_end.year}"
+
+
+def _log_ratio3_source(ticker: str, point: ConceptPoint, source_tag: str) -> None:
+    message = f"[Ratio3Source] {_quarter_label(point.end)} {ticker.upper()} → {source_tag}"
+    LOGGER.info(message)
+    print(message)
+
+
+def _select_interest_income_with_fallback(
+    rows_by_concept: dict[str, list[ConceptPoint]],
+    ticker: str,
+) -> tuple[MetricSelection, str | None, str | None]:
+    primary_rows = rows_by_concept.get(INTEREST_PRIMARY_CONCEPT) or []
+    bundled_rows = rows_by_concept.get(INTEREST_BUNDLED_CONCEPT) or []
+    upper_rows = rows_by_concept.get(INTEREST_UPPER_BOUNDARY_CONCEPT) or []
+
+    primary_selection = _income_ttm_or_10k(primary_rows)
+    if _is_non_zero(primary_selection.value):
+        primary_selection.concept = INTEREST_PRIMARY_CONCEPT
+        for point in primary_selection.points:
+            _log_ratio3_source(ticker, point, INTEREST_PRIMARY_CONCEPT)
+        return primary_selection, None, None
+
+    bundled_selection = _income_ttm_or_10k(bundled_rows)
+    if _is_non_zero(bundled_selection.value):
+        bundled_selection.concept = INTEREST_BUNDLED_CONCEPT
+        for point in bundled_selection.points:
+            _log_ratio3_source(ticker, point, INTEREST_BUNDLED_CONCEPT)
+        return (
+            bundled_selection,
+            "step2",
+            "⚠️ Interest & dividend income reported as a combined figure. "
+            "This ratio may be slightly overstated if dividend income is included.",
+        )
+
+    upper_selection = _income_ttm_or_10k(upper_rows)
+    if upper_selection.value is not None:
+        upper_selection.concept = INTEREST_UPPER_BOUNDARY_CONCEPT
+        for point in upper_selection.points:
+            _log_ratio3_source(ticker, point, INTEREST_UPPER_BOUNDARY_CONCEPT)
+        return (
+            upper_selection,
+            "step3",
+            "⚠️ Interest income not separately reported for this period. "
+            "Non-operating income used as the upper boundary. "
+            "Ratio 3 reflects a conservative ceiling, not an exact figure.",
+        )
+
+    return (
+        MetricSelection(
+            value=None,
+            period_end=None,
+            points=[],
+            method="missing",
+            concept=None,
+        ),
+        None,
+        None,
+    )
+
+
 def _points_to_raw_rows(points: list[ConceptPoint]) -> list[dict[str, Any]]:
     seen: set[tuple[str, date, str, str]] = set()
     rows: list[dict[str, Any]] = []
@@ -669,6 +747,10 @@ async def _fetch_ticker_packet(
             accounts_receivable=None,
             total_revenue=None,
             interest_income=None,
+            interest_income_source=None,
+            interest_income_method="missing",
+            interest_income_fallback_step=None,
+            interest_income_disclaimer=None,
             balance_sheet_date=None,
             income_statement_date=None,
             primary_filing_type=PLACEHOLDER_FILING_TYPE,
@@ -733,7 +815,10 @@ async def _fetch_ticker_packet(
     cash_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
     ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
     revenue_selection = _select_first_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
-    interest_selection = _select_first_income(rows_by_concept, INTEREST_INCOME_CONCEPTS)
+    interest_selection, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
+        rows_by_concept,
+        symbol,
+    )
     non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
     dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
 
@@ -841,6 +926,10 @@ async def _fetch_ticker_packet(
         accounts_receivable=ar_selection.value,
         total_revenue=revenue_selection.value,
         interest_income=interest_selection.value,
+        interest_income_source=interest_selection.concept,
+        interest_income_method=interest_selection.method,
+        interest_income_fallback_step=interest_fallback_step,
+        interest_income_disclaimer=interest_disclaimer,
         balance_sheet_date=balance_sheet_date,
         income_statement_date=income_statement_date,
         primary_filing_type=primary_form,
@@ -1000,6 +1089,19 @@ class SecRefreshService:
             "components": components,
             "concept_counts": {
                 "selected_points": len(packet.points),
+            },
+            "interest_income": {
+                "tag": packet.interest_income_source,
+                "method": packet.interest_income_method,
+                "periods": [point.end.isoformat() for point in packet.points if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}],
+                "forms": [point.form for point in packet.points if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}],
+                "fallback_step": packet.interest_income_fallback_step,
+                "fallback_disclaimer": packet.interest_income_disclaimer,
+                "selected_tags_by_period": [
+                    {"period": point.end.isoformat(), "tag": point.concept}
+                    for point in packet.points
+                    if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}
+                ],
             },
             "updated_at": datetime.now(UTC).isoformat(),
         }
