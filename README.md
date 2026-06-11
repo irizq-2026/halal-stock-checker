@@ -86,6 +86,18 @@ Set these env vars in Render before using admin pages:
 - `GET /admin` → analytics dashboard (protected)
 - `GET /admin-logout` → logout
 
+### Streamlit-native admin access
+
+You can also open the admin dashboard directly inside the Streamlit app by adding a query parameter:
+
+- `https://<your-streamlit-app>.streamlit.app/?page=admin`
+
+For example:
+
+- `https://test-halal-stock-checker.streamlit.app/?page=admin`
+
+Use the same admin password from `ANALYTICS_ADMIN_PASSWORD`.
+
 ### Dashboard metrics shown
 
 - Total visits
