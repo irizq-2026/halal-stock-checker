@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
+import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, Form, Header, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+from starlette.middleware.sessions import SessionMiddleware
 
+from analytics import ensure_events_table, get_dashboard_metrics, infer_source, track_event
 from config import settings
 from db import SessionLocal
 from jobs.nightly_price_update import get_db_connection, run_nightly_update
@@ -19,8 +25,11 @@ from sec_refresh import latest_cached_screen_row, refresh_single_ticker, weekly_
 from services.yfinance_price_cache import get_cached_or_refresh_price_row
 
 configure_logging()
+LOGGER = logging.getLogger(__name__)
 
 app = FastAPI(title="Halal Stock Checker API", version="1.0.0")
+app.add_middleware(SessionMiddleware, secret_key=settings.analytics_session_secret)
+templates = Jinja2Templates(directory="templates")
 jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
 CRON_SECRET = os.getenv("CRON_SECRET", "change-me-in-production")
 
@@ -48,8 +57,46 @@ def _admin_guard(x_admin_token: str | None = Header(default=None)) -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    try:
+        ensure_events_table()
+    except Exception:  # pragma: no cover - startup resilience
+        LOGGER.exception("Analytics table initialization failed.")
     if settings.refresh_default_limit >= 0:
         start_scheduler()
+
+
+def _resolve_uid(request: Request, response: Response) -> str:
+    cookie_name = settings.analytics_cookie_name
+    user_id = (request.cookies.get(cookie_name) or "").strip()
+    if user_id:
+        return user_id
+    user_id = str(uuid.uuid4())
+    response.set_cookie(
+        key=cookie_name,
+        value=user_id,
+        max_age=max(settings.analytics_cookie_max_age_seconds, 3600),
+        httponly=True,
+        samesite="lax",
+    )
+    return user_id
+
+
+def _safe_track(*, event_type: str, user_id: str, ticker: str | None, source: str) -> None:
+    try:
+        track_event(event_type=event_type, user_id=user_id, ticker=ticker, source=source)
+    except Exception:  # pragma: no cover - analytics must not break core flows
+        LOGGER.exception("Failed to track analytics event %s for user %s", event_type, user_id)
+
+
+@app.get("/", response_class=HTMLResponse)
+def root(request: Request) -> HTMLResponse:
+    html_response = HTMLResponse(
+        "<html><body><h3>Halal Stock Checker API</h3><p>Use /health or /api/v1/screen/{ticker}.</p></body></html>"
+    )
+    user_id = _resolve_uid(request, html_response)
+    source = infer_source(request.query_params.get("utm_source"), request.headers.get("referer"))
+    _safe_track(event_type="visit", user_id=user_id, ticker=None, source=source)
+    return html_response
 
 
 @app.get("/health")
@@ -58,7 +105,15 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/v1/screen/{ticker}")
-def get_cached_screen(ticker: str) -> dict[str, Any]:
+def get_cached_screen(ticker: str, request: Request, response: Response) -> dict[str, Any]:
+    user_id = _resolve_uid(request, response)
+    source = infer_source(request.query_params.get("utm_source"), request.headers.get("referer"))
+    _safe_track(
+        event_type="search",
+        user_id=user_id,
+        ticker=ticker.upper().strip(),
+        source=source,
+    )
     session = SessionLocal()
     try:
         row = latest_cached_screen_row(session, ticker)
@@ -106,6 +161,67 @@ def get_cached_screen(ticker: str) -> dict[str, Any]:
         }
     finally:
         session.close()
+
+
+@app.get("/admin-login", response_class=HTMLResponse)
+def admin_login_page(request: Request) -> HTMLResponse:
+    if request.session.get("admin_authenticated"):
+        return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_login.html",
+        context={"error": None},
+    )
+
+
+@app.post("/admin-login", response_class=HTMLResponse)
+def admin_login_submit(request: Request, password: str = Form(...)) -> HTMLResponse:
+    if password != settings.analytics_admin_password:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin_login.html",
+            context={"error": "Invalid password."},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    request.session["admin_authenticated"] = True
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/admin-logout")
+def admin_logout(request: Request) -> RedirectResponse:
+    request.session.clear()
+    return RedirectResponse(url="/admin-login", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request) -> HTMLResponse:
+    if not request.session.get("admin_authenticated"):
+        return RedirectResponse(url="/admin-login", status_code=status.HTTP_303_SEE_OTHER)
+    error: str | None = None
+    try:
+        stats_payload = get_dashboard_metrics()
+    except Exception:  # pragma: no cover - dashboard resilience
+        LOGGER.exception("Failed to load dashboard analytics.")
+        stats_payload = {
+            "total_visits": 0,
+            "total_searches": 0,
+            "unique_users": 0,
+            "return_users": 0,
+            "top_tickers": [],
+            "traffic_sources": [],
+            "conversion_rate": 0.0,
+            "last_events": [],
+        }
+        error = "Analytics database is temporarily unavailable."
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_dashboard.html",
+        context={
+            "stats": stats_payload,
+            "conversion_rate_pct": f"{stats_payload['conversion_rate'] * 100:.2f}%",
+            "error": error,
+        },
+    )
 
 
 @app.post("/api/v1/admin/refresh", dependencies=[Depends(_admin_guard)])

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .logout {
+      font-size: 14px;
+      text-decoration: none;
+      color: #2563eb;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .card .label {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px;
+      overflow-x: auto;
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    th {
+      color: #475569;
+      font-weight: 600;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Internal Analytics</h1>
+    <a class="logout" href="/admin-logout">Logout</a>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Total Visits</div>
+      <div class="value">{{ stats.total_visits }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Searches</div>
+      <div class="value">{{ stats.total_searches }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Unique Users</div>
+      <div class="value">{{ stats.unique_users }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Return Users</div>
+      <div class="value">{{ stats.return_users }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Conversion Rate</div>
+      <div class="value">{{ conversion_rate_pct }}</div>
+    </div>
+  </div>
+
+  {% if error %}
+  <section class="panel" style="margin-bottom: 14px; border-color: #fca5a5; color: #991b1b;">
+    {{ error }}
+  </section>
+  {% endif %}
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Most Searched Tickers (Top 10)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Searches</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats.top_tickers %}
+          <tr>
+            <td>{{ row.ticker }}</td>
+            <td>{{ row.search_count }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="2">No search data yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Traffic Sources</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Events</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats.traffic_sources %}
+          <tr>
+            <td>{{ row.source }}</td>
+            <td>{{ row.count }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="2">No source data yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top: 14px;">
+    <h2>Last 50 Events</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Type</th>
+          <th>User ID</th>
+          <th>Ticker</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stats.last_events %}
+        <tr>
+          <td>{{ row.timestamp }}</td>
+          <td>{{ row.event_type }}</td>
+          <td>{{ row.user_id }}</td>
+          <td>{{ row.ticker or "-" }}</td>
+          <td>{{ row.source }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">No events captured yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
