@@ -7,12 +7,15 @@ import datetime
 import html
 import os
 import time
+import uuid
 from datetime import date
 from urllib.parse import quote, urlparse
 
 import streamlit as st
 from streamlit_searchbox import st_searchbox
 
+from analytics import ensure_events_table, get_dashboard_metrics, infer_source, track_event
+from config import settings
 from data import (
     CachedDataNotReadyError,
     DatabaseUnavailableError,
@@ -2580,6 +2583,11 @@ def initialize_session_state() -> None:
         "pending_selection_ticker": "",
         "tabs_reset_token": 0,
         "has_results": False,
+        "admin_authenticated": False,
+        "analytics_uid": "",
+        "analytics_visit_tracked": False,
+        "analytics_table_ready": False,
+        "analytics_error": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -2647,6 +2655,111 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
         progress_bar.empty()
         status_text.empty()
 
+
+def _query_param_value(name: str) -> str:
+    raw = st.query_params.get(name, "")
+    if isinstance(raw, list):
+        return str(raw[0] if raw else "").strip()
+    return str(raw or "").strip()
+
+
+def _analytics_source_from_page() -> str:
+    utm_source = _query_param_value("utm_source")
+    return infer_source(utm_source or None, None)
+
+
+def _analytics_uid() -> str:
+    uid = str(st.session_state.get("analytics_uid") or "").strip()
+    if uid:
+        return uid
+    uid = str(uuid.uuid4())
+    st.session_state.analytics_uid = uid
+    return uid
+
+
+def _ensure_analytics_table_once() -> None:
+    if st.session_state.get("analytics_table_ready"):
+        return
+    try:
+        ensure_events_table()
+        st.session_state.analytics_table_ready = True
+        st.session_state.analytics_error = ""
+    except Exception:
+        st.session_state.analytics_error = "Analytics database is unavailable."
+
+
+def _track_streamlit_event(event_type: str, *, ticker: str | None = None) -> None:
+    _ensure_analytics_table_once()
+    if st.session_state.get("analytics_error"):
+        return
+    try:
+        track_event(
+            event_type=event_type,
+            user_id=_analytics_uid(),
+            ticker=ticker,
+            source=_analytics_source_from_page(),
+        )
+    except Exception:
+        st.session_state.analytics_error = "Analytics tracking is temporarily unavailable."
+
+
+def _render_streamlit_admin_page() -> None:
+    st.markdown("## Internal Analytics Dashboard")
+    st.caption("Secure admin view rendered directly inside Streamlit.")
+
+    if st.button("Back to Stock Checker", use_container_width=True):
+        st.query_params.clear()
+        st.rerun()
+
+    _ensure_analytics_table_once()
+    if st.session_state.get("analytics_error"):
+        st.error(st.session_state.analytics_error)
+        return
+
+    if not st.session_state.get("admin_authenticated"):
+        password = st.text_input("Admin Password", type="password", key="admin_password_input")
+        if st.button("Login to Admin", type="primary", use_container_width=True):
+            if password == settings.analytics_admin_password:
+                st.session_state.admin_authenticated = True
+                st.rerun()
+            else:
+                st.error("Invalid admin password.")
+        return
+
+    col_logout, col_refresh = st.columns(2)
+    with col_logout:
+        if st.button("Logout", use_container_width=True):
+            st.session_state.admin_authenticated = False
+            st.rerun()
+    with col_refresh:
+        if st.button("Refresh Stats", use_container_width=True):
+            st.rerun()
+
+    try:
+        stats = get_dashboard_metrics()
+    except Exception:
+        st.error("Failed to load analytics metrics from database.")
+        return
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Total Visits", stats.get("total_visits", 0))
+    c2.metric("Total Searches", stats.get("total_searches", 0))
+    c3.metric("Unique Users", stats.get("unique_users", 0))
+    c4.metric("Return Users", stats.get("return_users", 0))
+    c5.metric("Conversion", f"{(stats.get('conversion_rate', 0.0) * 100):.2f}%")
+
+    st.markdown("### Most Searched Tickers")
+    top_tickers = stats.get("top_tickers") or []
+    st.table(top_tickers if top_tickers else [{"ticker": "-", "search_count": 0}])
+
+    st.markdown("### Traffic Sources")
+    traffic_sources = stats.get("traffic_sources") or []
+    st.table(traffic_sources if traffic_sources else [{"source": "direct", "count": 0}])
+
+    st.markdown("### Last 50 Events")
+    last_events = stats.get("last_events") or []
+    st.dataframe(last_events, use_container_width=True)
+
 def main() -> None:
     st.set_page_config(
         page_title="Halal Stock Checker | iRizq",
@@ -2656,6 +2769,16 @@ def main() -> None:
 
     initialize_session_state()
     inject_head_and_styles()
+    _ensure_analytics_table_once()
+
+    requested_page = _query_param_value("page").lower()
+    if requested_page == "admin":
+        _render_streamlit_admin_page()
+        return
+
+    if not st.session_state.get("analytics_visit_tracked"):
+        _track_streamlit_event("visit")
+        st.session_state.analytics_visit_tracked = True
 
     logo_path = "static/icon.png" if os.path.exists("static/icon.png") else "static/logo.png"
     if os.path.exists(logo_path):
@@ -2706,12 +2829,14 @@ def main() -> None:
                     'Currently available: AAPL, MSFT, TSLA, JPM, XOM.</div>',
                     unsafe_allow_html=True,
                 )
-            elif (
+            else:
+                _track_streamlit_event("search", ticker=resolved_ticker)
+            if resolved_ticker and (
                 resolved_ticker != st.session_state.last_ticker
                 or not st.session_state.has_results
             ):
                 run_screening_flow(resolved_ticker)
-            else:
+            elif resolved_ticker:
                 st.markdown(
                     '<div class="info-msg">Showing saved results. Enter a different ticker and click Check Status to run a new screen.</div>',
                     unsafe_allow_html=True,
@@ -2726,6 +2851,12 @@ def main() -> None:
 
     render_aaoifi_box()
     render_feedback_small()
+    st.markdown(
+        "<div style='margin-top: 10px; text-align: center;'>"
+        "<a href='?page=admin' style='font-size: 12px; color: #6b7280;'>Admin Dashboard</a>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
