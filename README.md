@@ -45,8 +45,72 @@ REFRESH_CRON_HOUR_UTC=3
 REFRESH_CRON_MINUTE_UTC=0
 REFRESH_MAX_FILINGS_PER_COMPANY=8
 ADMIN_API_TOKEN=your-admin-token
+ANALYTICS_ADMIN_PASSWORD=change-this-password
+ANALYTICS_SESSION_SECRET=change-this-session-secret
+ANALYTICS_COOKIE_NAME=uid
+ANALYTICS_COOKIE_MAX_AGE_SECONDS=31536000
+ANALYTICS_CACHE_TTL_SECONDS=30
+ANALYTICS_SSLMODE=require
 LOG_LEVEL=INFO
 ```
+
+## Admin Analytics Setup (Render / Postgres)
+
+This project now includes a lightweight internal analytics system backed by PostgreSQL.
+
+### What it tracks
+
+- `visit` events on `GET /` (page loads)
+- `search` events on `GET /api/v1/screen/{ticker}` (stock checks)
+- anonymous returning users via cookie (`uid` by default)
+- traffic source from `utm_source` or `Referer` (fallback: `direct`)
+
+### Database setup
+
+- Uses the existing `DATABASE_URL` env var from Render
+- Accepts Render-style URLs starting with `postgres://` (normalized automatically)
+- Creates analytics table on API startup:
+  - `events (id, event_type, user_id, ticker, source, timestamp)`
+
+### Admin auth setup
+
+Set these env vars in Render before using admin pages:
+
+- `ANALYTICS_ADMIN_PASSWORD` (required; choose a strong password)
+- `ANALYTICS_SESSION_SECRET` (required; long random secret)
+
+### Admin routes
+
+- `GET /admin-login` → login page
+- `POST /admin-login` → session login
+- `GET /admin` → analytics dashboard (protected)
+- `GET /admin-logout` → logout
+
+### Dashboard metrics shown
+
+- Total visits
+- Total searches
+- Unique users
+- Return users (>1 event)
+- Most searched tickers (top 10)
+- Traffic source breakdown
+- Conversion rate (`searches / visits`)
+- Last 50 events
+
+### Quick local verification
+
+1. Start API service (for example: `uvicorn api:app --reload`).
+2. Open:
+   - `http://localhost:8000/?utm_source=reddit`
+   - `http://localhost:8000/api/v1/screen/AAPL`
+3. Login at `http://localhost:8000/admin-login`.
+4. Confirm metrics update in `http://localhost:8000/admin`.
+
+### Render notes
+
+- `psycopg2-binary` is already in `requirements.txt`.
+- Render free Postgres has connection/storage limits and expiration windows; plan upgrades for production workloads.
+- Keep `/admin` private and do not share admin credentials.
 
 ## New Data Architecture
 
