@@ -1074,7 +1074,24 @@ class SecRefreshService:
         purging = dict(components.get("purging") or {})
         core_prohibited = packet.total_revenue if _is_core_interest_profile(sector, industry) else 0.0
         purging["core_prohibited_operations"] = core_prohibited
-        total_annual = _sum_optional(core_prohibited, purging.get("passive_financial_yield"))
+        passive_yield = _to_float(purging.get("passive_financial_yield"))
+        # When Ratio 3 uses fallback tags, preserve the resolved numerator in the
+        # purging breakdown so the UI detail rows match the card-level value.
+        if (
+            not _is_core_interest_profile(sector, industry)
+            and packet.interest_income is not None
+            and packet.interest_income_fallback_step in {"step2", "step3"}
+            and (passive_yield is None or passive_yield == 0.0)
+        ):
+            purging["passive_financial_yield"] = packet.interest_income
+            passive_yield = packet.interest_income
+
+        if _is_core_interest_profile(sector, industry):
+            total_annual = packet.total_revenue
+        elif packet.interest_income is not None:
+            total_annual = packet.interest_income
+        else:
+            total_annual = _sum_optional(core_prohibited, passive_yield)
         purging["total_annual_prohibited_revenue"] = total_annual
         components["purging"] = purging
 
