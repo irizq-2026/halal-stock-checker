@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from typing import Any
+
+LOGGER = logging.getLogger(__name__)
 
 
 REVENUE_TAGS = [
@@ -13,10 +16,16 @@ REVENUE_TAGS = [
     "Revenues",
 ]
 
+INTEREST_PRIMARY_TAG = "InvestmentIncomeInterest"
+INTEREST_BUNDLED_TAG = "InvestmentIncomeInterestAndDividend"
+INTEREST_UPPER_BOUNDARY_TAG = "NonoperatingIncomeExpense"
+
 INTEREST_INCOME_TAGS = [
+    INTEREST_PRIMARY_TAG,
+    INTEREST_BUNDLED_TAG,
+    INTEREST_UPPER_BOUNDARY_TAG,
     "InterestIncomeExpenseNet",
     "InterestIncomeOperating",
-    "InvestmentIncomeInterest",
     "InterestAndDividendIncomeOperating",
 ]
 
@@ -289,9 +298,133 @@ def _calculate_ttm(points: list[FactPoint], *, as_of_date: date | None) -> tuple
     )
 
 
+def _is_non_zero(value: float | None) -> bool:
+    return value is not None and value != 0.0
+
+
+def _filter_as_of(points: list[FactPoint], *, as_of_date: date | None) -> list[FactPoint]:
+    if as_of_date is None:
+        return list(points)
+    return [point for point in points if point.filed_date is None or point.filed_date <= as_of_date]
+
+
+def _period_label_from_period_end(period_end: str | None) -> str:
+    if not period_end:
+        return "Unknown Period"
+    try:
+        parsed = datetime.strptime(period_end, "%Y-%m-%d").date()
+    except ValueError:
+        return period_end
+    quarter = ((parsed.month - 1) // 3) + 1
+    return f"Q{quarter} {parsed.year}"
+
+
+def _log_ratio3_source(ticker: str | None, periods: list[str], source_tag: str) -> None:
+    ticker_label = (ticker or "UNKNOWN").upper()
+    if not periods:
+        message = f"[Ratio3Source] Unknown Period {ticker_label} → {source_tag}"
+        LOGGER.info(message)
+        print(message)
+        return
+    for period in periods:
+        message = f"[Ratio3Source] {_period_label_from_period_end(period)} {ticker_label} → {source_tag}"
+        LOGGER.info(message)
+        print(message)
+
+
+def _merge_interest_metadata(
+    *,
+    tag: str | None,
+    base_meta: dict[str, Any],
+    fallback_step: str | None,
+    fallback_disclaimer: str | None,
+) -> dict[str, Any]:
+    return {
+        "tag": tag,
+        "method": base_meta.get("method"),
+        "periods": base_meta.get("periods", []),
+        "forms": base_meta.get("forms", []),
+        "fallback_step": fallback_step,
+        "fallback_disclaimer": fallback_disclaimer,
+    }
+
+
+def _resolve_interest_income_with_fallback(
+    facts: dict[str, list[FactPoint]],
+    *,
+    as_of_date: date | None,
+    ticker: str | None,
+) -> tuple[float | None, dict[str, Any]]:
+    primary_value, primary_meta = _calculate_ttm(
+        _filter_as_of(facts.get(INTEREST_PRIMARY_TAG, []), as_of_date=as_of_date),
+        as_of_date=as_of_date,
+    )
+    if _is_non_zero(primary_value):
+        _log_ratio3_source(ticker, primary_meta.get("periods", []), INTEREST_PRIMARY_TAG)
+        return (
+            primary_value,
+            _merge_interest_metadata(
+                tag=INTEREST_PRIMARY_TAG,
+                base_meta=primary_meta,
+                fallback_step=None,
+                fallback_disclaimer=None,
+            ),
+        )
+
+    bundled_value, bundled_meta = _calculate_ttm(
+        _filter_as_of(facts.get(INTEREST_BUNDLED_TAG, []), as_of_date=as_of_date),
+        as_of_date=as_of_date,
+    )
+    if _is_non_zero(bundled_value):
+        _log_ratio3_source(ticker, bundled_meta.get("periods", []), INTEREST_BUNDLED_TAG)
+        return (
+            bundled_value,
+            _merge_interest_metadata(
+                tag=INTEREST_BUNDLED_TAG,
+                base_meta=bundled_meta,
+                fallback_step="step2",
+                fallback_disclaimer=(
+                    "⚠️ Interest & dividend income reported as a combined figure. "
+                    "This ratio may be slightly overstated if dividend income is included."
+                ),
+            ),
+        )
+
+    upper_value, upper_meta = _calculate_ttm(
+        _filter_as_of(facts.get(INTEREST_UPPER_BOUNDARY_TAG, []), as_of_date=as_of_date),
+        as_of_date=as_of_date,
+    )
+    if upper_value is not None:
+        _log_ratio3_source(ticker, upper_meta.get("periods", []), INTEREST_UPPER_BOUNDARY_TAG)
+        return (
+            upper_value,
+            _merge_interest_metadata(
+                tag=INTEREST_UPPER_BOUNDARY_TAG,
+                base_meta=upper_meta,
+                fallback_step="step3",
+                fallback_disclaimer=(
+                    "⚠️ Interest income not separately reported for this period. "
+                    "Non-operating income used as the upper boundary. "
+                    "Ratio 3 reflects a conservative ceiling, not an exact figure."
+                ),
+            ),
+        )
+
+    return (
+        None,
+        _merge_interest_metadata(
+            tag=None,
+            base_meta={"method": "missing", "periods": [], "forms": []},
+            fallback_step=None,
+            fallback_disclaimer=None,
+        ),
+    )
+
+
 def normalize_financials_for_filing(
     company_facts: dict[str, Any],
     filing_date: date | None,
+    ticker: str | None = None,
 ) -> tuple[dict[str, float | None], dict[str, Any], list[dict[str, Any]]]:
     """Compute normalized values and explain which tags were used."""
     facts_index = build_fact_index(company_facts)
@@ -317,6 +450,16 @@ def normalize_financials_for_filing(
 
     flow_fields = {"total_revenue", "interest_income", "operating_income", "net_income"}
     for field_name, tags in CANONICAL_TAGS.items():
+        if field_name == "interest_income":
+            value, metadata = _resolve_interest_income_with_fallback(
+                facts_index,
+                as_of_date=filing_date,
+                ticker=ticker,
+            )
+            normalized[field_name] = value
+            mapped_tags[field_name] = metadata
+            continue
+
         if field_name in flow_fields:
             used_tag: str | None = None
             selected_value: float | None = None

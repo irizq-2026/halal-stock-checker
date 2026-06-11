@@ -1677,13 +1677,18 @@ def _render_metric_card(title: str, metric: str, threshold: float, questionable_
     else:
         bar_html = f'<div class="missing-data">{NOT_AVAILABLE}</div>' if ratio is None else _progress_bar_html(ratio * 100, threshold * 100, _ratio_color(status))
     note_html = f'<div class="metric-label">{html.escape(note)}</div>' if note else ""
+    disclaimer_html = ""
+    if metric == "income":
+        fallback_disclaimer = _income_ratio_disclaimer(data)
+        if fallback_disclaimer:
+            disclaimer_html = f'<div class="metric-label">{html.escape(fallback_disclaimer)}</div>'
     st.markdown(f'''
         <div class="metric-card">
           <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;"><div class="metric-title">{html.escape(title)} <span title="{html.escape(what_it_means)}" style="color:#C9A84C;">?</span></div>{badge}</div>
           <div style="margin-top:0.4rem;"><span class="metric-value">{html.escape(ratio_display)}</span><span class="metric-threshold">{threshold_text}</span></div>
           {bar_html}
           <div class="metric-label"><strong style="color:#F5F5F5;">What it means:</strong><br>{html.escape(what_it_means)}</div>
-          <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}
+          <div class="metric-label"><strong style="color:#F5F5F5;">Why it matters:</strong><br>{html.escape(why_it_matters)}</div>{note_html}{disclaimer_html}
         </div>''', unsafe_allow_html=True)
     with st.expander("View Calculation"):
         _render_metric_calculation(
