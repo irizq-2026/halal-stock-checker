@@ -301,6 +301,7 @@ class SecRefreshService:
             normalized_payload, mapped_tags, raw_rows = normalize_financials_for_filing(
                 company_facts,
                 filing.filing_date,
+                ticker=company.ticker,
             )
             self._store_raw_facts(company.id, filing.id, raw_rows)
             normalized = self._upsert_normalized(company.id, filing.id, normalized_payload, mapped_tags)
