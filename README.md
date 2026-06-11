@@ -98,6 +98,11 @@ For example:
 
 Use the same admin password from `ANALYTICS_ADMIN_PASSWORD`.
 
+If login shows default-fallback warning, verify one of these is set and redeploy/restart:
+
+- Streamlit Secrets: `ANALYTICS_ADMIN_PASSWORD = "your-password"`
+- Environment variable: `ANALYTICS_ADMIN_PASSWORD=your-password`
+
 ### Dashboard metrics shown
 
 - Total visits
