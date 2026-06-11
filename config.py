@@ -48,6 +48,12 @@ class Settings:
     refresh_max_filings_per_company: int = _env_int("REFRESH_MAX_FILINGS_PER_COMPANY", 8)
     refresh_default_limit: int = _env_int("REFRESH_DEFAULT_LIMIT", 0)
     admin_api_token: str = os.getenv("ADMIN_API_TOKEN", "")
+    analytics_admin_password: str = os.getenv("ANALYTICS_ADMIN_PASSWORD", "change-me")
+    analytics_session_secret: str = os.getenv("ANALYTICS_SESSION_SECRET", "change-me-session-secret")
+    analytics_cookie_name: str = os.getenv("ANALYTICS_COOKIE_NAME", "uid")
+    analytics_cookie_max_age_seconds: int = _env_int("ANALYTICS_COOKIE_MAX_AGE_SECONDS", 31_536_000)
+    analytics_cache_ttl_seconds: int = _env_int("ANALYTICS_CACHE_TTL_SECONDS", 30)
+    analytics_sslmode: str = os.getenv("ANALYTICS_SSLMODE", "require")
 
 
 settings = Settings()
