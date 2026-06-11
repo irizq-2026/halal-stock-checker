@@ -2716,10 +2716,32 @@ def _render_streamlit_admin_page() -> None:
         st.error(st.session_state.analytics_error)
         return
 
+    def _resolved_admin_password() -> str:
+        secret_password = ""
+        try:
+            # Streamlit Community Cloud commonly stores secrets here.
+            secret_password = str(st.secrets.get("ANALYTICS_ADMIN_PASSWORD", "") or "").strip()
+        except Exception:
+            secret_password = ""
+        env_password = str(settings.analytics_admin_password or "").strip()
+        for candidate in (secret_password, env_password):
+            normalized = candidate.strip().strip('"').strip("'")
+            if normalized:
+                return normalized
+        return "change-me"
+
+    expected_password = _resolved_admin_password()
+    if expected_password == "change-me":
+        st.warning(
+            "Admin password is still using default fallback. "
+            "Set ANALYTICS_ADMIN_PASSWORD in Streamlit Secrets or environment variables."
+        )
+
     if not st.session_state.get("admin_authenticated"):
         password = st.text_input("Admin Password", type="password", key="admin_password_input")
         if st.button("Login to Admin", type="primary", use_container_width=True):
-            if password == settings.analytics_admin_password:
+            entered = str(password or "").strip().strip('"').strip("'")
+            if entered and entered == expected_password:
                 st.session_state.admin_authenticated = True
                 st.rerun()
             else:
