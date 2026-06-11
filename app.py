@@ -1389,6 +1389,22 @@ def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, f
         return numerator, denominator, None
 
 
+def _income_ratio_disclaimer(data: dict) -> str | None:
+    data_source = data.get("_data_source")
+    if not isinstance(data_source, dict):
+        return None
+    mapped_tags = data_source.get("mapped_tags")
+    if not isinstance(mapped_tags, dict):
+        return None
+    interest_meta = mapped_tags.get("interest_income")
+    if not isinstance(interest_meta, dict):
+        return None
+    disclaimer = interest_meta.get("fallback_disclaimer")
+    if not disclaimer:
+        return None
+    return str(disclaimer)
+
+
 def _calc_float(value: object) -> float | None:
     if value is None:
         return None
