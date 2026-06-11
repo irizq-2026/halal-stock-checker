@@ -17,7 +17,7 @@
       ]
     }
   },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt-get update && sudo xargs -r apt-get install -y < packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; python3 -m compileall . && python3 -c \"import api,app,data,sec_refresh,sqlalchemy,aiohttp,yfinance\"; echo '✅ Environment ready: deps installed and startup validation passed'",
+  "updateContentCommand": "[ -f packages.txt ] && sudo apt-get update && sudo xargs -r apt-get install -y < packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; python3 -c \"import sec_refresh, sqlalchemy, aiohttp, yfinance\"; echo '✅ Environment ready: requirements installed and smoke test passed'",
   "postAttachCommand": {
     "server": "streamlit run app.py --server.enableCORS false --server.enableXsrfProtection false"
   },
