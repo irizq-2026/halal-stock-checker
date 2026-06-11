@@ -1474,7 +1474,39 @@ def _nested_component_map(data: dict) -> dict[str, dict]:
     liquid.setdefault("total_interest_earning_pools", data.get("cash"))
 
     purging = dict(components.get("purging") or {})
-    purging.setdefault("total_annual_prohibited_revenue", data.get("interest_income"))
+    interest_income = _calc_float(data.get("interest_income"))
+    total_prohibited = _calc_float(purging.get("total_annual_prohibited_revenue"))
+    # Backward-compatible guard for previously stored rows where purging total
+    # remained 0/None while resolved interest_income was populated by fallback.
+    if (
+        interest_income is not None
+        and (total_prohibited is None or (total_prohibited == 0.0 and interest_income != 0.0))
+    ):
+        purging["total_annual_prohibited_revenue"] = interest_income
+    else:
+        purging.setdefault("total_annual_prohibited_revenue", data.get("interest_income"))
+
+    passive_yield = _calc_float(purging.get("passive_financial_yield"))
+    if passive_yield is None:
+        inferred_passive = _sum_present(
+            [
+                _calc_float(purging.get("non_operating_cash_interest")),
+                _calc_float(purging.get("equity_investment_dividends")),
+            ]
+        )
+        if inferred_passive is not None:
+            purging["passive_financial_yield"] = inferred_passive
+            passive_yield = inferred_passive
+    if passive_yield in (None, 0.0) and interest_income not in (None, 0.0):
+        interest_meta = mapped_tags.get("interest_income") if isinstance(mapped_tags, dict) else None
+        fallback_step = (
+            str(interest_meta.get("fallback_step") or "").strip().lower()
+            if isinstance(interest_meta, dict)
+            else ""
+        )
+        if fallback_step in {"step2", "step3"}:
+            purging["passive_financial_yield"] = interest_income
+
     purging.setdefault("total_revenue_baseline", data.get("total_revenue"))
     if purging.get("core_prohibited_operations") is None:
         purging["core_prohibited_operations"] = 0.0
