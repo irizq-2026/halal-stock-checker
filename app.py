@@ -11,10 +11,13 @@ import uuid
 from datetime import date
 from urllib.parse import quote, urlparse
 
+import psycopg2
+import pandas as pd
 import streamlit as st
+from psycopg2.extras import RealDictCursor
 from streamlit_searchbox import st_searchbox
 
-from analytics import ensure_events_table, get_dashboard_metrics, infer_source, track_event
+from analytics import ensure_events_table, infer_source, track_event
 from config import settings
 from data import (
     CachedDataNotReadyError,
@@ -2703,6 +2706,222 @@ def _track_streamlit_event(event_type: str, *, ticker: str | None = None) -> Non
         st.session_state.analytics_error = "Analytics tracking is temporarily unavailable."
 
 
+def _normalize_database_url_for_psycopg2(raw_url: str) -> str:
+    url = (raw_url or "").strip()
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://") :]
+    if url.startswith("postgresql+psycopg2://"):
+        return "postgresql://" + url[len("postgresql+psycopg2://") :]
+    return url
+
+
+def _streamlit_admin_time_window() -> tuple[datetime.datetime, datetime.datetime, str, str, str, str | None]:
+    now = datetime.datetime.utcnow()
+    selected_range = _query_param_value("range").lower()
+    start_param = _query_param_value("start")
+    end_param = _query_param_value("end")
+
+    def _parse_date(raw: str) -> date | None:
+        try:
+            return date.fromisoformat((raw or "").strip())
+        except ValueError:
+            return None
+
+    filter_error: str | None = None
+    if selected_range == "custom" or start_param or end_param:
+        start_date = _parse_date(start_param)
+        end_date = _parse_date(end_param)
+        if start_date is None or end_date is None:
+            filter_error = "Invalid custom range. Showing last 7 days."
+        elif end_date < start_date:
+            filter_error = "End date must be on or after start date. Showing last 7 days."
+        else:
+            return (
+                datetime.datetime.combine(start_date, datetime.time.min),
+                datetime.datetime.combine(end_date, datetime.time.max),
+                "custom",
+                start_date.isoformat(),
+                end_date.isoformat(),
+                None,
+            )
+
+    active_range = selected_range if selected_range in {"24h", "7d", "30d"} else "7d"
+    if active_range == "24h":
+        start_ts = now - datetime.timedelta(hours=24)
+    elif active_range == "30d":
+        start_ts = now - datetime.timedelta(days=30)
+    else:
+        active_range = "7d"
+        start_ts = now - datetime.timedelta(days=7)
+    return (
+        start_ts,
+        now,
+        active_range,
+        start_ts.date().isoformat(),
+        now.date().isoformat(),
+        filter_error,
+    )
+
+
+def _set_streamlit_admin_filter(range_value: str, *, start: str | None = None, end: str | None = None) -> None:
+    st.query_params.clear()
+    st.query_params["page"] = "admin"
+    st.query_params["range"] = range_value
+    if start and end:
+        st.query_params["start"] = start
+        st.query_params["end"] = end
+    st.rerun()
+
+
+def _query_streamlit_admin_stats(start_ts: datetime.datetime, end_ts: datetime.datetime) -> dict[str, object]:
+    dsn = _normalize_database_url_for_psycopg2(settings.database_url)
+    parsed = urlparse(dsn)
+    connect_kwargs: dict[str, object] = {"connect_timeout": 10}
+    hostname = (parsed.hostname or "").lower()
+    if hostname and hostname not in {"localhost", "127.0.0.1"}:
+        connect_kwargs["sslmode"] = settings.analytics_sslmode
+
+    conn = psycopg2.connect(dsn, **connect_kwargs)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM events
+                WHERE event_type = %s
+                AND timestamp >= %s AND timestamp <= %s
+                """,
+                ("visit", start_ts, end_ts),
+            )
+            total_visits = int((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM events
+                WHERE event_type = %s
+                AND timestamp >= %s AND timestamp <= %s
+                """,
+                ("search", start_ts, end_ts),
+            )
+            total_searches = int((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT COUNT(DISTINCT user_id)
+                FROM events
+                WHERE timestamp >= %s AND timestamp <= %s
+                """,
+                (start_ts, end_ts),
+            )
+            unique_users = int((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT user_id
+                    FROM events
+                    WHERE timestamp >= %s AND timestamp <= %s
+                    GROUP BY user_id
+                    HAVING COUNT(*) > 1
+                ) AS returning_users
+                """,
+                (start_ts, end_ts),
+            )
+            return_users = int((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT ticker, COUNT(*) AS search_count
+                FROM events
+                WHERE event_type = %s
+                AND timestamp >= %s AND timestamp <= %s
+                AND ticker IS NOT NULL AND ticker <> ''
+                GROUP BY ticker
+                ORDER BY search_count DESC, ticker ASC
+                LIMIT 10
+                """,
+                ("search", start_ts, end_ts),
+            )
+            top_tickers = [
+                {"ticker": str(row[0]), "search_count": int(row[1])}
+                for row in (cur.fetchall() or [])
+            ]
+
+            cur.execute(
+                """
+                SELECT COALESCE(NULLIF(source, ''), 'direct') AS source_label, COUNT(*) AS event_count
+                FROM events
+                WHERE timestamp >= %s AND timestamp <= %s
+                GROUP BY COALESCE(NULLIF(source, ''), 'direct')
+                ORDER BY event_count DESC, source_label ASC
+                """,
+                (start_ts, end_ts),
+            )
+            traffic_sources = [
+                {"source": str(row[0]), "count": int(row[1])}
+                for row in (cur.fetchall() or [])
+            ]
+
+            cur.execute(
+                """
+                SELECT DATE(timestamp), COUNT(*)
+                FROM events
+                WHERE event_type = 'search'
+                AND timestamp >= %s AND timestamp <= %s
+                GROUP BY DATE(timestamp)
+                ORDER BY DATE(timestamp) ASC
+                """,
+                (start_ts, end_ts),
+            )
+            searches_per_day = [
+                {
+                    "date": row[0].isoformat() if hasattr(row[0], "isoformat") else str(row[0]),
+                    "count": int(row[1]),
+                }
+                for row in (cur.fetchall() or [])
+            ]
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT event_type, user_id, ticker, COALESCE(NULLIF(source, ''), 'direct') AS source, timestamp
+                FROM events
+                WHERE timestamp >= %s AND timestamp <= %s
+                ORDER BY timestamp DESC
+                LIMIT 50
+                """,
+                (start_ts, end_ts),
+            )
+            rows = cur.fetchall() or []
+            last_events: list[dict[str, object]] = []
+            for row in rows:
+                last_events.append(
+                    {
+                        "event_type": str(row.get("event_type") or ""),
+                        "user_id": str(row.get("user_id") or ""),
+                        "ticker": row.get("ticker"),
+                        "source": str(row.get("source") or "direct"),
+                        "timestamp": row.get("timestamp"),
+                    }
+                )
+    finally:
+        conn.close()
+
+    conversion_rate = (total_searches / total_visits) if total_visits > 0 else 0.0
+    return {
+        "total_visits": total_visits,
+        "total_searches": total_searches,
+        "unique_users": unique_users,
+        "return_users": return_users,
+        "top_tickers": top_tickers,
+        "traffic_sources": traffic_sources,
+        "conversion_rate": conversion_rate,
+        "last_events": last_events,
+        "searches_per_day": searches_per_day,
+    }
+
+
 def _render_streamlit_admin_page() -> None:
     st.markdown("## Internal Analytics Dashboard")
     st.caption("Secure admin view rendered directly inside Streamlit.")
@@ -2780,8 +2999,53 @@ def _render_streamlit_admin_page() -> None:
         if st.button("Refresh Stats", use_container_width=True):
             st.rerun()
 
+    start_ts, end_ts, active_range, custom_start, custom_end, filter_error = _streamlit_admin_time_window()
+    st.markdown("### Date Filter")
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        if st.button(
+            "Last 24 hours",
+            type="primary" if active_range == "24h" else "secondary",
+            use_container_width=True,
+        ):
+            _set_streamlit_admin_filter("24h")
+    with f2:
+        if st.button(
+            "Last 7 days",
+            type="primary" if active_range == "7d" else "secondary",
+            use_container_width=True,
+        ):
+            _set_streamlit_admin_filter("7d")
+    with f3:
+        if st.button(
+            "Last 30 days",
+            type="primary" if active_range == "30d" else "secondary",
+            use_container_width=True,
+        ):
+            _set_streamlit_admin_filter("30d")
+
+    with st.form("admin-custom-range-form"):
+        c_start, c_end = st.columns(2)
+        with c_start:
+            start_date = st.date_input("Start date", value=date.fromisoformat(custom_start), key="admin_custom_start")
+        with c_end:
+            end_date = st.date_input("End date", value=date.fromisoformat(custom_end), key="admin_custom_end")
+        submitted = st.form_submit_button("Apply Custom Range", use_container_width=True)
+        if submitted:
+            _set_streamlit_admin_filter(
+                "custom",
+                start=start_date.isoformat(),
+                end=end_date.isoformat(),
+            )
+
+    st.caption(
+        f"Active window: {start_ts.strftime('%Y-%m-%d %H:%M:%S UTC')} to {end_ts.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+    )
+    if filter_error:
+        st.warning(filter_error)
+
     try:
-        stats = get_dashboard_metrics()
+        stats = _query_streamlit_admin_stats(start_ts, end_ts)
     except Exception:
         st.error("Failed to load analytics metrics from database.")
         return
@@ -2792,6 +3056,15 @@ def _render_streamlit_admin_page() -> None:
     c3.metric("Unique Users", stats.get("unique_users", 0))
     c4.metric("Return Users", stats.get("return_users", 0))
     c5.metric("Conversion", f"{(stats.get('conversion_rate', 0.0) * 100):.2f}%")
+
+    st.markdown("### Searches per Day")
+    searches_per_day = stats.get("searches_per_day") or []
+    if searches_per_day:
+        chart_df = pd.DataFrame(searches_per_day)
+        chart_df = chart_df.rename(columns={"count": "searches"}).set_index("date")
+        st.bar_chart(chart_df)
+    else:
+        st.info("No search events found for selected date range.")
 
     st.markdown("### Most Searched Tickers")
     top_tickers = stats.get("top_tickers") or []
