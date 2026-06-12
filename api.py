@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
 import logging
 import os
 import uuid
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime, time, timedelta
+from typing import Any, Iterator
+from urllib.parse import urlparse
 
+import psycopg2
 from fastapi import APIRouter, Depends, FastAPI, Form, Header, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+from psycopg2.extras import RealDictCursor
 from starlette.middleware.sessions import SessionMiddleware
 
-from analytics import ensure_events_table, get_dashboard_metrics, infer_source, track_event
+from analytics import ensure_events_table, infer_source, track_event
 from config import settings
 from db import SessionLocal
 from jobs.nightly_price_update import get_db_connection, run_nightly_update
@@ -197,9 +201,218 @@ def admin_logout(request: Request) -> RedirectResponse:
 def admin_dashboard(request: Request) -> HTMLResponse:
     if not request.session.get("admin_authenticated"):
         return RedirectResponse(url="/admin-login", status_code=status.HTTP_303_SEE_OTHER)
+
+    def _normalize_database_url_for_psycopg2(raw_url: str) -> str:
+        url = (raw_url or "").strip()
+        if url.startswith("postgres://"):
+            return "postgresql://" + url[len("postgres://") :]
+        if url.startswith("postgresql+psycopg2://"):
+            return "postgresql://" + url[len("postgresql+psycopg2://") :]
+        return url
+
+    @contextmanager
+    def _analytics_connection() -> Iterator[Any]:
+        dsn = _normalize_database_url_for_psycopg2(settings.database_url)
+        parsed = urlparse(dsn)
+        connect_kwargs: dict[str, Any] = {"connect_timeout": 10}
+        host = (parsed.hostname or "").lower()
+        if host and host not in {"localhost", "127.0.0.1"}:
+            connect_kwargs["sslmode"] = settings.analytics_sslmode
+        conn = psycopg2.connect(dsn, **connect_kwargs)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def _parse_iso_date(raw: str) -> date | None:
+        value = (raw or "").strip()
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _resolve_time_window() -> tuple[datetime, datetime, str, str, str, str | None]:
+        now = datetime.utcnow()
+        requested_range = str(request.query_params.get("range", "") or "").strip().lower()
+        start_param = str(request.query_params.get("start", "") or "").strip()
+        end_param = str(request.query_params.get("end", "") or "").strip()
+        filter_error: str | None = None
+
+        if requested_range in {"custom"} or start_param or end_param:
+            start_date = _parse_iso_date(start_param)
+            end_date = _parse_iso_date(end_param)
+            if start_date is None or end_date is None:
+                filter_error = "Invalid custom date range. Showing last 7 days instead."
+            elif end_date < start_date:
+                filter_error = "End date must be on or after start date. Showing last 7 days instead."
+            else:
+                return (
+                    datetime.combine(start_date, time.min),
+                    datetime.combine(end_date, time.max),
+                    "custom",
+                    start_date.isoformat(),
+                    end_date.isoformat(),
+                    None,
+                )
+
+        active_range = requested_range if requested_range in {"24h", "7d", "30d"} else "7d"
+        if active_range == "24h":
+            start_ts = now - timedelta(hours=24)
+        elif active_range == "30d":
+            start_ts = now - timedelta(days=30)
+        else:
+            active_range = "7d"
+            start_ts = now - timedelta(days=7)
+        return (
+            start_ts,
+            now,
+            active_range,
+            start_ts.date().isoformat(),
+            now.date().isoformat(),
+            filter_error,
+        )
+
+    def _query_dashboard_stats(start_ts: datetime, end_ts: datetime) -> dict[str, Any]:
+        with _analytics_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM events
+                    WHERE event_type = %s
+                    AND timestamp >= %s AND timestamp <= %s
+                    """,
+                    ("visit", start_ts, end_ts),
+                )
+                total_visits = int((cur.fetchone() or [0])[0] or 0)
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM events
+                    WHERE event_type = %s
+                    AND timestamp >= %s AND timestamp <= %s
+                    """,
+                    ("search", start_ts, end_ts),
+                )
+                total_searches = int((cur.fetchone() or [0])[0] or 0)
+
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT user_id)
+                    FROM events
+                    WHERE timestamp >= %s AND timestamp <= %s
+                    """,
+                    (start_ts, end_ts),
+                )
+                unique_users = int((cur.fetchone() or [0])[0] or 0)
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM (
+                        SELECT user_id
+                        FROM events
+                        WHERE timestamp >= %s AND timestamp <= %s
+                        GROUP BY user_id
+                        HAVING COUNT(*) > 1
+                    ) AS returning_users
+                    """,
+                    (start_ts, end_ts),
+                )
+                return_users = int((cur.fetchone() or [0])[0] or 0)
+
+                cur.execute(
+                    """
+                    SELECT ticker, COUNT(*) AS search_count
+                    FROM events
+                    WHERE event_type = %s
+                    AND timestamp >= %s AND timestamp <= %s
+                    AND ticker IS NOT NULL AND ticker <> ''
+                    GROUP BY ticker
+                    ORDER BY search_count DESC, ticker ASC
+                    LIMIT 10
+                    """,
+                    ("search", start_ts, end_ts),
+                )
+                top_tickers = [
+                    {"ticker": str(row[0]), "search_count": int(row[1])}
+                    for row in (cur.fetchall() or [])
+                ]
+
+                cur.execute(
+                    """
+                    SELECT COALESCE(NULLIF(source, ''), 'direct') AS source_label, COUNT(*) AS event_count
+                    FROM events
+                    WHERE timestamp >= %s AND timestamp <= %s
+                    GROUP BY COALESCE(NULLIF(source, ''), 'direct')
+                    ORDER BY event_count DESC, source_label ASC
+                    """,
+                    (start_ts, end_ts),
+                )
+                traffic_sources = [
+                    {"source": str(row[0]), "count": int(row[1])}
+                    for row in (cur.fetchall() or [])
+                ]
+
+                cur.execute(
+                    """
+                    SELECT DATE(timestamp), COUNT(*)
+                    FROM events
+                    WHERE event_type = 'search'
+                    AND timestamp >= %s AND timestamp <= %s
+                    GROUP BY DATE(timestamp)
+                    ORDER BY DATE(timestamp) ASC
+                    """,
+                    (start_ts, end_ts),
+                )
+                searches_per_day = [
+                    (row[0].isoformat() if hasattr(row[0], "isoformat") else str(row[0]), int(row[1]))
+                    for row in (cur.fetchall() or [])
+                ]
+
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT event_type, user_id, ticker, COALESCE(NULLIF(source, ''), 'direct') AS source, timestamp
+                    FROM events
+                    WHERE timestamp >= %s AND timestamp <= %s
+                    ORDER BY timestamp DESC
+                    LIMIT 50
+                    """,
+                    (start_ts, end_ts),
+                )
+                raw_events = cur.fetchall() or []
+                last_events: list[dict[str, Any]] = []
+                for row in raw_events:
+                    last_events.append(
+                        {
+                            "event_type": str(row.get("event_type") or ""),
+                            "user_id": str(row.get("user_id") or ""),
+                            "ticker": row.get("ticker"),
+                            "source": str(row.get("source") or "direct"),
+                            "timestamp": row.get("timestamp"),
+                        }
+                    )
+
+        conversion_rate = (total_searches / total_visits) if total_visits > 0 else 0.0
+        return {
+            "total_visits": total_visits,
+            "total_searches": total_searches,
+            "unique_users": unique_users,
+            "return_users": return_users,
+            "top_tickers": top_tickers,
+            "traffic_sources": traffic_sources,
+            "conversion_rate": conversion_rate,
+            "last_events": last_events,
+            "searches_per_day": searches_per_day,
+        }
+
+    start_ts, end_ts, active_range, custom_start, custom_end, filter_error = _resolve_time_window()
     error: str | None = None
     try:
-        stats_payload = get_dashboard_metrics()
+        stats_payload = _query_dashboard_stats(start_ts, end_ts)
     except Exception:  # pragma: no cover - dashboard resilience
         LOGGER.exception("Failed to load dashboard analytics.")
         stats_payload = {
@@ -211,8 +424,12 @@ def admin_dashboard(request: Request) -> HTMLResponse:
             "traffic_sources": [],
             "conversion_rate": 0.0,
             "last_events": [],
+            "searches_per_day": [],
         }
         error = "Analytics database is temporarily unavailable."
+    search_rows = stats_payload.get("searches_per_day") or []
+    chart_labels = [row[0] for row in search_rows]
+    chart_values = [row[1] for row in search_rows]
     return templates.TemplateResponse(
         request=request,
         name="admin_dashboard.html",
@@ -220,6 +437,14 @@ def admin_dashboard(request: Request) -> HTMLResponse:
             "stats": stats_payload,
             "conversion_rate_pct": f"{stats_payload['conversion_rate'] * 100:.2f}%",
             "error": error,
+            "filter_error": filter_error,
+            "active_range": active_range,
+            "start_date": custom_start,
+            "end_date": custom_end,
+            "window_start": start_ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "window_end": end_ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "searches_per_day_labels": chart_labels,
+            "searches_per_day_values": chart_values,
         },
     )
 
