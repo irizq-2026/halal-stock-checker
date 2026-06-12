@@ -31,7 +31,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
     .card {
       background: #ffffff;
@@ -64,6 +64,74 @@
       margin: 0 0 12px 0;
       font-size: 18px;
     }
+    .filters-panel {
+      margin-bottom: 14px;
+    }
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .filter-button {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .filter-button.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+    .custom-filter-form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 10px;
+    }
+    .custom-filter-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      color: #334155;
+    }
+    .custom-filter-form input[type="date"] {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #0f172a;
+      background: #ffffff;
+    }
+    .apply-button {
+      border: 1px solid #2563eb;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #ffffff;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      height: 36px;
+    }
+    .apply-button.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+    .window-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .chart-wrap {
+      height: 300px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -91,6 +159,36 @@
     <h1>Internal Analytics</h1>
     <a class="logout" href="/admin-logout">Logout</a>
   </div>
+
+  <section class="panel filters-panel">
+    <h2>Date Filter</h2>
+    <form method="get" action="/admin" class="filters-row">
+      <button type="submit" name="range" value="24h" class="filter-button {% if active_range == '24h' %}active{% endif %}">Last 24 hours</button>
+      <button type="submit" name="range" value="7d" class="filter-button {% if active_range == '7d' %}active{% endif %}">Last 7 days</button>
+      <button type="submit" name="range" value="30d" class="filter-button {% if active_range == '30d' %}active{% endif %}">Last 30 days</button>
+    </form>
+    <form method="get" action="/admin" class="custom-filter-form">
+      <input type="hidden" name="range" value="custom" />
+      <label>
+        Start date
+        <input type="date" name="start" value="{{ start_date }}" />
+      </label>
+      <label>
+        End date
+        <input type="date" name="end" value="{{ end_date }}" />
+      </label>
+      <button type="submit" class="apply-button {% if active_range == 'custom' %}active{% endif %}">Apply Custom</button>
+    </form>
+    <div class="window-note">
+      Active window: {{ window_start }} to {{ window_end }}
+    </div>
+  </section>
+
+  {% if filter_error %}
+  <section class="panel" style="margin-bottom: 14px; border-color: #fcd34d; color: #92400e;">
+    {{ filter_error }}
+  </section>
+  {% endif %}
 
   <div class="cards">
     <div class="card">
@@ -120,6 +218,13 @@
     {{ error }}
   </section>
   {% endif %}
+
+  <section class="panel" style="margin-bottom: 14px;">
+    <h2>Searches per Day</h2>
+    <div class="chart-wrap">
+      <canvas id="searchesPerDayChart"></canvas>
+    </div>
+  </section>
 
   <div class="grid">
     <section class="panel">
@@ -200,5 +305,41 @@
       </tbody>
     </table>
   </section>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const chartLabels = {{ searches_per_day_labels | tojson }};
+    const chartValues = {{ searches_per_day_values | tojson }};
+    const chartCtx = document.getElementById("searchesPerDayChart");
+    if (chartCtx) {
+      new Chart(chartCtx, {
+        type: "bar",
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: "Searches",
+            data: chartValues,
+            backgroundColor: "#2563eb",
+            borderColor: "#1d4ed8",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>
