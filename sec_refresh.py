@@ -35,6 +35,23 @@ FIELD_INTEREST_INCOME = "interest_income"
 INTEREST_PRIMARY_CONCEPT = "InvestmentIncomeInterest"
 INTEREST_BUNDLED_CONCEPT = "InvestmentIncomeInterestAndDividend"
 INTEREST_UPPER_BOUNDARY_CONCEPT = "NonoperatingIncomeExpense"
+FINTECH_STABLECOIN_CONCEPTS = (
+    "ReserveIncome",
+    "ReserveFeeRevenue",
+    "StablecoinReserveRevenue",
+    "InterestOnSegregatedAssets",
+    "InterestIncomeOperating",
+)
+FINTECH_STABLECOIN_TERMS = tuple(
+    term.lower()
+    for term in (
+        "Reserve Income",
+        "Reserve Fee Revenue",
+        "Stablecoin Reserve Revenue",
+        "Interest on Segregated Assets",
+        "Interest Income, Operating",
+    )
+)
 
 DEBT_CONCEPTS = (
     "LongTermDebt",
@@ -96,6 +113,7 @@ ALL_REQUIRED_CONCEPTS = tuple(
         + RESTRICTED_CASH_CONCEPTS
         + LONG_TERM_SECURITIES_CONCEPTS
         + INTEREST_INCOME_CONCEPTS
+        + FINTECH_STABLECOIN_CONCEPTS
         + DIVIDEND_INCOME_CONCEPTS
         + TOTAL_REVENUE_CONCEPTS
     )
@@ -217,6 +235,7 @@ class TickerEdgarPacket:
     interest_income_method: str
     interest_income_fallback_step: str | None
     interest_income_disclaimer: str | None
+    interest_income_calculation_details: list[dict[str, Any]]
     balance_sheet_date: date | None
     income_statement_date: date | None
     primary_filing_type: str
@@ -566,56 +585,144 @@ def _log_ratio3_source(ticker: str, point: ConceptPoint, source_tag: str) -> Non
     print(message)
 
 
+def _matches_fintech_stablecoin_term(concept_name: str) -> bool:
+    normalized = (concept_name or "").replace("_", " ").replace("-", " ").lower()
+    return any(term in normalized for term in FINTECH_STABLECOIN_TERMS)
+
+
 def _select_interest_income_with_fallback(
     rows_by_concept: dict[str, list[ConceptPoint]],
     ticker: str,
-) -> tuple[MetricSelection, str | None, str | None]:
+) -> tuple[dict[str, Any], str | None, str | None]:
     primary_rows = rows_by_concept.get(INTEREST_PRIMARY_CONCEPT) or []
     bundled_rows = rows_by_concept.get(INTEREST_BUNDLED_CONCEPT) or []
     upper_rows = rows_by_concept.get(INTEREST_UPPER_BOUNDARY_CONCEPT) or []
+    total_impermissible_income: float | None = None
+    calculation_details: list[dict[str, Any]] = []
+    captured_amounts: set[float] = set()
+    selected = MetricSelection(
+        value=None,
+        period_end=None,
+        points=[],
+        method="missing",
+        concept=None,
+    )
+    fallback_step: str | None = None
+    fallback_disclaimer: str | None = None
 
     primary_selection = _income_ttm_or_10k(primary_rows)
     if _is_non_zero(primary_selection.value):
         primary_selection.concept = INTEREST_PRIMARY_CONCEPT
         for point in primary_selection.points:
             _log_ratio3_source(ticker, point, INTEREST_PRIMARY_CONCEPT)
-        return primary_selection, None, None
-
-    bundled_selection = _income_ttm_or_10k(bundled_rows)
-    if _is_non_zero(bundled_selection.value):
-        bundled_selection.concept = INTEREST_BUNDLED_CONCEPT
-        for point in bundled_selection.points:
-            _log_ratio3_source(ticker, point, INTEREST_BUNDLED_CONCEPT)
-        return (
-            bundled_selection,
-            "step2",
-            "⚠️ Interest & dividend income reported as a combined figure. "
-            "This ratio may be slightly overstated if dividend income is included.",
+        selected = primary_selection
+        total_impermissible_income = primary_selection.value
+        captured_amounts.add(round(float(primary_selection.value), 6))
+        calculation_details.append(
+            {
+                "lineName": "Traditional Interest Income",
+                "amount": float(primary_selection.value),
+                "sourceSection": "Non-Operating",
+            }
         )
 
-    upper_selection = _income_ttm_or_10k(upper_rows)
-    if upper_selection.value is not None:
-        upper_selection.concept = INTEREST_UPPER_BOUNDARY_CONCEPT
-        for point in upper_selection.points:
-            _log_ratio3_source(ticker, point, INTEREST_UPPER_BOUNDARY_CONCEPT)
-        return (
-            upper_selection,
-            "step3",
-            "⚠️ Interest income not separately reported for this period. "
-            "Non-operating income used as the upper boundary. "
-            "Ratio 3 reflects a conservative ceiling, not an exact figure.",
+    if selected.value is None:
+        bundled_selection = _income_ttm_or_10k(bundled_rows)
+        if _is_non_zero(bundled_selection.value):
+            bundled_selection.concept = INTEREST_BUNDLED_CONCEPT
+            for point in bundled_selection.points:
+                _log_ratio3_source(ticker, point, INTEREST_BUNDLED_CONCEPT)
+            selected = bundled_selection
+            fallback_step = "step2"
+            fallback_disclaimer = (
+                "⚠️ Interest & dividend income reported as a combined figure. "
+                "This ratio may be slightly overstated if dividend income is included."
+            )
+            total_impermissible_income = bundled_selection.value
+            captured_amounts.add(round(float(bundled_selection.value), 6))
+            calculation_details.append(
+                {
+                    "lineName": "Interest Income, Operating (Bundled)",
+                    "amount": float(bundled_selection.value),
+                    "sourceSection": "Non-Operating",
+                }
+            )
+
+    if selected.value is None:
+        upper_selection = _income_ttm_or_10k(upper_rows)
+        if upper_selection.value is not None:
+            upper_selection.concept = INTEREST_UPPER_BOUNDARY_CONCEPT
+            for point in upper_selection.points:
+                _log_ratio3_source(ticker, point, INTEREST_UPPER_BOUNDARY_CONCEPT)
+            selected = upper_selection
+            fallback_step = "step3"
+            fallback_disclaimer = (
+                "⚠️ Interest income not separately reported for this period. "
+                "Non-operating income used as the upper boundary. "
+                "Ratio 3 reflects a conservative ceiling, not an exact figure."
+            )
+            total_impermissible_income = upper_selection.value
+            if upper_selection.value is not None:
+                captured_amounts.add(round(float(upper_selection.value), 6))
+                calculation_details.append(
+                    {
+                        "lineName": "Apple-Other Income Fallback",
+                        "amount": float(upper_selection.value),
+                        "sourceSection": "Apple-Other Income",
+                    }
+                )
+
+    # ── FINTECH/STABLECOIN FALLBACK (added for CRCL-type companies) ──
+    # ── Do NOT merge with or modify the blocks above ──────────────────
+    for concept_name, concept_rows in rows_by_concept.items():
+        if not _matches_fintech_stablecoin_term(concept_name):
+            continue
+        fintech_selection = _income_ttm_or_10k(concept_rows or [])
+        fintech_value = fintech_selection.value
+        if not _is_non_zero(fintech_value):
+            continue
+        rounded_value = round(float(fintech_value), 6)
+        if rounded_value in captured_amounts:
+            continue
+        if total_impermissible_income is None:
+            total_impermissible_income = 0.0
+        total_impermissible_income += float(fintech_value)
+        captured_amounts.add(rounded_value)
+        calculation_details.append(
+            {
+                "lineName": concept_name,
+                "amount": float(fintech_value),
+                "sourceSection": "Revenue/Operating Income",
+            }
+        )
+        for point in fintech_selection.points:
+            _log_ratio3_source(ticker, point, concept_name)
+        if selected.value is None:
+            selected = MetricSelection(
+                value=float(fintech_value),
+                period_end=fintech_selection.period_end,
+                points=fintech_selection.points,
+                method="fintech_stablecoin_fallback",
+                concept=concept_name,
+            )
+
+    if total_impermissible_income is not None:
+        selected = MetricSelection(
+            value=float(total_impermissible_income),
+            period_end=selected.period_end,
+            points=selected.points,
+            method=selected.method,
+            concept=selected.concept,
         )
 
     return (
-        MetricSelection(
-            value=None,
-            period_end=None,
-            points=[],
-            method="missing",
-            concept=None,
-        ),
-        None,
-        None,
+        {
+            "totalImpermissibleIncome": total_impermissible_income,
+            "calculationDetails": calculation_details,
+            "selection": selected,
+        },
+        fallback_step,
+        fallback_disclaimer,
     )
 
 
@@ -751,6 +858,7 @@ async def _fetch_ticker_packet(
             interest_income_method="missing",
             interest_income_fallback_step=None,
             interest_income_disclaimer=None,
+            interest_income_calculation_details=[],
             balance_sheet_date=None,
             income_statement_date=None,
             primary_filing_type=PLACEHOLDER_FILING_TYPE,
@@ -815,10 +923,31 @@ async def _fetch_ticker_packet(
     cash_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
     ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
     revenue_selection = _select_first_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
-    interest_selection, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
+    interest_result, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
         rows_by_concept,
         symbol,
     )
+    interest_total = _to_float(interest_result.get("totalImpermissibleIncome"))
+    interest_selection = interest_result.get("selection")
+    if not isinstance(interest_selection, MetricSelection):
+        interest_selection = MetricSelection(
+            value=None,
+            period_end=None,
+            points=[],
+            method="missing",
+            concept=None,
+        )
+    elif interest_total is not None:
+        interest_selection = MetricSelection(
+            value=interest_total,
+            period_end=interest_selection.period_end,
+            points=interest_selection.points,
+            method=interest_selection.method,
+            concept=interest_selection.concept,
+        )
+    interest_calculation_details = interest_result.get("calculationDetails")
+    if not isinstance(interest_calculation_details, list):
+        interest_calculation_details = []
     non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
     dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
 
@@ -930,6 +1059,7 @@ async def _fetch_ticker_packet(
         interest_income_method=interest_selection.method,
         interest_income_fallback_step=interest_fallback_step,
         interest_income_disclaimer=interest_disclaimer,
+        interest_income_calculation_details=interest_calculation_details,
         balance_sheet_date=balance_sheet_date,
         income_statement_date=income_statement_date,
         primary_filing_type=primary_form,
@@ -1072,6 +1202,8 @@ class SecRefreshService:
         components["valuation"] = valuation
 
         purging = dict(components.get("purging") or {})
+        if packet.interest_income_calculation_details:
+            purging["calculation_details"] = packet.interest_income_calculation_details
         core_prohibited = packet.total_revenue if _is_core_interest_profile(sector, industry) else 0.0
         purging["core_prohibited_operations"] = core_prohibited
         passive_yield = _to_float(purging.get("passive_financial_yield"))
@@ -1114,6 +1246,7 @@ class SecRefreshService:
                 "forms": [point.form for point in packet.points if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}],
                 "fallback_step": packet.interest_income_fallback_step,
                 "fallback_disclaimer": packet.interest_income_disclaimer,
+                "calculationDetails": packet.interest_income_calculation_details,
                 "selected_tags_by_period": [
                     {"period": point.end.isoformat(), "tag": point.concept}
                     for point in packet.points
