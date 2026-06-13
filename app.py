@@ -45,11 +45,17 @@ ISRAEL_KEYWORDS = ("israel", "israeli", "tel aviv", "jerusalem", "idf", "gaza", 
 # Local search universe intentionally constrained to currently validated profiles only.
 LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
     {"ticker": "AAPL", "company_name": "Apple Inc."},
+    {"ticker": "CRCL", "company_name": "Circle Internet Group, Inc."},
     {"ticker": "MSFT", "company_name": "Microsoft Corporation"},
+    {"ticker": "SPCX", "company_name": "SpaceX (Test Symbol)"},
     {"ticker": "TSLA", "company_name": "Tesla, Inc."},
     {"ticker": "JPM", "company_name": "JPMorgan Chase & Co."},
     {"ticker": "XOM", "company_name": "Exxon Mobil Corporation"},
 )
+
+# ── TEMPORARY: Force fresh fetch for fintech testing ──────────────
+# ── Remove or set to [] once CRCL and SPCX are verified ───────────
+FORCE_REFRESH_TICKERS = ["CRCL", "SPCX"]
 
 
 def _extract_news_item(item: dict) -> dict:
@@ -1474,6 +1480,11 @@ def _nested_component_map(data: dict) -> dict[str, dict]:
     liquid.setdefault("total_interest_earning_pools", data.get("cash"))
 
     purging = dict(components.get("purging") or {})
+    interest_meta = mapped_tags.get("interest_income") if isinstance(mapped_tags, dict) else None
+    if isinstance(interest_meta, dict) and not purging.get("calculation_details"):
+        calc_details = interest_meta.get("calculationDetails")
+        if isinstance(calc_details, list):
+            purging["calculation_details"] = calc_details
     interest_income = _calc_float(data.get("interest_income"))
     total_prohibited = _calc_float(purging.get("total_annual_prohibited_revenue"))
     # Backward-compatible guard for previously stored rows where purging total
@@ -1498,7 +1509,6 @@ def _nested_component_map(data: dict) -> dict[str, dict]:
             purging["passive_financial_yield"] = inferred_passive
             passive_yield = inferred_passive
     if passive_yield in (None, 0.0) and interest_income not in (None, 0.0):
-        interest_meta = mapped_tags.get("interest_income") if isinstance(mapped_tags, dict) else None
         fallback_step = (
             str(interest_meta.get("fallback_step") or "").strip().lower()
             if isinstance(interest_meta, dict)
@@ -1662,6 +1672,18 @@ def _calculation_details_for_metric(
             {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
             {"label": "Equity Investment Dividends", "value": purging.get("equity_investment_dividends"), "depth": 1},
         ]
+        additional_details = purging.get("calculation_details")
+        if isinstance(additional_details, list):
+            for detail in additional_details:
+                if not isinstance(detail, dict):
+                    continue
+                amount = detail.get("amount")
+                if amount is None:
+                    continue
+                line_name = str(detail.get("lineName") or "Additional Impermissible Income")
+                source_section = str(detail.get("sourceSection") or "").strip()
+                label = line_name if not source_section else f"{line_name} ({source_section})"
+                numerator_rows.append({"label": label, "value": amount, "depth": 1})
 
     baseline_label = valuation.get("baseline_label") or "Market Cap Baseline"
     denominator_rows = [
@@ -2608,8 +2630,18 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
 
         status_text.markdown("📊 Fetching financial statements...")
         progress_bar.progress(50)
-        stock_data = fetch_stock_data_cached(ticker)
-        enrichment = fetch_ui_enrichment_cached(ticker)
+        if ticker.upper() in FORCE_REFRESH_TICKERS:
+            print(f"[TEST MODE] Bypassing cache for {ticker} — fresh fetch")
+            st.info(
+                f"🔄 **Test Mode:** Fetching fresh data for {ticker}. "
+                "Remove FORCE_REFRESH_TICKERS entry after verification.",
+                icon="🧪"
+            )
+            stock_data = _fetch_stock_data(ticker)
+            enrichment = _fetch_company_enrichment(ticker)
+        else:
+            stock_data = fetch_stock_data_cached(ticker)
+            enrichment = fetch_ui_enrichment_cached(ticker)
 
         if stock_data is None or stock_data.get("error"):
             clear_results_for_error(ticker)
@@ -2703,7 +2735,7 @@ def main() -> None:
             if not resolved_ticker:
                 st.markdown(
                     '<div class="info-msg">No local compliance profile match was found. '
-                    'Currently available: AAPL, MSFT, TSLA, JPM, XOM.</div>',
+                    'Currently available: AAPL, CRCL, MSFT, SPCX, TSLA, JPM, XOM.</div>',
                     unsafe_allow_html=True,
                 )
             elif (
