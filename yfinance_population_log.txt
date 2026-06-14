@@ -1,0 +1,1293 @@
+[2026-06-14 20:18:38] =======================================================
+[2026-06-14 20:18:38] YFINANCE MISSING DATA POPULATION
+[2026-06-14 20:18:38] Job ID:    917471b2
+[2026-06-14 20:18:38] Start:     2026-06-14 20:18:38
+[2026-06-14 20:18:38] Dry Run:   False
+[2026-06-14 20:18:38] Test Mode: True (first 50 tickers only)
+[2026-06-14 20:18:38] Force All: False (re-fetch all tickers)
+[2026-06-14 20:18:38] =======================================================
+[2026-06-14 20:18:38] PostgreSQL connection established.
+[2026-06-14 20:18:38] Loading tickers with missing yfinance data...
+[2026-06-14 20:18:38] [TEST MODE] Limited to first 50 tickers.
+[2026-06-14 20:18:38] Found 50 tickers with missing yfinance data.
+[2026-06-14 20:18:38] Checking for Questionable stocks due to missing market cap...
+[2026-06-14 20:18:39]   Added 1180 Questionable tickers with missing market cap.
+[2026-06-14 20:18:39] Total tickers to process: 1190
+[2026-06-14 20:18:39] Starting yfinance fetch...
+[2026-06-14 20:18:39]   Batch 1/24 (50 tickers)...
+[2026-06-14 20:18:40]   [OK] AAAU — price: 41.53, mktcap: N/A
+[2026-06-14 20:18:42]   [OK] AACBR — price: 0.1951, mktcap: N/A
+[2026-06-14 20:18:44]   [OK] AACBU — price: 10.61, mktcap: 293,911,456
+[2026-06-14 20:18:45]   [OK] AACIU — price: 10.3, mktcap: 349,603,936
+[2026-06-14 20:18:47]   [OK] AACIW — price: 0.3, mktcap: N/A
+[2026-06-14 20:18:49]   [OK] AACOU — price: 10.1, mktcap: 315,428,448
+[2026-06-14 20:18:51]   [OK] AACOW — price: 0.39, mktcap: N/A
+[2026-06-14 20:18:52]   [OK] AACPR — price: 0.19, mktcap: N/A
+[2026-06-14 20:18:54]   [OK] AACPU — price: 10.22, mktcap: N/A
+[2026-06-14 20:18:56]   [OK] AACPW — price: 0.11, mktcap: N/A
+[2026-06-14 20:18:57]   [OK] AADX — price: 20.43, mktcap: 4,513,358,848
+[2026-06-14 20:18:59]   [OK] ABLVW — price: 0.0169, mktcap: N/A
+[2026-06-14 20:19:01]   [OK] ABPWW — price: 0.0115, mktcap: N/A
+[2026-06-14 20:19:02]   [OK] ABXL — price: 25.5601, mktcap: N/A
+[2026-06-14 20:19:04]   [OK] ACAAU — price: 10.05, mktcap: 358,213,184
+[2026-06-14 20:19:06]   [OK] ACAAW — price: 0.555, mktcap: N/A
+[2026-06-14 20:19:08]   [OK] ACCO — price: 4.04, mktcap: 1,232,521,472
+[2026-06-14 20:19:09]   [OK] ACGCU — price: 10.07, mktcap: N/A
+[2026-06-14 20:19:11]   [OK] ACGCW — price: 0.32, mktcap: N/A
+[2026-06-14 20:19:13]   [OK] ACGLN — price: 16.36, mktcap: 5,630,938,112
+[2026-06-14 20:19:14]   [OK] ACGLO — price: 19.33, mktcap: 6,664,436,224
+[2026-06-14 20:19:16]   [OK] ACONW — price: 0.0292, mktcap: N/A
+[2026-06-14 20:19:18]   [OK] ADACU — price: 10.24, mktcap: 293,405,824
+[2026-06-14 20:19:20]   [OK] ADACW — price: 0.55, mktcap: N/A
+[2026-06-14 20:19:21]   [OK] ADAMG — price: 25.31, mktcap: 13,760,721,920
+[2026-06-14 20:19:23]   [OK] ADAMH — price: 25.78, mktcap: 13,802,956,800
+[2026-06-14 20:19:25]   [OK] ADAMI — price: 25.38, mktcap: N/A
+[2026-06-14 20:19:26]   [OK] ADAML — price: 24.355, mktcap: 13,674,904,576
+[2026-06-14 20:19:28]   [OK] ADAMM — price: 25.3, mktcap: 13,759,822,848
+[2026-06-14 20:19:30]   [OK] ADAMN — price: 23.56, mktcap: 13,603,465,216
+[2026-06-14 20:19:32]   [OK] ADAMO — price: 25.305, mktcap: N/A
+[2026-06-14 20:19:33]   [OK] ADAMZ — price: 18.88, mktcap: 13,182,914,560
+[2026-06-14 20:19:35]   [OK] ADSEW — price: 0.45, mktcap: N/A
+[2026-06-14 20:19:37]   [OK] ADZCF — price: 22.0, mktcap: N/A
+[2026-06-14 20:19:39]   [OK] AEAEU — price: 4.5, mktcap: 32,119,746
+[2026-06-14 20:19:40]   [OK] AEAEW — price: 0.07, mktcap: N/A
+[2026-06-14 20:19:42]   [OK] AEAQU — price: 10.15, mktcap: 545,439,872
+[2026-06-14 20:19:44]   [OK] AEAQW — price: 0.38, mktcap: 4,492,550
+[2026-06-14 20:19:46]   [OK] AEFC — price: 18.91, mktcap: N/A
+[2026-06-14 20:19:47]   [OK] AENTW — price: 0.35, mktcap: N/A
+[2026-06-14 20:19:49]   [OK] AERTW — price: 0.0181, mktcap: N/A
+[2026-06-14 20:19:51]   [NO PRICE] yfinance has no price data for AESP
+[2026-06-14 20:19:52]   [OK] AESPU — price: 10.06, mktcap: N/A
+[2026-06-14 20:19:54]   [OK] AFGB — price: 20.72, mktcap: N/A
+[2026-06-14 20:19:56]   [OK] AFGC — price: 17.84, mktcap: 17,805,390
+[2026-06-14 20:19:57]   [OK] AFGD — price: 19.5, mktcap: N/A
+[2026-06-14 20:19:59]   [OK] AFGE — price: 15.99, mktcap: N/A
+[2026-06-14 20:20:01]   [OK] AFJKR — price: 0.234, mktcap: N/A
+[2026-06-14 20:20:02]   [OK] AFJKU — price: 58.5, mktcap: 156,696,448
+[2026-06-14 20:20:04]   [OK] AFRIW — price: 0.6344, mktcap: N/A
+[2026-06-14 20:20:04]   Batch 1 complete. Pausing 3.0s...
+[2026-06-14 20:20:07]   Batch 2/24 (50 tickers)...
+[2026-06-14 20:20:09]   [OK] AIIOW — price: 0.0456, mktcap: N/A
+[2026-06-14 20:20:11]   [OK] AIMDW — price: 0.1496, mktcap: N/A
+[2026-06-14 20:20:12]   [OK] AIQD — price: 66.6492, mktcap: N/A
+[2026-06-14 20:20:14]   [OK] AIQU — price: 17.267, mktcap: N/A
+[2026-06-14 20:20:16]   [OK] AIRJW — price: 1.07, mktcap: N/A
+[2026-06-14 20:20:17]   [OK] ALCUF — price: 12.26, mktcap: 53,504,364
+[2026-06-14 20:20:19]   [OK] ALCWF — price: 0.4, mktcap: N/A
+[2026-06-14 20:20:21]   [OK] ALDFU — price: 10.82, mktcap: 322,809,440
+[2026-06-14 20:20:23]   [OK] ALDFW — price: 0.39, mktcap: N/A
+[2026-06-14 20:20:24]   [OK] ALFUU — price: 11.58, mktcap: 83,202,424
+[2026-06-14 20:20:26]   [OK] ALFUW — price: 0.26, mktcap: N/A
+[2026-06-14 20:20:28]   [OK] ALISR — price: 0.7387, mktcap: N/A
+[2026-06-14 20:20:30]   [OK] ALISU — price: 10.8, mktcap: 90,757,112
+[2026-06-14 20:20:31]   [OK] ALOVU — price: 10.06, mktcap: 375,237,760
+[2026-06-14 20:20:33]   [OK] ALOVW — price: 0.45, mktcap: N/A
+[2026-06-14 20:20:35]   [OK] ALVOW — price: 0.315, mktcap: N/A
+[2026-06-14 20:20:36]   [OK] AMBO — price: 2.64, mktcap: 12,494,250
+[2026-06-14 20:20:38]   [OK] AMBWQ — price: 0.001, mktcap: N/A
+[2026-06-14 20:20:40]   [OK] AGNCL — price: 24.9546, mktcap: 100,355,112,960
+[2026-06-14 20:20:42]   [OK] AGNCM — price: 25.12, mktcap: 100,544,987,136
+[2026-06-14 20:20:43]   [OK] AGNCN — price: 25.94, mktcap: 101,486,288,896
+[2026-06-14 20:20:45]   [OK] AGNCO — price: 25.56, mktcap: 101,050,073,088
+[2026-06-14 20:20:47]   [OK] AGNCP — price: 25.24, mktcap: 100,682,735,616
+[2026-06-14 20:20:49]   [OK] AGNCZ — price: 25.41, mktcap: 100,877,885,440
+[2026-06-14 20:20:50]   [OK] AGQPF — price: 14.45, mktcap: N/A
+[2026-06-14 20:20:52]   [NO PRICE] yfinance has no price data for AMPWF
+[2026-06-14 20:20:54]   [NO PRICE] yfinance has no price data for AMTU
+[2026-06-14 20:20:55]   [OK] AMUB — price: 21.8998, mktcap: N/A
+[2026-06-14 20:20:57]   [OK] ANGHW — price: 0.0143, mktcap: N/A
+[2026-06-14 20:20:59]   [OK] ANSCU — price: 12.51, mktcap: 524,548,160
+[2026-06-14 20:21:01]   [OK] ANSCW — price: 0.2, mktcap: N/A
+[2026-06-14 20:21:02]   [OK] APACR — price: 0.16, mktcap: N/A
+[2026-06-14 20:21:04]   [OK] APACU — price: 10.21, mktcap: 82,911,632
+[2026-06-14 20:21:06]   [NO PRICE] yfinance has no price data for APEX
+[2026-06-14 20:21:07]   [NO PRICE] yfinance has no price data for APMC
+[2026-06-14 20:21:09]   [OK] APMCU — price: 9.98, mktcap: N/A
+[2026-06-14 20:21:11]   [OK] APURR — price: 0.21, mktcap: N/A
+[2026-06-14 20:21:12]   [OK] APURU — price: 10.09, mktcap: N/A
+[2026-06-14 20:21:14]   [OK] APXTU — price: 10.25, mktcap: 470,327,808
+[2026-06-14 20:21:16]   [OK] APXTW — price: 0.28, mktcap: N/A
+[2026-06-14 20:21:18]   [OK] AQNB — price: 26.08, mktcap: N/A
+[2026-06-14 20:21:19]   [OK] ARBEW — price: 0.0326, mktcap: N/A
+[2026-06-14 20:21:21]   [OK] ARCIU — price: 10.26, mktcap: 49,640,376
+[2026-06-14 20:21:23]   [OK] ARCIW — price: 0.55, mktcap: N/A
+[2026-06-14 20:21:24]   [OK] ARCLR — price: 0.23, mktcap: N/A
+[2026-06-14 20:21:26]   [OK] ARCLU — price: 10.2, mktcap: N/A
+[2026-06-14 20:21:28]   [OK] ARCLW — price: 0.11, mktcap: N/A
+[2026-06-14 20:21:30]   [OK] ARKB — price: 21.08, mktcap: N/A
+[2026-06-14 20:21:31]   [OK] ARQQW — price: 0.0545, mktcap: N/A
+[2026-06-14 20:21:33]   [OK] ASPCR — price: 0.101, mktcap: N/A
+[2026-06-14 20:21:33]   Batch 2 complete. Pausing 3.0s...
+[2026-06-14 20:21:36]   Batch 3/24 (50 tickers)...
+[2026-06-14 20:21:38]   [OK] ASPCU — price: 11.5, mktcap: 26,211,854
+[2026-06-14 20:21:39]   [OK] ASTLW — price: 0.045, mktcap: N/A
+[2026-06-14 20:21:41]   [OK] ATEKU — price: 20.0, mktcap: 125,315,424
+[2026-06-14 20:21:43]   [OK] ATEKW — price: 0.027, mktcap: N/A
+[2026-06-14 20:21:45]   [OK] ATIIU — price: 12.32, mktcap: 351,043,168
+[2026-06-14 20:21:47]   [OK] ATIIW — price: 2.25, mktcap: N/A
+[2026-06-14 20:21:48]   [OK] ATMP — price: 34.6961, mktcap: N/A
+[2026-06-14 20:21:50]   [OK] AUROW — price: 0.3, mktcap: N/A
+[2026-06-14 20:21:52]   [NO PRICE] yfinance has no price data for AVAC
+[2026-06-14 20:21:53]   [OK] AXINR — price: 0.3668, mktcap: N/A
+[2026-06-14 20:21:55]   [OK] AXINU — price: 10.87, mktcap: 295,843,520
+[2026-06-14 20:21:57]   [NO PRICE] yfinance has no price data for AZUXY
+[2026-06-14 20:21:59]   [OK] BACCR — price: 0.35, mktcap: N/A
+[2026-06-14 20:22:00]   [OK] BACCU — price: 11.05, mktcap: 308,623,360
+[2026-06-14 20:22:02]   [OK] BAMGF — price: 16.8976, mktcap: 413,124,395,008
+[2026-06-14 20:22:04]   [OK] BAMKF — price: 12.5, mktcap: 403,301,957,632
+[2026-06-14 20:22:05]   [OK] BANFP — price: 26.63, mktcap: N/A
+[2026-06-14 20:22:07]   [OK] BA-PA — price: 68.68, mktcap: N/A
+[2026-06-14 20:22:09]   [OK] BAR — price: 41.47, mktcap: N/A
+[2026-06-14 20:22:11]   [OK] BAVA — price: 17.7185, mktcap: N/A
+[2026-06-14 20:22:12]   [OK] BAYAR — price: 0.12, mktcap: N/A
+[2026-06-14 20:22:14]   [OK] BAYAU — price: 12.75, mktcap: 36,788,036
+[2026-06-14 20:22:16]   [NO PRICE] yfinance has no price data for BBAAY
+[2026-06-14 20:22:18]   [OK] BBCQU — price: 12.0, mktcap: 458,668,992
+[2026-06-14 20:22:19]   [OK] BBCQW — price: 2.13, mktcap: N/A
+[2026-06-14 20:22:21]   [NO PRICE] yfinance has no price data for BCAEF
+[2026-06-14 20:22:23]   [OK] BCARU — price: 12.0, mktcap: 463,079,648
+[2026-06-14 20:22:24]   [OK] BCARW — price: 1.85, mktcap: N/A
+[2026-06-14 20:22:26]   [OK] BCEFF — price: 15.4, mktcap: 59,487,895,552
+[2026-06-14 20:22:28]   [OK] BCEIF — price: 21.24, mktcap: N/A
+[2026-06-14 20:22:29]   [NO PRICE] yfinance has no price data for BCENF
+[2026-06-14 20:22:31]   [OK] BCEPF — price: 15.2, mktcap: 59,301,392,384
+[2026-06-14 20:22:33]   [OK] BCEXF — price: 10.0, mktcap: 54,452,256,768
+[2026-06-14 20:22:35]   [OK] BCGWW — price: 0.1531, mktcap: N/A
+[2026-06-14 20:22:36]   [OK] BCHG — price: 1.53, mktcap: 48,616,668
+[2026-06-14 20:22:38]   [OK] BCPPF — price: 11.0, mktcap: 55,384,784,896
+[2026-06-14 20:22:40]   [OK] BDCIU — price: 10.18, mktcap: 352,272,736
+[2026-06-14 20:22:42]   [OK] BDCIW — price: 0.41, mktcap: N/A
+[2026-06-14 20:22:43]   [OK] BDCX — price: 20.2963, mktcap: N/A
+[2026-06-14 20:22:45]   [OK] BDCZ — price: 15.0543, mktcap: N/A
+[2026-06-14 20:22:47]   [NO PRICE] yfinance has no price data for BDDD
+[2026-06-14 20:22:49]   [OK] BDMDW — price: 0.0452, mktcap: N/A
+[2026-06-14 20:22:50]   [OK] BDRY — price: 12.32, mktcap: N/A
+[2026-06-14 20:22:52]   [OK] BDTB — price: 0.2, mktcap: N/A
+[2026-06-14 20:22:54]   [OK] BEAGR — price: 0.42, mktcap: N/A
+[2026-06-14 20:22:56]   [OK] BEAGU — price: 10.91, mktcap: 341,700,992
+[2026-06-14 20:22:57]   [OK] BECEF — price: 15.107, mktcap: 59,214,667,776
+[2026-06-14 20:22:59]   [OK] BENFW — price: 0.0105, mktcap: N/A
+[2026-06-14 20:23:01]   [OK] BEPH — price: 14.88, mktcap: N/A
+[2026-06-14 20:23:02]   [OK] BEPI — price: 15.48, mktcap: N/A
+[2026-06-14 20:23:02]   Batch 3 complete. Pausing 3.0s...
+[2026-06-14 20:23:05]   Batch 4/24 (50 tickers)...
+[2026-06-14 20:23:07]   [OK] BEPJ — price: 25.27, mktcap: N/A
+[2026-06-14 20:23:09]   [OK] BERZ — price: 24.17, mktcap: N/A
+[2026-06-14 20:23:10]   [OK] BFRIW — price: 0.027, mktcap: N/A
+[2026-06-14 20:23:12]   [NO PRICE] yfinance has no price data for BGFR
+[2026-06-14 20:23:14]   [OK] BGLWW — price: 0.1425, mktcap: N/A
+[2026-06-14 20:23:16]   [OK] BHAVR — price: 0.25, mktcap: N/A
+[2026-06-14 20:23:17]   [OK] BHAVU — price: 10.14, mktcap: 141,362,672
+[2026-06-14 20:23:19]   [NO PRICE] yfinance has no price data for BID
+[2026-06-14 20:23:21]   [OK] BIDWU — price: 9.9762, mktcap: N/A
+[2026-06-14 20:23:22]   [OK] BIPH — price: 16.33, mktcap: N/A
+[2026-06-14 20:23:24]   [OK] BIPI — price: 16.36, mktcap: N/A
+[2026-06-14 20:23:26]   [OK] BIPJ — price: 25.05, mktcap: N/A
+[2026-06-14 20:23:28]   [OK] BITB — price: 34.52, mktcap: N/A
+[2026-06-14 20:23:29]   [OK] BITW — price: 40.32, mktcap: N/A
+[2026-06-14 20:23:31]   [OK] BIXIU — price: 10.09, mktcap: 304,724,544
+[2026-06-14 20:23:33]   [OK] BIXIW — price: 0.275, mktcap: N/A
+[2026-06-14 20:23:34]   [OK] BKAMF — price: 14.3349, mktcap: 407,400,382,464
+[2026-06-14 20:23:36]   [OK] BKFAF — price: 8.0, mktcap: N/A
+[2026-06-14 20:23:38]   [OK] BKFOF — price: 17.97, mktcap: 415,519,703,040
+[2026-06-14 20:23:40]   [OK] BKFPF — price: 11.3446, mktcap: 400,721,248,256
+[2026-06-14 20:23:41]   [OK] BKHAR — price: 1.48, mktcap: 2,042,400
+[2026-06-14 20:23:43]   [OK] BKHAU — price: 13.75, mktcap: 58,946,632
+[2026-06-14 20:23:45]   [NO PRICE] yfinance has no price data for BKPA
+[2026-06-14 20:23:46]   [NO PRICE] yfinance has no price data for BLDC
+[2026-06-14 20:23:48]   [OK] BLRKU — price: 10.09, mktcap: 231,572,352
+[2026-06-14 20:23:50]   [OK] BLRKW — price: 0.34, mktcap: N/A
+[2026-06-14 20:23:52]   [NO PRICE] yfinance has no price data for BLTG
+[2026-06-14 20:23:53]   [OK] BLUWU — price: 10.54, mktcap: N/A
+[2026-06-14 20:23:55]   [OK] BLUWW — price: 0.4193, mktcap: N/A
+[2026-06-14 20:23:57]   [OK] BLZRU — price: 10.21, mktcap: 351,157,504
+[2026-06-14 20:23:58]   [OK] BLZRW — price: 0.5298, mktcap: N/A
+[2026-06-14 20:24:00]   [OK] BNH — price: 15.5, mktcap: N/A
+[2026-06-14 20:24:02]   [OK] BNJ — price: 15.21, mktcap: N/A
+[2026-06-14 20:24:03]   [OK] BNKD — price: 34.0371, mktcap: N/A
+[2026-06-14 20:24:05]   [OK] BNKU — price: 38.9276, mktcap: N/A
+[2026-06-14 20:24:07]   [OK] BOT — price: 35.39, mktcap: 717,502,805
+[2026-06-14 20:24:09]   [OK] BPACR — price: 0.1602, mktcap: N/A
+[2026-06-14 20:24:10]   [OK] BPACU — price: 10.24, mktcap: N/A
+[2026-06-14 20:24:12]   [NO PRICE] yfinance has no price data for BPPFF
+[2026-06-14 20:24:14]   [OK] BPRE — price: 14.75, mktcap: N/A
+[2026-06-14 20:24:16]   [OK] BPYPM — price: 16.66, mktcap: N/A
+[2026-06-14 20:24:17]   [OK] BPYPN — price: 13.95, mktcap: 91,707,424,768
+[2026-06-14 20:24:19]   [OK] BPYPO — price: 15.11, mktcap: 92,194,242,560
+[2026-06-14 20:24:21]   [OK] BPYPP — price: 15.472, mktcap: 92,346,163,200
+[2026-06-14 20:24:22]   [NO PRICE] yfinance has no price data for BRBF
+[2026-06-14 20:24:24]   [OK] BRCFF — price: 17.0, mktcap: 413,353,115,648
+[2026-06-14 20:24:26]   [OK] BREZ — price: 9.92, mktcap: 175,478,768
+[2026-06-14 20:24:28]   [OK] BREZR — price: 0.25, mktcap: N/A
+[2026-06-14 20:24:29]   [OK] BREZU — price: 10.11, mktcap: N/A
+[2026-06-14 20:24:31]   [OK] BRFAF — price: 25.42, mktcap: N/A
+[2026-06-14 20:24:31]   Batch 4 complete. Pausing 3.0s...
+[2026-06-14 20:24:34]   Batch 5/24 (50 tickers)...
+[2026-06-14 20:24:36]   [NO PRICE] yfinance has no price data for BRFCF
+[2026-06-14 20:24:38]   [OK] BRIPF — price: 17.8493, mktcap: 103,926,964,224
+[2026-06-14 20:24:39]   [OK] BRKHU — price: 10.0, mktcap: N/A
+[2026-06-14 20:24:41]   [OK] BRKRP — price: 401.31, mktcap: 62,714,966,016
+[2026-06-14 20:24:43]   [OK] BRLSW — price: 0.0547, mktcap: N/A
+[2026-06-14 20:24:44]   [OK] BRPSF — price: 12.98, mktcap: 418,624,405,504
+[2026-06-14 20:24:46]   [OK] BRRR — price: 17.93, mktcap: N/A
+[2026-06-14 20:24:48]   [OK] BRRWW — price: 0.2798, mktcap: N/A
+[2026-06-14 20:24:50]   [OK] BRUNW — price: 19.39, mktcap: N/A
+[2026-06-14 20:24:51]   [OK] BSAAR — price: 0.177, mktcap: N/A
+[2026-06-14 20:24:53]   [OK] BSAAU — price: 14.0, mktcap: 102,421,360
+[2026-06-14 20:24:55]   [OK] BSOL — price: 9.05, mktcap: N/A
+[2026-06-14 20:24:56]   [NO PRICE] yfinance has no price data for BSP
+[2026-06-14 20:24:58]   [NO PRICE] yfinance has no price data for BSTR
+[2026-06-14 20:25:00]   [OK] BTC — price: 28.13, mktcap: N/A
+[2026-06-14 20:25:01]   [OK] BTCO — price: 63.25, mktcap: N/A
+[2026-06-14 20:25:03]   [OK] BTCW — price: 67.24, mktcap: N/A
+[2026-06-14 20:25:05]   [OK] BULLW — price: 2.055, mktcap: N/A
+[2026-06-14 20:25:07]   [OK] BULZ — price: 40.22, mktcap: N/A
+[2026-06-14 20:25:08]   [OK] BWBBP — price: 20.03, mktcap: 833,549,824
+[2026-06-14 20:25:10]   [OK] BWET — price: 199.9, mktcap: N/A
+[2026-06-14 20:25:12]   [OK] BWOW — price: 14.344, mktcap: N/A
+[2026-06-14 20:25:13]   [OK] BWVTF — price: 115.0, mktcap: N/A
+[2026-06-14 20:25:15]   [OK] BYNOU — price: 12.79, mktcap: 121,270,280
+[2026-06-14 20:25:17]   [OK] BYNOW — price: 0.0889, mktcap: N/A
+[2026-06-14 20:25:19]   [OK] BZFDW — price: 0.0262, mktcap: N/A
+[2026-06-14 20:25:20]   [NO PRICE] yfinance has no price data for CAES
+[2026-06-14 20:25:22]   [NO PRICE] yfinance has no price data for CAII
+[2026-06-14 20:25:24]   [OK] CAIIU — price: 9.97, mktcap: N/A
+[2026-06-14 20:25:25]   [NO PRICE] yfinance has no price data for CAPI
+[2026-06-14 20:25:27]   [OK] CAPNR — price: 0.268, mktcap: N/A
+[2026-06-14 20:25:29]   [OK] CAPNU — price: 11.29, mktcap: 60,963,124
+[2026-06-14 20:25:30]   [OK] CAQUU — price: 10.01, mktcap: 250,216,848
+[2026-06-14 20:25:32]   [OK] CAQUW — price: 0.32, mktcap: N/A
+[2026-06-14 20:25:34]   [OK] CARD — price: 2.62, mktcap: N/A
+[2026-06-14 20:25:36]   [OK] CARU — price: 23.4834, mktcap: N/A
+[2026-06-14 20:25:37]   [NO PRICE] yfinance has no price data for CBAI
+[2026-06-14 20:25:39]   [OK] CCAQU — price: 11.5, mktcap: 232,593,136
+[2026-06-14 20:25:41]   [OK] CCAQW — price: 0.4, mktcap: N/A
+[2026-06-14 20:25:42]   [OK] CCGWW — price: 0.02, mktcap: N/A
+[2026-06-14 20:25:44]   [OK] CCID — price: 25.21, mktcap: N/A
+[2026-06-14 20:25:46]   [OK] CCIIU — price: 10.45, mktcap: 361,088,512
+[2026-06-14 20:25:47]   [OK] CCIIW — price: 0.75, mktcap: 4,743,750
+[2026-06-14 20:25:49]   [OK] CCIXU — price: 12.0, mktcap: 440,282,208
+[2026-06-14 20:25:51]   [OK] CCIXW — price: 0.3831, mktcap: 14,377,606
+[2026-06-14 20:25:53]   [NO PRICE] yfinance has no price data for CCLV
+[2026-06-14 20:25:54]   [OK] CCNEP — price: 24.725, mktcap: 511,450,304
+[2026-06-14 20:25:56]   [OK] CCXIU — price: 10.31, mktcap: 573,856,896
+[2026-06-14 20:25:58]   [OK] CCXIW — price: 1.19, mktcap: N/A
+[2026-06-14 20:25:59]   [OK] CDAUF — price: 10.18, mktcap: 57,120,276
+[2026-06-14 20:26:00]   Batch 5 complete. Pausing 3.0s...
+[2026-06-14 20:26:03]   Batch 6/24 (50 tickers)...
+[2026-06-14 20:26:04]   [NO PRICE] yfinance has no price data for CDAWF
+[2026-06-14 20:26:06]   [OK] CDROW — price: 0.8496, mktcap: N/A
+[2026-06-14 20:26:08]   [OK] CDTTW — price: 0.0126, mktcap: N/A
+[2026-06-14 20:26:09]   [OK] CEFD — price: 18.879, mktcap: N/A
+[2026-06-14 20:26:11]   [OK] CGCTU — price: 12.01, mktcap: 413,948,800
+[2026-06-14 20:26:13]   [OK] CGCTW — price: 1.4, mktcap: N/A
+[2026-06-14 20:26:14]   [OK] CHARR — price: 0.0808, mktcap: N/A
+[2026-06-14 20:26:16]   [OK] CHARU — price: 10.8, mktcap: 115,347,448
+[2026-06-14 20:26:18]   [OK] CHECU — price: 10.29, mktcap: 177,162,656
+[2026-06-14 20:26:20]   [OK] CHECW — price: 0.165, mktcap: N/A
+[2026-06-14 20:26:21]   [OK] CHPGR — price: 0.145, mktcap: N/A
+[2026-06-14 20:26:23]   [OK] CHPGU — price: 10.48, mktcap: 104,807,568
+[2026-06-14 20:26:25]   [NO PRICE] yfinance has no price data for CILFY
+[2026-06-14 20:26:26]   [OK] CIMN — price: 25.07, mktcap: N/A
+[2026-06-14 20:26:28]   [OK] CIMO — price: 25.21, mktcap: N/A
+[2026-06-14 20:26:30]   [OK] CIMP — price: 24.95, mktcap: N/A
+[2026-06-14 20:26:31]   [NO PRICE] yfinance has no price data for CLBZ
+[2026-06-14 20:26:33]   [OK] CLNK — price: 14.31, mktcap: N/A
+[2026-06-14 20:26:35]   [OK] CLRRF — price: 0.06, mktcap: N/A
+[2026-06-14 20:26:37]   [NO PRICE] yfinance has no price data for CLYD
+[2026-06-14 20:26:38]   [OK] CMCUF — price: 2.0, mktcap: 12,023,677
+[2026-06-14 20:26:40]   [NO PRICE] yfinance has no price data for CMCWF
+[2026-06-14 20:26:42]   [OK] CMIIU — price: 10.18, mktcap: 199,276,624
+[2026-06-14 20:26:44]   [OK] CMIIW — price: 0.65, mktcap: N/A
+[2026-06-14 20:26:45]   [OK] CNCKW — price: 0.171, mktcap: N/A
+[2026-06-14 20:26:47]   [OK] CNOBP — price: 24.9578, mktcap: 2,061,945,600
+[2026-06-14 20:26:49]   [OK] COLAR — price: 0.5699, mktcap: N/A
+[2026-06-14 20:26:50]   [OK] COLAU — price: 11.25, mktcap: 57,407,792
+[2026-06-14 20:26:52]   [OK] COOTW — price: 0.0224, mktcap: N/A
+[2026-06-14 20:26:54]   [OK] CORZR — price: 0.025, mktcap: N/A
+[2026-06-14 20:26:56]   [OK] CORZW — price: 20.78, mktcap: N/A
+[2026-06-14 20:26:57]   [OK] CORZZ — price: 27.47, mktcap: N/A
+[2026-06-14 20:26:59]   [OK] CPPTL — price: 10.95, mktcap: N/A
+[2026-06-14 20:27:01]   [NO PRICE] yfinance has no price data for CPTKW
+[2026-06-14 20:27:02]   [OK] CRACR — price: 0.14, mktcap: N/A
+[2026-06-14 20:27:04]   [OK] CRACU — price: 10.23, mktcap: N/A
+[2026-06-14 20:27:06]   [OK] CRACW — price: 0.05, mktcap: N/A
+[2026-06-14 20:27:07]   [OK] CRANR — price: 0.2001, mktcap: N/A
+[2026-06-14 20:27:09]   [OK] CRANU — price: 10.27, mktcap: 479,710,432
+[2026-06-14 20:27:11]   [OK] CRAQR — price: 0.24, mktcap: N/A
+[2026-06-14 20:27:13]   [OK] CRAQU — price: 10.41, mktcap: 325,140,608
+[2026-06-14 20:27:14]   [OK] CRBD — price: 22.61, mktcap: N/A
+[2026-06-14 20:27:16]   [OK] CRGOW — price: 0.065, mktcap: N/A
+[2026-06-14 20:27:18]   [NO PRICE] yfinance has no price data for CRGT
+[2026-06-14 20:27:19]   [OK] CRMLW — price: 3.79, mktcap: N/A
+[2026-06-14 20:27:21]   [OK] CSHRW — price: 1.27, mktcap: N/A
+[2026-06-14 20:27:23]   [OK] CSTUF — price: 12.49, mktcap: 95,035,104
+[2026-06-14 20:27:24]   [OK] CSTWF — price: 0.25, mktcap: N/A
+[2026-06-14 20:27:26]   [OK] CTAAR — price: 0.23, mktcap: N/A
+[2026-06-14 20:27:28]   [OK] CTAAU — price: 10.0201, mktcap: 165,645,216
+[2026-06-14 20:27:28]   Batch 6 complete. Pausing 3.0s...
+[2026-06-14 20:27:31]   Batch 7/24 (50 tickers)...
+[2026-06-14 20:27:33]   [OK] CTWO — price: 16.7, mktcap: N/A
+[2026-06-14 20:27:35]   [OK] CUBWU — price: 11.05, mktcap: 338,748,992
+[2026-06-14 20:27:36]   [OK] CUBWW — price: 0.38, mktcap: N/A
+[2026-06-14 20:27:38]   [NO PRICE] yfinance has no price data for CUX
+[2026-06-14 20:27:40]   [NO PRICE] yfinance has no price data for CWLXF
+[2026-06-14 20:27:41]   [NO PRICE] yfinance has no price data for CXII
+[2026-06-14 20:27:43]   [OK] CXIIU — price: 10.15, mktcap: N/A
+[2026-06-14 20:27:45]   [OK] CYCUW — price: 0.0239, mktcap: N/A
+[2026-06-14 20:27:46]   [OK] DAAQU — price: 10.99, mktcap: 188,963,440
+[2026-06-14 20:27:48]   [OK] DAAQW — price: 0.46, mktcap: N/A
+[2026-06-14 20:27:50]   [OK] DAVEW — price: 1.07, mktcap: N/A
+[2026-06-14 20:27:51]   [NO PRICE] yfinance has no price data for DAVI
+[2026-06-14 20:27:53]   [OK] DBA — price: 26.24, mktcap: 724,224,000
+[2026-06-14 20:27:55]   [OK] DBB — price: 25.73, mktcap: 272,738,000
+[2026-06-14 20:27:57]   [OK] DBCAU — price: 10.2, mktcap: 440,854,880
+[2026-06-14 20:27:58]   [OK] DBCAW — price: 0.4001, mktcap: N/A
+[2026-06-14 20:28:00]   [OK] DBP — price: 98.88, mktcap: 316,416,000
+[2026-06-14 20:28:02]   [OK] DEENF — price: 0.0001, mktcap: N/A
+[2026-06-14 20:28:04]   [OK] DEFI — price: 72.0943, mktcap: N/A
+[2026-06-14 20:28:05]   [OK] DFSCW — price: 0.0325, mktcap: N/A
+[2026-06-14 20:28:07]   [OK] DGAC — price: 1e-06, mktcap: 15
+[2026-06-14 20:28:09]   [OK] DGP — price: 144.89, mktcap: N/A
+[2026-06-14 20:28:10]   [OK] DGZ — price: 5.6556, mktcap: N/A
+[2026-06-14 20:28:12]   [OK] DJP — price: 45.99, mktcap: N/A
+[2026-06-14 20:28:14]   [OK] DMAAR — price: 0.1, mktcap: 2,040,000
+[2026-06-14 20:28:16]   [OK] DMAAU — price: 11.32, mktcap: 356,727,968
+[2026-06-14 20:28:17]   [OK] DMIIR — price: 0.0799, mktcap: N/A
+[2026-06-14 20:28:19]   [OK] DMIIU — price: 10.12, mktcap: 644,746,304
+[2026-06-14 20:28:21]   [OK] DNMXU — price: 10.15, mktcap: 271,347,168
+[2026-06-14 20:28:22]   [OK] DNMXW — price: 0.329, mktcap: N/A
+[2026-06-14 20:28:24]   [NO PRICE] yfinance has no price data for DPC
+[2026-06-14 20:28:26]   [OK] DRDBU — price: 11.49, mktcap: 352,786,592
+[2026-06-14 20:28:27]   [NO PRICE] yfinance has no price data for DRIL
+[2026-06-14 20:28:29]   [OK] DRTSW — price: 2.1, mktcap: N/A
+[2026-06-14 20:28:31]   [OK] DSACU — price: 10.1, mktcap: 342,810,784
+[2026-06-14 20:28:33]   [OK] DSACW — price: 0.47, mktcap: N/A
+[2026-06-14 20:28:34]   [OK] DSYWW — price: 0.0329, mktcap: N/A
+[2026-06-14 20:28:36]   [OK] DTSQR — price: 0.0901, mktcap: N/A
+[2026-06-14 20:28:38]   [OK] DTSQU — price: 12.15, mktcap: 44,387,264
+[2026-06-14 20:28:40]   [OK] DULL — price: 67.88, mktcap: N/A
+[2026-06-14 20:28:41]   [OK] DX-PC — price: 26.1199, mktcap: 26,013,308,928
+[2026-06-14 20:28:43]   [OK] DYNCU — price: 10.87, mktcap: 240,434,480
+[2026-06-14 20:28:45]   [OK] DYNCW — price: 0.1301, mktcap: N/A
+[2026-06-14 20:28:46]   [OK] DYORU — price: 10.13, mktcap: 232,048,640
+[2026-06-14 20:28:48]   [OK] DYORW — price: 0.27, mktcap: N/A
+[2026-06-14 20:28:50]   [OK] DZZ — price: 1.825, mktcap: N/A
+[2026-06-14 20:28:52]   [OK] EBBGF — price: 25.0, mktcap: 172,894,404,608
+[2026-06-14 20:28:53]   [OK] EBBNF — price: 24.57, mktcap: 171,955,421,184
+[2026-06-14 20:28:55]   [OK] EBGEF — price: 25.34, mktcap: 173,636,861,952
+[2026-06-14 20:28:57]   [OK] EBRGF — price: 16.455, mktcap: N/A
+[2026-06-14 20:28:57]   Batch 7 complete. Pausing 3.0s...
+[2026-06-14 20:29:00]   Batch 8/24 (50 tickers)...
+[2026-06-14 20:29:01]   [OK] EBRZF — price: 15.45, mktcap: 152,040,112,128
+[2026-06-14 20:29:03]   [OK] ECCC — price: 24.5, mktcap: 3,780,932,352
+[2026-06-14 20:29:05]   [OK] ECCU — price: 25.54, mktcap: N/A
+[2026-06-14 20:29:07]   [OK] ECCV — price: 23.9, mktcap: N/A
+[2026-06-14 20:29:08]   [NO PRICE] yfinance has no price data for ECR
+[2026-06-14 20:29:10]   [OK] ECXWW — price: 0.0399, mktcap: N/A
+[2026-06-14 20:29:12]   [NO PRICE] yfinance has no price data for EFGH
+[2026-06-14 20:29:13]   [OK] EFSCP — price: 20.25, mktcap: 589,981,568
+[2026-06-14 20:29:15]   [OK] EGHAR — price: 0.3899, mktcap: N/A
+[2026-06-14 20:29:17]   [OK] EGHAU — price: 10.8, mktcap: 220,941,072
+[2026-06-14 20:29:18]   [OK] EICA — price: 24.91, mktcap: 659,518,336
+[2026-06-14 20:29:20]   [OK] EIIA — price: 25.2, mktcap: N/A
+[2026-06-14 20:29:22]   [OK] ELC — price: 19.99, mktcap: N/A
+[2026-06-14 20:29:24]   [OK] ELLA — price: 25.66, mktcap: 1,127,669,760
+[2026-06-14 20:29:25]   [OK] EMCRF — price: 0.0805, mktcap: N/A
+[2026-06-14 20:29:27]   [OK] EMCWF — price: 0.0134, mktcap: N/A
+[2026-06-14 20:29:29]   [NO PRICE] yfinance has no price data for EMI
+[2026-06-14 20:29:30]   [OK] EMICF — price: 15.0409, mktcap: 27,537,010,688
+[2026-06-14 20:29:32]   [OK] EMISR — price: 0.1599, mktcap: N/A
+[2026-06-14 20:29:34]   [OK] EMP — price: 20.5801, mktcap: 178,354,555
+[2026-06-14 20:29:35]   [NO PRICE] yfinance has no price data for EMRJF
+[2026-06-14 20:29:37]   [OK] ENBFF — price: 15.5, mktcap: 152,149,295,104
+[2026-06-14 20:29:39]   [OK] ENBGF — price: 18.0, mktcap: N/A
+[2026-06-14 20:29:41]   [OK] ENBHF — price: 16.9821, mktcap: 155,385,757,696
+[2026-06-14 20:29:42]   [OK] ENBMF — price: 15.0, mktcap: 151,057,448,960
+[2026-06-14 20:29:44]   [OK] ENBNF — price: 15.8518, mktcap: 152,917,524,480
+[2026-06-14 20:29:46]   [OK] ENBOF — price: 12.0, mktcap: N/A
+[2026-06-14 20:29:47]   [OK] ENBRF — price: 16.5, mktcap: 154,332,987,392
+[2026-06-14 20:29:49]   [OK] ENBSF — price: 16.0, mktcap: N/A
+[2026-06-14 20:29:51]   [NO PRICE] yfinance has no price data for ENFFF
+[2026-06-14 20:29:53]   [OK] ENGNW — price: 0.26, mktcap: N/A
+[2026-06-14 20:29:54]   [OK] ENNPF — price: 18.15, mktcap: 157,936,091,136
+[2026-06-14 20:29:56]   [OK] ENRDW — price: 0.6101, mktcap: N/A
+[2026-06-14 20:29:58]   [NO PRICE] yfinance has no price data for ENT
+[2026-06-14 20:29:59]   [OK] ERRAF — price: 18.24, mktcap: 28,515,616,768
+[2026-06-14 20:30:01]   [OK] ESLAW — price: 0.13, mktcap: N/A
+[2026-06-14 20:30:03]   [NO PRICE] yfinance has no price data for ESMR
+[2026-06-14 20:30:05]   [OK] ETCG — price: 3.979, mktcap: N/A
+[2026-06-14 20:30:06]   [OK] ETH — price: 15.83, mktcap: N/A
+[2026-06-14 20:30:08]   [OK] ETHA — price: 12.57, mktcap: N/A
+[2026-06-14 20:30:10]   [OK] ETHB — price: 21.41, mktcap: N/A
+[2026-06-14 20:30:11]   [OK] ETHE — price: 13.47, mktcap: N/A
+[2026-06-14 20:30:13]   [OK] ETHV — price: 24.34, mktcap: N/A
+[2026-06-14 20:30:15]   [OK] ETHW — price: 11.9, mktcap: N/A
+[2026-06-14 20:30:17]   [OK] ETI-P — price: 24.368, mktcap: 4,768,175,104
+[2026-06-14 20:30:18]   [OK] EURKR — price: 0.3, mktcap: N/A
+[2026-06-14 20:30:20]   [OK] EURKU — price: 11.5, mktcap: 57,044,308
+[2026-06-14 20:30:22]   [NO PRICE] yfinance has no price data for EVAWF
+[2026-06-14 20:30:23]   [NO PRICE] yfinance has no price data for EVBWF
+[2026-06-14 20:30:25]   [NO PRICE] yfinance has no price data for EVON
+[2026-06-14 20:30:25]   Batch 8 complete. Pausing 3.0s...
+[2026-06-14 20:30:28]   Batch 9/24 (50 tickers)...
+[2026-06-14 20:30:30]   [OK] EVOXU — price: 10.2, mktcap: 325,389,280
+[2026-06-14 20:30:31]   [OK] EVOXW — price: 0.367, mktcap: N/A
+[2026-06-14 20:30:33]   [OK] EVTWF — price: 0.025, mktcap: N/A
+[2026-06-14 20:30:35]   [OK] EXYNW — price: 0.91, mktcap: N/A
+[2026-06-14 20:30:37]   [OK] EZBC — price: 36.75, mktcap: N/A
+[2026-06-14 20:30:38]   [OK] EZET — price: 12.61, mktcap: N/A
+[2026-06-14 20:30:40]   [OK] EZPZ — price: 15.6619, mktcap: N/A
+[2026-06-14 20:30:42]   [OK] FACTU — price: 11.35, mktcap: 275,635,648
+[2026-06-14 20:30:43]   [OK] FACTW — price: 0.7958, mktcap: N/A
+[2026-06-14 20:30:45]   [OK] FACWW — price: 2.1399, mktcap: N/A
+[2026-06-14 20:30:47]   [OK] FBTC — price: 55.35, mktcap: N/A
+[2026-06-14 20:30:49]   [NO PRICE] yfinance has no price data for FCBM
+[2026-06-14 20:30:50]   [OK] FXACU — price: 10.06, mktcap: N/A
+[2026-06-14 20:30:52]   [OK] FERAR — price: 0.33, mktcap: N/A
+[2026-06-14 20:30:54]   [OK] FERAU — price: 10.62, mktcap: 329,007,424
+[2026-06-14 20:30:56]   [OK] FETH — price: 16.58, mktcap: N/A
+[2026-06-14 20:30:57]   [NO PRICE] yfinance has no price data for FFGG
+[2026-06-14 20:30:59]   [OK] FGBIP — price: 20.55, mktcap: N/A
+[2026-06-14 20:31:01]   [OK] FGDL — price: 55.98, mktcap: N/A
+[2026-06-14 20:31:02]   [OK] FGIIU — price: 10.03, mktcap: 289,370,208
+[2026-06-14 20:31:04]   [OK] FGIIW — price: 0.25, mktcap: N/A
+[2026-06-14 20:31:06]   [OK] FGIWW — price: 0.0401, mktcap: N/A
+[2026-06-14 20:31:07]   [OK] FGMCR — price: 1.015, mktcap: N/A
+[2026-06-14 20:31:09]   [OK] FGMCU — price: 11.25, mktcap: 115,584,512
+[2026-06-14 20:31:11]   [OK] FIGXU — price: 10.5, mktcap: 198,231,888
+[2026-06-14 20:31:13]   [OK] FIGXW — price: 0.2799, mktcap: N/A
+[2026-06-14 20:31:14]   [OK] FIISO — price: 115.65, mktcap: N/A
+[2026-06-14 20:31:16]   [NO PRICE] yfinance has no price data for FIISP
+[2026-06-14 20:31:18]   [NO PRICE] yfinance has no price data for FINCF
+[2026-06-14 20:31:19]   [OK] FITBI — price: 25.69, mktcap: 16,842,775,040
+[2026-06-14 20:31:21]   [OK] FITBM — price: 26.0, mktcap: 40,414,552,064
+[2026-06-14 20:31:23]   [OK] FITBO — price: 18.36, mktcap: 33,322,663,936
+[2026-06-14 20:31:25]   [OK] FITBP — price: 23.52, mktcap: 38,062,673,920
+[2026-06-14 20:31:26]   [OK] FLDDW — price: 0.1424, mktcap: N/A
+[2026-06-14 20:31:28]   [OK] FLYD — price: 50.5729, mktcap: N/A
+[2026-06-14 20:31:30]   [OK] FLYU — price: 45.2703, mktcap: N/A
+[2026-06-14 20:31:31]   [OK] FMCCG — price: 12.05, mktcap: 3,391,681,200,128
+[2026-06-14 20:31:33]   [OK] FMCCH — price: 14.42, mktcap: 3,399,315,619,840
+[2026-06-14 20:31:35]   [OK] FMCCI — price: 12.0, mktcap: 3,391,519,981,568
+[2026-06-14 20:31:37]   [OK] FMCCJ — price: 12.6, mktcap: 3,393,452,769,280
+[2026-06-14 20:31:38]   [OK] FMCCK — price: 15.25, mktcap: 3,401,989,488,640
+[2026-06-14 20:31:40]   [OK] FMCCL — price: 12.8, mktcap: 3,394,097,119,232
+[2026-06-14 20:31:42]   [OK] FMCCM — price: 12.5, mktcap: 3,393,130,856,448
+[2026-06-14 20:31:44]   [OK] FMCCN — price: 12.24, mktcap: 3,392,299,073,536
+[2026-06-14 20:31:45]   [OK] FMCCO — price: 15.8, mktcap: 3,403,761,319,936
+[2026-06-14 20:31:47]   [OK] FMCCP — price: 15.96, mktcap: 3,404,276,695,040
+[2026-06-14 20:31:49]   [OK] FMCCS — price: 14.02, mktcap: 3,398,027,182,080
+[2026-06-14 20:31:51]   [OK] FMCCT — price: 16.95, mktcap: 3,407,465,676,800
+[2026-06-14 20:31:52]   [OK] FMCKI — price: 8.804, mktcap: 3,381,224,800,256
+[2026-06-14 20:31:54]   [OK] FMCKJ — price: 10.82, mktcap: 3,387,718,893,568
+[2026-06-14 20:31:54]   Batch 9 complete. Pausing 3.0s...
+[2026-06-14 20:31:57]   Batch 10/24 (50 tickers)...
+[2026-06-14 20:31:59]   [OK] FMCKK — price: 14.1, mktcap: N/A
+[2026-06-14 20:32:00]   [OK] FMCKL — price: 8.5, mktcap: 3,380,245,430,272
+[2026-06-14 20:32:02]   [OK] FMCKM — price: 8.4, mktcap: 3,379,923,255,296
+[2026-06-14 20:32:04]   [OK] FMCKN — price: 9.19, mktcap: 3,382,468,149,248
+[2026-06-14 20:32:06]   [OK] FMCKO — price: 8.2, mktcap: 3,379,278,905,344
+[2026-06-14 20:32:07]   [OK] FMCKP — price: 14.46, mktcap: 3,399,444,594,688
+[2026-06-14 20:32:09]   [OK] FMSTW — price: 0.5488, mktcap: N/A
+[2026-06-14 20:32:11]   [OK] FNGD — price: 38.36, mktcap: 25,014,554,772
+[2026-06-14 20:32:12]   [OK] FNGO — price: 126.908, mktcap: N/A
+[2026-06-14 20:32:14]   [OK] FNGS — price: 72.67, mktcap: N/A
+[2026-06-14 20:32:16]   [OK] FNGU — price: 26.26, mktcap: N/A
+[2026-06-14 20:32:18]   [OK] FORFF — price: 15.73, mktcap: 46,787,141,632
+[2026-06-14 20:32:19]   [OK] FRBT — price: 18.0, mktcap: 45,918,780
+[2026-06-14 20:32:21]   [OK] FREGP — price: 15.39, mktcap: 3,402,440,376,320
+[2026-06-14 20:32:23]   [OK] FREJN — price: 16.61, mktcap: 3,406,370,439,168
+[2026-06-14 20:32:24]   [OK] FREJO — price: 16.84, mktcap: 54,246,859,591
+[2026-06-14 20:32:26]   [OK] FREJP — price: 14.75, mktcap: N/A
+[2026-06-14 20:32:28]   [OK] FRFFF — price: 18.132, mktcap: 12,606,355,456
+[2026-06-14 20:32:30]   [OK] FRMEP — price: 25.15, mktcap: 2,980,896,000
+[2026-06-14 20:32:31]   [OK] FRTJF — price: 22.51, mktcap: N/A
+[2026-06-14 20:32:33]   [OK] FRTSF — price: 15.0, mktcap: 46,415,499,264
+[2026-06-14 20:32:35]   [OK] FSHPR — price: 0.082, mktcap: N/A
+[2026-06-14 20:32:36]   [OK] FSHPU — price: 11.25, mktcap: 58,075,476
+[2026-06-14 20:32:38]   [OK] FSOL — price: 7.88, mktcap: N/A
+[2026-06-14 20:32:40]   [NO PRICE] yfinance has no price data for FSTWF
+[2026-06-14 20:32:41]   [OK] FTHAU — price: 10.01, mktcap: N/A
+[2026-06-14 20:32:43]   [NO PRICE] yfinance has no price data for FTPSF
+[2026-06-14 20:32:45]   [OK] FTRSF — price: 17.16, mktcap: 47,515,156,480
+[2026-06-14 20:32:47]   [OK] FUFUW — price: 0.1501, mktcap: N/A
+[2026-06-14 20:32:49]   [OK] FULTP — price: 18.42, mktcap: 3,970,922,752
+[2026-06-14 20:32:50]   [NO PRICE] yfinance has no price data for FVGPY
+[2026-06-14 20:32:52]   [OK] FVNNR — price: 0.11, mktcap: 147,578
+[2026-06-14 20:32:54]   [OK] FVNNU — price: 11.5, mktcap: 86,073,736
+[2026-06-14 20:32:55]   [NO PRICE] yfinance has no price data for FWAC
+[2026-06-14 20:32:57]   [OK] FXY — price: 57.26, mktcap: 117,383,000
+[2026-06-14 20:32:59]   [OK] GAFC — price: 5.0, mktcap: 35,560,480
+[2026-06-14 20:33:01]   [OK] GAVA — price: 15.8892, mktcap: N/A
+[2026-06-14 20:33:02]   [OK] GBTC — price: 49.34, mktcap: 34,161,535,010
+[2026-06-14 20:33:04]   [OK] GBUG — price: 40.311, mktcap: N/A
+[2026-06-14 20:33:06]   [NO PRICE] yfinance has no price data for GCGR
+[2026-06-14 20:33:07]   [OK] GCGRU — price: 10.235, mktcap: N/A
+[2026-06-14 20:33:09]   [OK] GCLWW — price: 0.0284, mktcap: 45,245,868
+[2026-06-14 20:33:11]   [OK] GDEVW — price: 0.0074, mktcap: N/A
+[2026-06-14 20:33:13]   [NO PRICE] yfinance has no price data for GDHLF
+[2026-06-14 20:33:14]   [OK] GDLC — price: 28.39, mktcap: 450,475,486
+[2026-06-14 20:33:16]   [OK] GDOG — price: 10.2784, mktcap: N/A
+[2026-06-14 20:33:18]   [OK] GDSTR — price: 0.0834, mktcap: N/A
+[2026-06-14 20:33:19]   [OK] GDSTU — price: 10.72, mktcap: 28,341,354
+[2026-06-14 20:33:21]   [OK] GDSTW — price: 0.0175, mktcap: N/A
+[2026-06-14 20:33:23]   [OK] GDXD — price: 45.62, mktcap: N/A
+[2026-06-14 20:33:23]   Batch 10 complete. Pausing 3.0s...
+[2026-06-14 20:33:26]   Batch 11/24 (50 tickers)...
+[2026-06-14 20:33:28]   [OK] GDXU — price: 107.21, mktcap: N/A
+[2026-06-14 20:33:29]   [OK] GECCG — price: 25.2, mktcap: N/A
+[2026-06-14 20:33:31]   [OK] GECCH — price: 25.39, mktcap: N/A
+[2026-06-14 20:33:33]   [OK] GECCI — price: 25.58, mktcap: N/A
+[2026-06-14 20:33:34]   [OK] GEGGL — price: 24.8999, mktcap: N/A
+[2026-06-14 20:33:36]   [OK] GFAIW — price: 0.04, mktcap: N/A
+[2026-06-14 20:33:38]   [NO PRICE] yfinance has no price data for GFRWF
+[2026-06-14 20:33:40]   [OK] GGROU — price: 5.0, mktcap: 73,243,400
+[2026-06-14 20:33:40] ───────────────────────────────────────────────────────
+[2026-06-14 20:33:40] ▶ PROGRESS REPORT
+[2026-06-14 20:33:40]   Elapsed:            0:15:01.846334
+[2026-06-14 20:33:40]   Processed:          508/1190
+[2026-06-14 20:33:40]   yfinance success:   448
+[2026-06-14 20:33:40]   yfinance failed:    60
+[2026-06-14 20:33:40]   Market cap fixed:   184
+[2026-06-14 20:33:40]   Halal recalculated: 0
+[2026-06-14 20:33:40]   Estimated ETA:      0:20:09
+[2026-06-14 20:33:40] ───────────────────────────────────────────────────────
+[2026-06-14 20:33:41]   [OK] GGROW — price: 0.0082, mktcap: N/A
+[2026-06-14 20:33:43]   [OK] GIBOW — price: 0.0284, mktcap: N/A
+[2026-06-14 20:33:45]   [OK] GIPRW — price: 0.0254, mktcap: N/A
+[2026-06-14 20:33:46]   [OK] GIWWR — price: 0.3239, mktcap: N/A
+[2026-06-14 20:33:48]   [OK] GIWWU — price: 10.32, mktcap: 375,409,216
+[2026-06-14 20:33:50]   [OK] GIXXR — price: 0.2902, mktcap: N/A
+[2026-06-14 20:33:52]   [OK] GIXXU — price: 10.22, mktcap: 371,645,280
+[2026-06-14 20:33:53]   [OK] GLD — price: 386.54, mktcap: 100,616,362,000
+[2026-06-14 20:33:55]   [OK] GLDI — price: 151.62, mktcap: N/A
+[2026-06-14 20:33:57]   [OK] GLDM — price: 83.32, mktcap: N/A
+[2026-06-14 20:33:58]   [NO PRICE] yfinance has no price data for GLEI
+[2026-06-14 20:34:00]   [OK] GLNDW — price: 1.1, mktcap: N/A
+[2026-06-14 20:34:02]   [OK] GLNK — price: 6.97, mktcap: N/A
+[2026-06-14 20:34:03]   [OK] GLTR — price: 196.02, mktcap: N/A
+[2026-06-14 20:34:05]   [OK] GMBLP — price: 0.02, mktcap: 12,506,991
+[2026-06-14 20:34:07]   [OK] GMBLZ — price: 0.0003, mktcap: N/A
+[2026-06-14 20:34:09]   [OK] GTERU — price: 10.44, mktcap: 247,338,320
+[2026-06-14 20:34:10]   [NO PRICE] yfinance has no price data for GOW
+[2026-06-14 20:34:12]   [OK] GPACU — price: 10.09, mktcap: 295,729,792
+[2026-06-14 20:34:14]   [OK] GPACW — price: 0.28, mktcap: N/A
+[2026-06-14 20:34:16]   [OK] GPATU — price: 11.09, mktcap: 398,943,744
+[2026-06-14 20:34:17]   [OK] GPATW — price: 0.25, mktcap: N/A
+[2026-06-14 20:34:19]   [OK] GPJA — price: 21.63, mktcap: 200,326,245
+[2026-06-14 20:34:21]   [OK] GRABW — price: 0.0501, mktcap: N/A
+[2026-06-14 20:34:22]   [OK] GRN — price: 30.7079, mktcap: N/A
+[2026-06-14 20:34:24]   [OK] GRRRW — price: 0.31, mktcap: N/A
+[2026-06-14 20:34:26]   [NO PRICE] yfinance has no price data for GRVT
+[2026-06-14 20:34:28]   [OK] GSCE — price: 31.0, mktcap: N/A
+[2026-06-14 20:34:30]   [OK] GSHRU — price: 10.53, mktcap: 214,792,480
+[2026-06-14 20:34:31]   [OK] GSHRW — price: 0.2401, mktcap: N/A
+[2026-06-14 20:34:33]   [OK] GSMT — price: 0.03, mktcap: N/A
+[2026-06-14 20:34:35]   [OK] GSOL — price: 5.0, mktcap: N/A
+[2026-06-14 20:34:36]   [OK] GS-PA — price: 19.35, mktcap: 7,409,115,000
+[2026-06-14 20:34:38]   [OK] GS-PC — price: 19.56, mktcap: 7,593,446,123
+[2026-06-14 20:34:40]   [OK] GS-PD — price: 19.1, mktcap: 7,313,390,000
+[2026-06-14 20:34:42]   [OK] GSRFR — price: 2.4, mktcap: N/A
+[2026-06-14 20:34:43]   [OK] GSRFU — price: 10.41, mktcap: 304,800,672
+[2026-06-14 20:34:45]   [OK] GSRVU — price: 10.0, mktcap: N/A
+[2026-06-14 20:34:47]   [OK] GSUI — price: 10.84, mktcap: N/A
+[2026-06-14 20:34:49]   [OK] GTAO — price: 6.35, mktcap: N/A
+[2026-06-14 20:34:50]   [OK] GTENU — price: 10.49, mktcap: 472,405,440
+[2026-06-14 20:34:52]   [OK] GTENW — price: 0.945, mktcap: N/A
+[2026-06-14 20:34:52]   Batch 11 complete. Pausing 3.0s...
+[2026-06-14 20:34:55]   Batch 12/24 (50 tickers)...
+[2026-06-14 20:34:57]   [OK] GTERR — price: 0.1051, mktcap: N/A
+[2026-06-14 20:34:59]   [OK] GTERW — price: 0.088, mktcap: N/A
+[2026-06-14 20:35:00]   [OK] GUACU — price: 10.085, mktcap: 276,381,280
+[2026-06-14 20:35:02]   [OK] GXLM — price: 20.912, mktcap: N/A
+[2026-06-14 20:35:04]   [OK] GXRP — price: 21.97, mktcap: N/A
+[2026-06-14 20:35:06]   [OK] HACQU — price: 10.11, mktcap: 376,837,888
+[2026-06-14 20:35:07]   [OK] HACQW — price: 0.48, mktcap: N/A
+[2026-06-14 20:35:09]   [OK] HAVAR — price: 0.16, mktcap: N/A
+[2026-06-14 20:35:11]   [OK] HAVAU — price: 10.24, mktcap: 211,359,456
+[2026-06-14 20:35:12]   [OK] HPAIW — price: 0.0259, mktcap: N/A
+[2026-06-14 20:35:14]   [OK] HCACR — price: 0.3, mktcap: N/A
+[2026-06-14 20:35:16]   [OK] HCACU — price: 10.5, mktcap: 306,140,032
+[2026-06-14 20:35:18]   [OK] HCICR — price: 0.19, mktcap: N/A
+[2026-06-14 20:35:19]   [OK] HCICU — price: 10.08, mktcap: 357,170,624
+[2026-06-14 20:35:21]   [OK] HCMAU — price: 10.44, mktcap: 351,345,856
+[2026-06-14 20:35:23]   [OK] HCMAW — price: 0.665, mktcap: N/A
+[2026-06-14 20:35:24]   [OK] HDLB — price: 16.8262, mktcap: N/A
+[2026-06-14 20:35:26]   [OK] HDRNW — price: 0.245, mktcap: N/A
+[2026-06-14 20:35:28]   [NO PRICE] yfinance has no price data for HIPOW
+[2026-06-14 20:35:30]   [OK] HODL — price: 17.97, mktcap: N/A
+[2026-06-14 20:35:31]   [OK] HOVRW — price: 0.4362, mktcap: N/A
+[2026-06-14 20:35:33]   [OK] HQWWW — price: 2.6101, mktcap: N/A
+[2026-06-14 20:35:35]   [OK] HSCSW — price: 0.06, mktcap: N/A
+[2026-06-14 20:35:36]   [NO PRICE] yfinance has no price data for HSIGF
+[2026-06-14 20:35:38]   [OK] HSPTR — price: 0.4604, mktcap: N/A
+[2026-06-14 20:35:40]   [OK] HSPTU — price: 5.0, mktcap: 30,954,992
+[2026-06-14 20:35:41]   [OK] HUBCW — price: 0.0156, mktcap: N/A
+[2026-06-14 20:35:43]   [OK] HUBCZ — price: 0.0188, mktcap: N/A
+[2026-06-14 20:35:45]   [OK] HVIIU — price: 10.77, mktcap: 279,948,064
+[2026-06-14 20:35:47]   [OK] HVMCU — price: 10.27, mktcap: 301,308,192
+[2026-06-14 20:35:49]   [OK] HVMCW — price: 0.35, mktcap: N/A
+[2026-06-14 20:35:50]   [OK] HWCPZ — price: 21.9236, mktcap: N/A
+[2026-06-14 20:35:52]   [OK] HWLDF — price: 5.44, mktcap: N/A
+[2026-06-14 20:35:54]   [NO PRICE] yfinance has no price data for HYNLY
+[2026-06-14 20:35:55]   [OK] HZEN — price: 0.565, mktcap: N/A
+[2026-06-14 20:35:57]   [OK] IACOU — price: 10.0299, mktcap: N/A
+[2026-06-14 20:35:59]   [OK] IACOW — price: 0.3751, mktcap: N/A
+[2026-06-14 20:36:01]   [OK] IACQU — price: 10.04, mktcap: 220,879,999
+[2026-06-14 20:36:02]   [OK] IAU — price: 79.19, mktcap: 76,826,179,767
+[2026-06-14 20:36:04]   [OK] IAUM — price: 41.96, mktcap: N/A
+[2026-06-14 20:36:06]   [OK] IBACR — price: 0.115, mktcap: N/A
+[2026-06-14 20:36:07]   [OK] IBIT — price: 36.04, mktcap: N/A
+[2026-06-14 20:36:09]   [OK] IDACU — price: 10.055, mktcap: N/A
+[2026-06-14 20:36:11]   [OK] IEAGR — price: 0.19, mktcap: N/A
+[2026-06-14 20:36:12]   [OK] IEAGU — price: 10.21, mktcap: 444,283,936
+[2026-06-14 20:36:14]   [OK] IFED — price: 44.9574, mktcap: N/A
+[2026-06-14 20:36:16]   [OK] IGACR — price: 0.185, mktcap: N/A
+[2026-06-14 20:36:18]   [OK] IGACU — price: 10.185, mktcap: 243,962,288
+[2026-06-14 20:36:19]   [OK] IGTAR — price: 0.041, mktcap: N/A
+[2026-06-14 20:36:21]   [OK] IGTAW — price: 0.1, mktcap: N/A
+[2026-06-14 20:36:21]   Batch 12 complete. Pausing 3.0s...
+[2026-06-14 20:36:24]   Batch 13/24 (50 tickers)...
+[2026-06-14 20:36:26]   [OK] ILLRW — price: 0.0337, mktcap: N/A
+[2026-06-14 20:36:28]   [OK] IMAA — price: 0.05, mktcap: 403,614
+[2026-06-14 20:36:30]   [OK] IMAQR — price: 0.04, mktcap: N/A
+[2026-06-14 20:36:31]   [OK] IMAQU — price: 9.11, mktcap: N/A
+[2026-06-14 20:36:33]   [OK] IMAQW — price: 0.025, mktcap: N/A
+[2026-06-14 20:36:35]   [OK] IMPPP — price: 25.88, mktcap: 960,714,944
+[2026-06-14 20:36:36]   [OK] INACR — price: 0.1399, mktcap: N/A
+[2026-06-14 20:36:38]   [OK] INACU — price: 10.4, mktcap: 152,993,520
+[2026-06-14 20:36:40]   [OK] INBKZ — price: 25.22, mktcap: N/A
+[2026-06-14 20:36:41]   [NO PRICE] yfinance has no price data for JAB
+[2026-06-14 20:36:43]   [OK] IPCXR — price: 0.45, mktcap: N/A
+[2026-06-14 20:36:45]   [OK] IPCXU — price: 10.64, mktcap: 365,406,336
+[2026-06-14 20:36:47]   [OK] IPEXR — price: 0.55, mktcap: N/A
+[2026-06-14 20:36:48]   [OK] IPEXU — price: 10.9, mktcap: 130,501,328
+[2026-06-14 20:36:50]   [OK] IPVVU — price: 9.93, mktcap: 43,475,768
+[2026-06-14 20:36:52]   [NO PRICE] yfinance has no price data for IQMX
+[2026-06-14 20:36:54]   [OK] IRHOR — price: 0.2, mktcap: N/A
+[2026-06-14 20:36:55]   [OK] IRHOU — price: 10.2, mktcap: 298,347,648
+[2026-06-14 20:36:57]   [OK] ISLUF — price: 11.02, mktcap: N/A
+[2026-06-14 20:36:59]   [OK] ISLWF — price: 0.0501, mktcap: N/A
+[2026-06-14 20:37:00]   [OK] ISNRU — price: 10.02, mktcap: N/A
+[2026-06-14 20:37:02]   [OK] ISRLF — price: 14.5, mktcap: 89,910,232
+[2026-06-14 20:37:04]   [NO PRICE] yfinance has no price data for ITG
+[2026-06-14 20:37:06]   [OK] ITHAU — price: 10.165, mktcap: 311,073,088
+[2026-06-14 20:37:07]   [OK] ITHAW — price: 0.2, mktcap: N/A
+[2026-06-14 20:37:09]   [NO PRICE] yfinance has no price data for ITXP
+[2026-06-14 20:37:11]   [OK] IVHI — price: 0.0492, mktcap: 5,279,142
+[2026-06-14 20:37:12]   [OK] IWDL — price: 61.9458, mktcap: N/A
+[2026-06-14 20:37:14]   [OK] IWFL — price: 58.4215, mktcap: N/A
+[2026-06-14 20:37:16]   [OK] IWML — price: 32.0312, mktcap: N/A
+[2026-06-14 20:37:17]   [OK] JABRU — price: 10.01, mktcap: N/A
+[2026-06-14 20:37:19]   [OK] JETD — price: 2.752, mktcap: N/A
+[2026-06-14 20:37:21]   [OK] JETU — price: 33.59, mktcap: N/A
+[2026-06-14 20:37:23]   [OK] JJETF — price: 8.0, mktcap: N/A
+[2026-06-14 20:37:24]   [NO PRICE] yfinance has no price data for JONE
+[2026-06-14 20:37:26]   [OK] JWSUF — price: 10.51, mktcap: 276,700,928
+[2026-06-14 20:37:28]   [OK] JWSWF — price: 0.1, mktcap: N/A
+[2026-06-14 20:37:29]   [NO PRICE] yfinance has no price data for KARD
+[2026-06-14 20:37:31]   [OK] KBONU — price: 10.27, mktcap: 451,336,320
+[2026-06-14 20:37:33]   [OK] KBONW — price: 0.7, mktcap: N/A
+[2026-06-14 20:37:34]   [OK] KCHVR — price: 0.22, mktcap: N/A
+[2026-06-14 20:37:36]   [OK] KCHVU — price: 10.51, mktcap: 356,252,032
+[2026-06-14 20:37:38]   [OK] KDKRW — price: 0.95, mktcap: N/A
+[2026-06-14 20:37:40]   [OK] KEYYU — price: 10.01, mktcap: N/A
+[2026-06-14 20:37:41]   [OK] KFIIR — price: 0.122, mktcap: N/A
+[2026-06-14 20:37:43]   [OK] KGCRF — price: 1.21, mktcap: N/A
+[2026-06-14 20:37:45]   [OK] KHOBF — price: 2.5, mktcap: N/A
+[2026-06-14 20:37:47]   [OK] KIDZW — price: 0.0149, mktcap: N/A
+[2026-06-14 20:37:48]   [NO PRICE] yfinance has no price data for KMCM
+[2026-06-14 20:37:50]   [OK] KOYNU — price: 10.38, mktcap: 320,360,352
+[2026-06-14 20:37:50]   Batch 13 complete. Pausing 3.0s...
+[2026-06-14 20:37:53]   Batch 14/24 (50 tickers)...
+[2026-06-14 20:37:55]   [OK] KOYNW — price: 0.21, mktcap: N/A
+[2026-06-14 20:37:56]   [NO PRICE] yfinance has no price data for KPL
+[2026-06-14 20:37:58]   [OK] KPLTW — price: 0.0002, mktcap: N/A
+[2026-06-14 20:38:00]   [OK] KRAQU — price: 10.0801, mktcap: 433,953,664
+[2026-06-14 20:38:01]   [OK] KRAQW — price: 0.49, mktcap: N/A
+[2026-06-14 20:38:03]   [OK] KTWOR — price: 0.23, mktcap: N/A
+[2026-06-14 20:38:05]   [OK] KTWOU — price: 10.43, mktcap: N/A
+[2026-06-14 20:38:07]   [OK] KVACU — price: 12.71, mktcap: 80,847,384
+[2026-06-14 20:38:08]   [OK] KVACW — price: 0.0122, mktcap: N/A
+[2026-06-14 20:38:10]   [OK] KWMWW — price: 0.02, mktcap: N/A
+[2026-06-14 20:38:12]   [OK] KYIVW — price: 5.24, mktcap: N/A
+[2026-06-14 20:38:13]   [OK] LAFAR — price: 0.1, mktcap: N/A
+[2026-06-14 20:38:15]   [OK] LAFAU — price: 10.2, mktcap: 159,666,352
+[2026-06-14 20:38:17]   [OK] LARAX — price: 8.27, mktcap: N/A
+[2026-06-14 20:38:19]   [OK] LATAU — price: 10.22, mktcap: 242,684,624
+[2026-06-14 20:38:21]   [OK] LATAW — price: 0.4, mktcap: N/A
+[2026-06-14 20:38:22]   [OK] LCCCR — price: 0.22, mktcap: N/A
+[2026-06-14 20:38:24]   [OK] LCCCU — price: 10.61, mktcap: 93,891,856
+[2026-06-14 20:38:26]   [OK] LCFYW — price: 6.3, mktcap: N/A
+[2026-06-14 20:38:28]   [OK] LDXC — price: 1.5, mktcap: N/A
+[2026-06-14 20:38:29]   [OK] LFACU — price: 10.09, mktcap: 192,381,392
+[2026-06-14 20:38:31]   [OK] LFACW — price: 0.32, mktcap: 2,375,600
+[2026-06-14 20:38:33]   [NO PRICE] yfinance has no price data for LIME
+[2026-06-14 20:38:34]   [OK] LIMNW — price: 0.0814, mktcap: N/A
+[2026-06-14 20:38:36]   [OK] LKSPR — price: 1.0, mktcap: N/A
+[2026-06-14 20:38:38]   [OK] LKSPU — price: 10.21, mktcap: 199,277,616
+[2026-06-14 20:38:39]   [OK] LLOBF — price: 2.0, mktcap: N/A
+[2026-06-14 20:38:41]   [OK] LOKVU — price: 17.48, mktcap: 501,425,504
+[2026-06-14 20:38:43]   [OK] LOKVW — price: 1.6399, mktcap: N/A
+[2026-06-14 20:38:45]   [OK] LOTWW — price: 0.0646, mktcap: N/A
+[2026-06-14 20:38:46]   [OK] LPAAU — price: 10.74, mktcap: 308,508,992
+[2026-06-14 20:38:48]   [OK] LPAAW — price: 0.2054, mktcap: N/A
+[2026-06-14 20:38:50]   [OK] LPBBU — price: 10.73, mktcap: 308,346,784
+[2026-06-14 20:38:51]   [OK] LPBBW — price: 0.2, mktcap: N/A
+[2026-06-14 20:38:53]   [OK] LPCVU — price: 10.06, mktcap: 288,317,440
+[2026-06-14 20:38:55]   [OK] LPCVW — price: 0.35, mktcap: N/A
+[2026-06-14 20:38:57]   [NO PRICE] yfinance has no price data for LSBA
+[2026-06-14 20:38:58]   [OK] LSBWF — price: 0.0003, mktcap: N/A
+[2026-06-14 20:39:00]   [OK] LTAFX — price: 12.7, mktcap: N/A
+[2026-06-14 20:39:02]   [OK] LTCFX — price: 11.73, mktcap: N/A
+[2026-06-14 20:39:03]   [OK] LTCN — price: 3.19, mktcap: 51,818,360
+[2026-06-14 20:39:05]   [OK] LTGRU — price: 10.01, mktcap: 209,050,000
+[2026-06-14 20:39:07]   [OK] LTRYW — price: 0.0111, mktcap: N/A
+[2026-06-14 20:39:09]   [OK] LVRWF — price: 0.0007, mktcap: N/A
+[2026-06-14 20:39:10]   [OK] LWACU — price: 10.3, mktcap: 309,147,040
+[2026-06-14 20:39:12]   [OK] LWACW — price: 0.2599, mktcap: N/A
+[2026-06-14 20:39:14]   [OK] MACIU — price: 11.56, mktcap: 243,931,440
+[2026-06-14 20:39:16]   [OK] MACIW — price: 0.1332, mktcap: 2,297,700
+[2026-06-14 20:39:17]   [OK] MANU — price: 23.21, mktcap: 4,697,208,320
+[2026-06-14 20:39:19]   [OK] MAPSW — price: 0.0026, mktcap: N/A
+[2026-06-14 20:39:19]   Batch 14 complete. Pausing 3.0s...
+[2026-06-14 20:39:22]   Batch 15/24 (50 tickers)...
+[2026-06-14 20:39:24]   [NO PRICE] yfinance has no price data for MARH
+[2026-06-14 20:39:25]   [OK] MBAVU — price: 13.19, mktcap: 476,739,552
+[2026-06-14 20:39:27]   [OK] MBAVW — price: 0.3, mktcap: 8,625,000
+[2026-06-14 20:39:29]   [OK] MBINL — price: 24.7, mktcap: 5,892,044,800
+[2026-06-14 20:39:31]   [OK] MBINM — price: 25.5701, mktcap: 5,932,013,056
+[2026-06-14 20:39:32]   [OK] MBINN — price: 20.275, mktcap: 5,688,780,288
+[2026-06-14 20:39:34]   [OK] MBNKO — price: 25.91, mktcap: 28,801,000
+[2026-06-14 20:39:36]   [OK] MBVIU — price: 10.25, mktcap: 441,236,864
+[2026-06-14 20:39:38]   [OK] MBVIW — price: 0.3999, mktcap: N/A
+[2026-06-14 20:39:39]   [OK] MCAHU — price: 10.08, mktcap: 91,260,624
+[2026-06-14 20:39:41]   [NO PRICE] yfinance has no price data for MCFN
+[2026-06-14 20:39:43]   [OK] MCGAU — price: 10.32, mktcap: 242,441,328
+[2026-06-14 20:39:44]   [OK] MCGAW — price: 0.32, mktcap: N/A
+[2026-06-14 20:39:46]   [OK] MESHU — price: 10.07, mktcap: 433,355,936
+[2026-06-14 20:39:48]   [OK] MESHW — price: 0.2641, mktcap: N/A
+[2026-06-14 20:39:49]   [OK] MEVOU — price: 10.25, mktcap: 408,964,640
+[2026-06-14 20:39:51]   [OK] MEVOW — price: 0.3771, mktcap: N/A
+[2026-06-14 20:39:53]   [OK] MFAN — price: 25.1, mktcap: N/A
+[2026-06-14 20:39:55]   [OK] MFAO — price: 25.1101, mktcap: N/A
+[2026-06-14 20:39:56]   [NO PRICE] yfinance has no price data for MOT
+[2026-06-14 20:39:58]   [OK] MGSD — price: 0.0184, mktcap: 1,200,938
+[2026-06-14 20:40:00]   [OK] MITN — price: 25.34, mktcap: N/A
+[2026-06-14 20:40:02]   [OK] MITP — price: 25.215, mktcap: N/A
+[2026-06-14 20:40:03]   [NO PRICE] yfinance has no price data for MKAR
+[2026-06-14 20:40:05]   [OK] MKDWW — price: 0.0082, mktcap: N/A
+[2026-06-14 20:40:07]   [OK] MKLYR — price: 0.2339, mktcap: N/A
+[2026-06-14 20:40:08]   [OK] MKLYU — price: 10.33, mktcap: 246,892,800
+[2026-06-14 20:40:10]   [OK] MLAA — price: 9.94, mktcap: 485,293,984
+[2026-06-14 20:40:12]   [OK] MLAAU — price: 10.4, mktcap: 507,824,768
+[2026-06-14 20:40:14]   [OK] MLAAW — price: 0.21, mktcap: N/A
+[2026-06-14 20:40:15]   [OK] MLACU — price: 3.6, mktcap: 97,182,000
+[2026-06-14 20:40:17]   [OK] MLCIL — price: 23.0, mktcap: N/A
+[2026-06-14 20:40:19]   [OK] MLECW — price: 0.0157, mktcap: N/A
+[2026-06-14 20:40:21]   [OK] MLPB — price: 29.0526, mktcap: N/A
+[2026-06-14 20:40:22]   [OK] MLPR — price: 71.0244, mktcap: N/A
+[2026-06-14 20:40:24]   [OK] MMTXU — price: 10.1, mktcap: 77,710,410
+[2026-06-14 20:40:26]   [OK] MMTXW — price: 0.1526, mktcap: N/A
+[2026-06-14 20:40:28]   [OK] MNLCF — price: 17.0054, mktcap: 25,642,149,888
+[2026-06-14 20:40:29]   [OK] MNQFF — price: 16.1698, mktcap: N/A
+[2026-06-14 20:40:31]   [OK] MNTSW — price: 0.0439, mktcap: N/A
+[2026-06-14 20:40:33]   [OK] MNUFF — price: 14.5, mktcap: 21,460,912,128
+[2026-06-14 20:40:34]   [OK] MNUPF — price: 25.06, mktcap: N/A
+[2026-06-14 20:40:36]   [OK] MNYWW — price: 0.0451, mktcap: N/A
+[2026-06-14 20:40:38]   [OK] MOBBW — price: 2.68, mktcap: 862,790,398
+[2026-06-14 20:40:40]   [OK] MOVAA — price: 2.0, mktcap: N/A
+[2026-06-14 20:40:41]   [OK] MRNOW — price: 0.0332, mktcap: N/A
+[2026-06-14 20:40:43]   [NO PRICE] yfinance has no price data for MSAV
+[2026-06-14 20:40:45]   [OK] MSBIP — price: 25.36, mktcap: 1,001,571,712
+[2026-06-14 20:40:46]   [NO PRICE] yfinance has no price data for MSOGF
+[2026-06-14 20:40:48]   [OK] MSPRW — price: 0.0019, mktcap: N/A
+[2026-06-14 20:40:48]   Batch 15 complete. Pausing 3.0s...
+[2026-06-14 20:40:51]   Batch 16/24 (50 tickers)...
+[2026-06-14 20:40:53]   [OK] MSPRZ — price: 0.0399, mktcap: N/A
+[2026-06-14 20:40:55]   [OK] MSSUF — price: 10.05, mktcap: N/A
+[2026-06-14 20:40:56]   [OK] MSSWF — price: 0.0107, mktcap: N/A
+[2026-06-14 20:40:58]   [NO PRICE] yfinance has no price data for MSYND
+[2026-06-14 20:41:00]   [OK] MTEKW — price: 0.192, mktcap: N/A
+[2026-06-14 20:41:01]   [OK] MTUL — price: 60.4646, mktcap: N/A
+[2026-06-14 20:41:03]   [OK] MUZEU — price: 10.07, mktcap: 274,179,904
+[2026-06-14 20:41:05]   [OK] MUZEW — price: 0.3, mktcap: N/A
+[2026-06-14 20:41:07]   [OK] MVRL — price: 13.2929, mktcap: N/A
+[2026-06-14 20:41:08]   [OK] MYXXR — price: 0.2, mktcap: N/A
+[2026-06-14 20:41:10]   [OK] MYXXU — price: 10.14, mktcap: 142,133,776
+[2026-06-14 20:41:12]   [OK] MYXXW — price: 0.0501, mktcap: N/A
+[2026-06-14 20:41:13]   [OK] NAMMW — price: 0.22, mktcap: 15,282,185
+[2026-06-14 20:41:15]   [NO PRICE] yfinance has no price data for NANO
+[2026-06-14 20:41:17]   [OK] NBRGR — price: 0.1834, mktcap: N/A
+[2026-06-14 20:41:19]   [OK] NBRGU — price: 10.14, mktcap: 77,020,072
+[2026-06-14 20:41:20]   [OK] NCIQ — price: 15.65, mktcap: N/A
+[2026-06-14 20:41:22]   [NO PRICE] yfinance has no price data for NCLA
+[2026-06-14 20:41:24]   [OK] NELR — price: 0.25, mktcap: N/A
+[2026-06-14 20:41:25]   [NO PRICE] yfinance has no price data for NEUC
+[2026-06-14 20:41:27]   [OK] NEWEN — price: 115.0, mktcap: N/A
+[2026-06-14 20:41:29]   [OK] NE-WT — price: 27.685, mktcap: N/A
+[2026-06-14 20:41:30]   [OK] NEXRW — price: 0.033, mktcap: N/A
+[2026-06-14 20:41:32]   [OK] NHICU — price: 13.0, mktcap: N/A
+[2026-06-14 20:41:34]   [OK] NHICW — price: 2.25, mktcap: N/A
+[2026-06-14 20:41:36]   [OK] NHIVU — price: 11.0, mktcap: N/A
+[2026-06-14 20:41:37]   [OK] NHIVW — price: 0.9, mktcap: N/A
+[2026-06-14 20:41:39]   [OK] NHPAP — price: 22.48, mktcap: 2,633,093,632
+[2026-06-14 20:41:41]   [OK] NHPBP — price: 22.16, mktcap: 2,609,764,096
+[2026-06-14 20:41:43]   [OK] NICHX — price: 25.97, mktcap: N/A
+[2026-06-14 20:41:44]   [OK] NIVFW — price: 0.0202, mktcap: N/A
+[2026-06-14 20:41:46]   [OK] NMKBP — price: 59.78, mktcap: N/A
+[2026-06-14 20:41:48]   [OK] NMKCP — price: 65.38, mktcap: N/A
+[2026-06-14 20:41:49]   [OK] NMPAR — price: 0.1617, mktcap: N/A
+[2026-06-14 20:41:51]   [OK] NMPAU — price: 10.43, mktcap: 165,945,152
+[2026-06-14 20:41:53]   [OK] NMPWP — price: 56.0, mktcap: N/A
+[2026-06-14 20:41:55]   [OK] NNAVW — price: 10.12, mktcap: N/A
+[2026-06-14 20:41:56]   [NO PRICE] yfinance has no price data for NNBXF
+[2026-06-14 20:41:58]   [OK] NOEMR — price: 0.1524, mktcap: N/A
+[2026-06-14 20:42:00]   [OK] NOEMU — price: 10.6, mktcap: 107,825,312
+[2026-06-14 20:42:01]   [OK] NOEMW — price: 0.1254, mktcap: N/A
+[2026-06-14 20:42:03]   [OK] NPACU — price: 10.31, mktcap: 395,484,800
+[2026-06-14 20:42:05]   [OK] NPACW — price: 0.1728, mktcap: N/A
+[2026-06-14 20:42:06]   [OK] NPLY — price: 0.02, mktcap: N/A
+[2026-06-14 20:42:08]   [OK] NRGD — price: 26.1453, mktcap: N/A
+[2026-06-14 20:42:10]   [OK] NRGU — price: 36.76, mktcap: N/A
+[2026-06-14 20:42:12]   [OK] NRSAX — price: 12.77, mktcap: N/A
+[2026-06-14 20:42:13]   [OK] NRSNW — price: 0.1797, mktcap: N/A
+[2026-06-14 20:42:15]   [OK] NSARO — price: 77.91, mktcap: N/A
+[2026-06-14 20:42:17]   [OK] NSARP — price: 70.5, mktcap: N/A
+[2026-06-14 20:42:17]   Batch 16 complete. Pausing 3.0s...
+[2026-06-14 20:42:20]   Batch 17/24 (50 tickers)...
+[2026-06-14 20:42:22]   [OK] NTCS — price: 0.3, mktcap: N/A
+[2026-06-14 20:42:23]   [NO PRICE] yfinance has no price data for NTMJ
+[2026-06-14 20:42:25]   [OK] NTWOU — price: 10.65, mktcap: 256,342,000
+[2026-06-14 20:42:27]   [OK] NTWOW — price: 0.3, mktcap: 5,387,002
+[2026-06-14 20:42:28]   [OK] NUCLW — price: 1.51, mktcap: N/A
+[2026-06-14 20:42:30]   [OK] NVAWW — price: 31.4, mktcap: N/A
+[2026-06-14 20:42:32]   [OK] NVNIW — price: 0.0287, mktcap: N/A
+[2026-06-14 20:42:33]   [OK] NXNVW — price: 10.2, mktcap: N/A
+[2026-06-14 20:42:35]   [OK] OACCU — price: 10.73, mktcap: 262,508,000
+[2026-06-14 20:42:37]   [OK] OACCW — price: 0.87, mktcap: N/A
+[2026-06-14 20:42:39]   [OK] OBAWU — price: 10.25, mktcap: 323,340,128
+[2026-06-14 20:42:40]   [OK] OBAWW — price: 0.2299, mktcap: N/A
+[2026-06-14 20:42:42]   [OK] OBTC — price: 20.455, mktcap: N/A
+[2026-06-14 20:42:44]   [NO PRICE] yfinance has no price data for OBX
+[2026-06-14 20:42:45]   [OK] OCCIM — price: 25.35, mktcap: 829,105,728
+[2026-06-14 20:42:47]   [OK] OCCIN — price: 24.7834, mktcap: 812,496,256
+[2026-06-14 20:42:49]   [OK] OCSAW — price: 4.35, mktcap: N/A
+[2026-06-14 20:42:50]   [NO PRICE] yfinance has no price data for OCTLF
+[2026-06-14 20:42:52]   [NO PRICE] yfinance has no price data for ODRS
+[2026-06-14 20:42:54]   [OK] ODVWZ — price: 0.115, mktcap: N/A
+[2026-06-14 20:42:56]   [OK] OHACR — price: 0.26, mktcap: N/A
+[2026-06-14 20:42:57]   [OK] OHACU — price: 10.1301, mktcap: 217,804,800
+[2026-06-14 20:42:59]   [OK] OILD — price: 41.99, mktcap: N/A
+[2026-06-14 20:43:01]   [OK] OILU — price: 41.65, mktcap: N/A
+[2026-06-14 20:43:02]   [OK] OIMAU — price: 10.18, mktcap: 367,109,376
+[2026-06-14 20:43:04]   [OK] OIMAW — price: 0.6199, mktcap: N/A
+[2026-06-14 20:43:06]   [OK] OIOWW — price: 0.0374, mktcap: N/A
+[2026-06-14 20:43:08]   [OK] OLOXF — price: 10.25, mktcap: N/A
+[2026-06-14 20:43:09]   [OK] ONCHU — price: 10.33, mktcap: 221,710,672
+[2026-06-14 20:43:11]   [OK] ONCHW — price: 0.45, mktcap: N/A
+[2026-06-14 20:43:13]   [NO PRICE] yfinance has no price data for ONFOP
+[2026-06-14 20:43:14]   [OK] ONFOW — price: 0.0221, mktcap: N/A
+[2026-06-14 20:43:16]   [OK] OPADW — price: 0.04, mktcap: N/A
+[2026-06-14 20:43:18]   [OK] ORIB — price: 1.25, mktcap: N/A
+[2026-06-14 20:43:20]   [OK] ORIQW — price: 0.1446, mktcap: N/A
+[2026-06-14 20:43:21]   [NO PRICE] yfinance has no price data for OSDVF
+[2026-06-14 20:43:23]   [OK] OSRHW — price: 0.0571, mktcap: N/A
+[2026-06-14 20:43:25]   [OK] OTGAU — price: 10.31, mktcap: 302,130,816
+[2026-06-14 20:43:27]   [OK] OTGAW — price: 0.39, mktcap: N/A
+[2026-06-14 20:43:28]   [OK] OUNZ — price: 40.48, mktcap: N/A
+[2026-06-14 20:43:30]   [OK] OXBRW — price: 0.1, mktcap: 573,359
+[2026-06-14 20:43:32]   [OK] OXLCG — price: 25.37, mktcap: N/A
+[2026-06-14 20:43:34]   [OK] OXLCI — price: 25.86, mktcap: N/A
+[2026-06-14 20:43:35]   [OK] OXLCL — price: 24.61, mktcap: N/A
+[2026-06-14 20:43:37]   [OK] OXLCM — price: 25.06, mktcap: N/A
+[2026-06-14 20:43:39]   [OK] OXLCN — price: 24.935, mktcap: 3,110,856,192
+[2026-06-14 20:43:40]   [OK] OXLCO — price: 24.15, mktcap: 3,034,201,088
+[2026-06-14 20:43:42]   [OK] OXLCZ — price: 24.81, mktcap: N/A
+[2026-06-14 20:43:44]   [OK] OYCG — price: 0.02, mktcap: N/A
+[2026-06-14 20:43:46]   [OK] OYSER — price: 0.1141, mktcap: N/A
+[2026-06-14 20:43:46]   Batch 17 complete. Pausing 3.0s...
+[2026-06-14 20:43:49]   Batch 18/24 (50 tickers)...
+[2026-06-14 20:43:50]   [OK] OYSEU — price: 10.99, mktcap: 372,026,432
+[2026-06-14 20:43:52]   [OK] PAACU — price: 10.08, mktcap: 177,906,976
+[2026-06-14 20:43:54]   [OK] PAACW — price: 0.35, mktcap: N/A
+[2026-06-14 20:43:55]   [OK] PAASF — price: 0.689, mktcap: N/A
+[2026-06-14 20:43:57]   [OK] PACHU — price: 10.31, mktcap: 292,645,600
+[2026-06-14 20:43:59]   [OK] PACHW — price: 0.22, mktcap: N/A
+[2026-06-14 20:44:01]   [OK] PALL — price: 23.23, mktcap: N/A
+[2026-06-14 20:44:02]   [OK] PALOU — price: 10.06, mktcap: 36,512,244
+[2026-06-14 20:44:04]   [OK] PALOW — price: 0.38, mktcap: N/A
+[2026-06-14 20:44:06]   [OK] PBMWW — price: 0.0336, mktcap: N/A
+[2026-06-14 20:44:07]   [OK] PBNAF — price: 16.0, mktcap: 26,052,116,480
+[2026-06-14 20:44:09]   [NO PRICE] yfinance has no price data for PBPRF
+[2026-06-14 20:44:11]   [OK] PC — price: 9.4, mktcap: 29,582,086
+[2026-06-14 20:44:13]   [OK] PCAPU — price: 10.35, mktcap: 322,574,528
+[2026-06-14 20:44:14]   [OK] PCAPW — price: 0.3201, mktcap: N/A
+[2026-06-14 20:44:16]   [OK] PCSVD — price: 1.45, mktcap: 13,091,236
+[2026-06-14 20:44:18]   [OK] PDPA — price: 25.15, mktcap: N/A
+[2026-06-14 20:44:19]   [OK] PDSKX — price: 28.45, mktcap: N/A
+[2026-06-14 20:44:21]   [OK] PDSRX — price: 28.17, mktcap: N/A
+[2026-06-14 20:44:23]   [OK] PDYNW — price: 0.0379, mktcap: N/A
+[2026-06-14 20:44:25]   [OK] PECER — price: 0.5562, mktcap: N/A
+[2026-06-14 20:44:26]   [OK] PECEU — price: 10.4701, mktcap: N/A
+[2026-06-14 20:44:28]   [OK] PECEW — price: 0.11, mktcap: N/A
+[2026-06-14 20:44:30]   [NO PRICE] yfinance has no price data for PERFF
+[2026-06-14 20:44:31]   [OK] PFFL — price: 7.7297, mktcap: N/A
+[2026-06-14 20:44:33]   [OK] PFH — price: 16.34, mktcap: N/A
+[2026-06-14 20:44:35]   [OK] PFLA — price: 25.1, mktcap: 4,036,197,120
+[2026-06-14 20:44:37]   [OK] PFXNZ — price: 23.85, mktcap: N/A
+[2026-06-14 20:44:38]   [OK] PGACR — price: 0.17, mktcap: N/A
+[2026-06-14 20:44:40]   [OK] PGACU — price: 10.75, mktcap: 119,298,560
+[2026-06-14 20:44:42]   [OK] PLMKU — price: 10.88, mktcap: 259,352,512
+[2026-06-14 20:44:44]   [OK] PLMKW — price: 0.5669, mktcap: N/A
+[2026-06-14 20:44:45]   [OK] PLMUF — price: 10.0, mktcap: 34,124,868
+[2026-06-14 20:44:47]   [OK] PLMWF — price: 0.5, mktcap: N/A
+[2026-06-14 20:44:49]   [NO PRICE] yfinance has no price data for PLSAY
+[2026-06-14 20:44:50]   [OK] PLTM — price: 16.44, mktcap: N/A
+[2026-06-14 20:44:52]   [OK] PMBPF — price: 18.5148, mktcap: 26,235,152,384
+[2026-06-14 20:44:54]   [OK] PMFAX — price: 10.12, mktcap: N/A
+[2026-06-14 20:44:56]   [OK] PMMBF — price: 18.01, mktcap: N/A
+[2026-06-14 20:44:57]   [OK] PMTRU — price: 10.78, mktcap: 332,278,464
+[2026-06-14 20:44:59]   [OK] PMTRW — price: 0.8447, mktcap: N/A
+[2026-06-14 20:45:01]   [OK] PNMXO — price: 76.03, mktcap: N/A
+[2026-06-14 20:45:03]   [OK] PNSB — price: 11.0, mktcap: N/A
+[2026-06-14 20:45:04]   [OK] POLEU — price: 10.83, mktcap: 320,502,784
+[2026-06-14 20:45:06]   [OK] POLEW — price: 0.2299, mktcap: N/A
+[2026-06-14 20:45:08]   [OK] PONOR — price: 0.25, mktcap: N/A
+[2026-06-14 20:45:09]   [OK] PONOU — price: 9.98, mktcap: 172,647,184
+[2026-06-14 20:45:11]   [OK] PPLAF — price: 18.75, mktcap: 26,371,905,536
+[2026-06-14 20:45:13]   [NO PRICE] yfinance has no price data for PPLOF
+[2026-06-14 20:45:14]   [OK] PPLT — price: 15.54, mktcap: N/A
+[2026-06-14 20:45:14]   Batch 18 complete. Pausing 3.0s...
+[2026-06-14 20:45:17]   Batch 19/24 (50 tickers)...
+[2026-06-14 20:45:19]   [OK] PREJF — price: 16.17, mktcap: 2,219,639,040
+[2026-06-14 20:45:21]   [OK] PRENW — price: 0.016, mktcap: N/A
+[2026-06-14 20:45:23]   [OK] PRH — price: 22.9, mktcap: N/A
+[2026-06-14 20:45:24]   [OK] PRIAF — price: 0.0377, mktcap: 1,774,114
+[2026-06-14 20:45:26]   [NO PRICE] yfinance has no price data for PRNAD
+[2026-06-14 20:45:28]   [OK] PRS — price: 22.13, mktcap: N/A
+[2026-06-14 20:45:29]   [NO PRICE] yfinance has no price data for RACD
+[2026-06-14 20:45:31]   [NO PRICE] yfinance has no price data for PSQL
+[2026-06-14 20:45:33]   [OK] PSUS — price: 37.88, mktcap: N/A
+[2026-06-14 20:45:35]   [NO PRICE] yfinance has no price data for PTAC
+[2026-06-14 20:45:36]   [OK] PTACU — price: 9.99, mktcap: N/A
+[2026-06-14 20:45:38]   [NO PRICE] yfinance has no price data for PTCCY
+[2026-06-14 20:45:40]   [OK] PYAIF — price: 13.7, mktcap: N/A
+[2026-06-14 20:45:41]   [OK] QADRU — price: 10.01, mktcap: 249,011,584
+[2026-06-14 20:45:43]   [OK] QADRW — price: 0.24, mktcap: N/A
+[2026-06-14 20:45:45]   [OK] QETAR — price: 0.7, mktcap: N/A
+[2026-06-14 20:45:47]   [OK] QETAU — price: 11.71, mktcap: 43,233,868
+[2026-06-14 20:45:48]   [OK] QETH — price: 16.56, mktcap: N/A
+[2026-06-14 20:45:50]   [NO PRICE] yfinance has no price data for QFNHF
+[2026-06-14 20:45:52]   [OK] QSEAR — price: 0.22, mktcap: N/A
+[2026-06-14 20:45:53]   [OK] QSEAU — price: 10.71, mktcap: 122,193,896
+[2026-06-14 20:45:55]   [OK] QSOL — price: 6.7299, mktcap: N/A
+[2026-06-14 20:45:57]   [OK] QTEXW — price: 0.07, mktcap: N/A
+[2026-06-14 20:45:59]   [OK] QULL — price: 65.638, mktcap: N/A
+[2026-06-14 20:46:00]   [OK] QUMSR — price: 0.1501, mktcap: N/A
+[2026-06-14 20:46:02]   [OK] QUMSU — price: 10.34, mktcap: 117,663,584
+[2026-06-14 20:46:04]   [OK] RAAQU — price: 12.52, mktcap: 287,121,504
+[2026-06-14 20:46:05]   [OK] RAAQW — price: 2.98, mktcap: N/A
+[2026-06-14 20:46:07]   [OK] RADC — price: 0.03, mktcap: N/A
+[2026-06-14 20:46:09]   [OK] RANGR — price: 0.28, mktcap: N/A
+[2026-06-14 20:46:11]   [OK] RANGU — price: 10.83, mktcap: 173,681,728
+[2026-06-14 20:46:12]   [OK] RBOTW — price: 0.0076, mktcap: N/A
+[2026-06-14 20:46:14]   [OK] RCD — price: 22.31, mktcap: N/A
+[2026-06-14 20:46:16]   [OK] RCKTW — price: 0.0097, mktcap: N/A
+[2026-06-14 20:46:17]   [OK] RC-PC — price: 12.35, mktcap: 6,754,124,288
+[2026-06-14 20:46:19]   [OK] RC-PE — price: 12.4, mktcap: 6,762,385,408
+[2026-06-14 20:46:21]   [OK] RDACR — price: 0.0714, mktcap: N/A
+[2026-06-14 20:46:23]   [OK] RDACU — price: 7.6, mktcap: 46,056,128
+[2026-06-14 20:46:24]   [OK] RDAGU — price: 10.48, mktcap: 392,131,200
+[2026-06-14 20:46:26]   [OK] RDAGW — price: 0.35, mktcap: N/A
+[2026-06-14 20:46:28]   [OK] RDZNW — price: 0.19, mktcap: N/A
+[2026-06-14 20:46:30]   [OK] REEUF — price: 11.69, mktcap: 112,313,624
+[2026-06-14 20:46:31]   [OK] REEWF — price: 0.1, mktcap: N/A
+[2026-06-14 20:46:33]   [OK] RFAIR — price: 0.1, mktcap: N/A
+[2026-06-14 20:46:35]   [OK] RFAIU — price: 11.03, mktcap: 38,708,136
+[2026-06-14 20:46:36]   [OK] RFAMR — price: 0.15, mktcap: N/A
+[2026-06-14 20:46:38]   [OK] RFAMU — price: 10.0, mktcap: 83,199,936
+[2026-06-14 20:46:40]   [OK] RF-PC — price: 24.17, mktcap: 24,953,184,256
+[2026-06-14 20:46:42]   [OK] RF-PE — price: 16.07, mktcap: 18,040,809,472
+[2026-06-14 20:46:43]   [OK] RF-PF — price: 25.17, mktcap: 25,806,563,328
+[2026-06-14 20:46:43]   Batch 19 complete. Pausing 3.0s...
+[2026-06-14 20:46:46]   Batch 20/24 (50 tickers)...
+[2026-06-14 20:46:48]   [OK] RGBPP — price: 0.0067, mktcap: 4,404,473
+[2026-06-14 20:46:50]   [OK] RIBBR — price: 0.24, mktcap: 1,252,800
+[2026-06-14 20:46:51]   [OK] RIBBU — price: 13.1, mktcap: 62,782,644
+[2026-06-14 20:46:53]   [NO PRICE] yfinance has no price data for RKAM
+[2026-06-14 20:46:55]   [OK] RLNDF — price: 22.5, mktcap: 323,222,528
+[2026-06-14 20:46:57]   [OK] RMSGW — price: 0.0456, mktcap: N/A
+[2026-06-14 20:46:58]   [OK] RNGTU — price: 10.5, mktcap: 328,007,392
+[2026-06-14 20:47:00]   [OK] RNGTW — price: 0.36, mktcap: N/A
+[2026-06-14 20:47:02]   [OK] RNWWW — price: 0.004, mktcap: N/A
+[2026-06-14 20:47:03]   [NO PRICE] yfinance has no price data for ROZE
+[2026-06-14 20:47:05]   [OK] RREV — price: 9.88, mktcap: N/A
+[2026-06-14 20:47:07]   [OK] RREVU — price: 10.0, mktcap: N/A
+[2026-06-14 20:47:09]   [OK] RREVW — price: 0.4206, mktcap: N/A
+[2026-06-14 20:47:10]   [OK] RTACU — price: 10.76, mktcap: 335,614,496
+[2026-06-14 20:47:12]   [OK] RTACW — price: 0.7099, mktcap: N/A
+[2026-06-14 20:47:14]   [NO PRICE] yfinance has no price data for RUIH
+[2026-06-14 20:47:15]   [OK] RVSNW — price: 0.0211, mktcap: N/A
+[2026-06-14 20:47:17]   [OK] RWTN — price: 24.45, mktcap: N/A
+[2026-06-14 20:47:19]   [OK] RWTO — price: 23.86, mktcap: N/A
+[2026-06-14 20:47:21]   [OK] RWTP — price: 23.765, mktcap: 27,951,124,480
+[2026-06-14 20:47:23]   [OK] RWTQ — price: 23.72, mktcap: 27,945,498,624
+[2026-06-14 20:47:24]   [OK] RWTS — price: 24.01, mktcap: N/A
+[2026-06-14 20:47:26]   [OK] RYLBF — price: 19.498, mktcap: N/A
+[2026-06-14 20:47:28]   [OK] SORNW — price: 0.28, mktcap: N/A
+[2026-06-14 20:47:30]   [OK] RZLVW — price: 0.9187, mktcap: N/A
+[2026-06-14 20:47:31]   [OK] SAIHW — price: 0.0294, mktcap: N/A
+[2026-06-14 20:47:33]   [NO PRICE] yfinance has no price data for SBAQ
+[2026-06-14 20:47:35]   [OK] SBMW — price: 16.493, mktcap: 14,418,302
+[2026-06-14 20:47:36]   [OK] SB-PC — price: 25.99, mktcap: 3,039,565,824
+[2026-06-14 20:47:38]   [OK] SB-PD — price: 26.0, mktcap: 3,040,588,288
+[2026-06-14 20:47:40]   [OK] SCAGW — price: 0.0673, mktcap: N/A
+[2026-06-14 20:47:42]   [OK] SCDL — price: 55.3, mktcap: N/A
+[2026-06-14 20:47:43]   [OK] SCIIR — price: 0.2099, mktcap: N/A
+[2026-06-14 20:47:45]   [OK] SCIIU — price: 10.18, mktcap: 253,774,336
+[2026-06-14 20:47:47]   [OK] SCOP — price: 11.93, mktcap: N/A
+[2026-06-14 20:47:49]   [OK] SCPQU — price: 10.36, mktcap: 141,234,720
+[2026-06-14 20:47:50]   [OK] SCPQW — price: 0.73, mktcap: N/A
+[2026-06-14 20:47:52]   [OK] SDAWW — price: 0.126, mktcap: N/A
+[2026-06-14 20:47:54]   [OK] SDHIR — price: 0.24, mktcap: N/A
+[2026-06-14 20:47:55]   [OK] SDHIU — price: 10.53, mktcap: 365,959,808
+[2026-06-14 20:47:57]   [OK] SDSTW — price: 0.1101, mktcap: N/A
+[2026-06-14 20:47:59]   [NO PRICE] yfinance has no price data for SEAH
+[2026-06-14 20:48:01]   [NO PRICE] yfinance has no price data for SFPT
+[2026-06-14 20:48:02]   [OK] SGOL — price: 40.1, mktcap: N/A
+[2026-06-14 20:48:04]   [NO PRICE] yfinance has no price data for SGST
+[2026-06-14 20:48:06]   [OK] SHMDW — price: 1.73, mktcap: N/A
+[2026-06-14 20:48:07]   [OK] SHNY — price: 9.36, mktcap: N/A
+[2026-06-14 20:48:09]   [OK] SHOT — price: 0.3917, mktcap: N/A
+[2026-06-14 20:48:11]   [OK] SHOTU — price: 10.0, mktcap: N/A
+[2026-06-14 20:48:13]   [NO PRICE] yfinance has no price data for SIAI
+[2026-06-14 20:48:13]   Batch 20 complete. Pausing 3.0s...
+[2026-06-14 20:48:16]   Batch 21/24 (50 tickers)...
+[2026-06-14 20:48:17]   [OK] SIGIP — price: 15.972, mktcap: 1,605,688,960
+[2026-06-14 20:48:19]   [OK] SIMAU — price: 11.21, mktcap: 92,373,728
+[2026-06-14 20:48:21]   [OK] SIMAW — price: 0.2557, mktcap: N/A
+[2026-06-14 20:48:22]   [OK] SIVR — price: 64.43, mktcap: N/A
+[2026-06-14 20:48:24]   [OK] SLFIF — price: 15.75, mktcap: N/A
+[2026-06-14 20:48:26]   [OK] SLFQF — price: 12.68, mktcap: N/A
+[2026-06-14 20:48:28]   [OK] SLMBP — price: 74.61, mktcap: 15,287,143,424
+[2026-06-14 20:48:29]   [OK] SLV — price: 61.29, mktcap: 20,927,469,519
+[2026-06-14 20:48:31]   [OK] SLVO — price: 79.35, mktcap: N/A
+[2026-06-14 20:48:33]   [OK] SMHB — price: 3.9338, mktcap: N/A
+[2026-06-14 20:48:35]   [OK] SMNRW — price: 0.129, mktcap: N/A
+[2026-06-14 20:48:36]   [OK] SMXWW — price: 0.0289, mktcap: N/A
+[2026-06-14 20:48:38]   [OK] SNNRF — price: 52.57, mktcap: 9,380,074,496
+[2026-06-14 20:48:40]   [NO PRICE] yfinance has no price data for SNSC
+[2026-06-14 20:48:41]   [OK] SNTUF — price: 2.1, mktcap: 72,434,712,576
+[2026-06-14 20:48:41] ───────────────────────────────────────────────────────
+[2026-06-14 20:48:41] ▶ PROGRESS REPORT
+[2026-06-14 20:48:41]   Elapsed:            0:30:03.748340
+[2026-06-14 20:48:41]   Processed:          1015/1190
+[2026-06-14 20:48:41]   yfinance success:   903
+[2026-06-14 20:48:41]   yfinance failed:    112
+[2026-06-14 20:48:41]   Market cap fixed:   341
+[2026-06-14 20:48:41]   Halal recalculated: 0
+[2026-06-14 20:48:41]   Estimated ETA:      0:05:10
+[2026-06-14 20:48:41] ───────────────────────────────────────────────────────
+[2026-06-14 20:48:43]   [OK] SOARW — price: 0.03, mktcap: N/A
+[2026-06-14 20:48:45]   [OK] SOCAU — price: 10.31, mktcap: 240,539,552
+[2026-06-14 20:48:47]   [OK] SOCAW — price: 0.2899, mktcap: N/A
+[2026-06-14 20:48:48]   [OK] SOCGM — price: 29.75, mktcap: N/A
+[2026-06-14 20:48:50]   [OK] SOCGP — price: 29.94, mktcap: 2,724,540,000
+[2026-06-14 20:48:52]   [OK] SOEZ — price: 11.6223, mktcap: N/A
+[2026-06-14 20:48:54]   [OK] SOLC — price: 13.2895, mktcap: N/A
+[2026-06-14 20:48:55]   [OK] SORNU — price: 10.05, mktcap: 347,087,424
+[2026-06-14 20:48:57]   [OK] SPEGR — price: 0.224, mktcap: N/A
+[2026-06-14 20:48:59]   [OK] SPEGU — price: 10.41, mktcap: 162,295,936
+[2026-06-14 20:49:01]   [OK] SPKLU — price: 14.03, mktcap: 125,093,472
+[2026-06-14 20:49:02]   [OK] SPKLW — price: 2.08, mktcap: N/A
+[2026-06-14 20:49:04]   [OK] SPMA — price: 25.04, mktcap: 570,739,584
+[2026-06-14 20:49:06]   [OK] SPME — price: 25.22, mktcap: 574,452,736
+[2026-06-14 20:49:08]   [OK] SSACR — price: 0.17, mktcap: N/A
+[2026-06-14 20:49:09]   [OK] SSACU — price: 10.19, mktcap: 244,741,056
+[2026-06-14 20:49:11]   [OK] SSACW — price: 0.1223, mktcap: N/A
+[2026-06-14 20:49:13]   [OK] SSEAR — price: 0.17, mktcap: N/A
+[2026-06-14 20:49:14]   [OK] SSEAU — price: 10.33, mktcap: 78,820,496
+[2026-06-14 20:49:16]   [OK] SSSSL — price: 25.35, mktcap: N/A
+[2026-06-14 20:49:18]   [OK] STNDF — price: 1.5, mktcap: 53,803,655,168
+[2026-06-14 20:49:20]   [NO PRICE] yfinance has no price data for SUCH
+[2026-06-14 20:49:21]   [OK] SUIS — price: 19.4019, mktcap: N/A
+[2026-06-14 20:49:23]   [OK] SUMAR — price: 0.24, mktcap: N/A
+[2026-06-14 20:49:25]   [OK] SUMAU — price: 10.15, mktcap: 236,856,848
+[2026-06-14 20:49:26]   [OK] SUNFF — price: 11.8167, mktcap: N/A
+[2026-06-14 20:49:28]   [OK] SVA — price: 6.47, mktcap: 642,436,734
+[2026-06-14 20:49:30]   [OK] SVACU — price: 11.01, mktcap: 336,974,624
+[2026-06-14 20:49:32]   [OK] SVACW — price: 1.85, mktcap: N/A
+[2026-06-14 20:49:33]   [OK] SVAQU — price: 10.17, mktcap: 296,777,536
+[2026-06-14 20:49:35]   [OK] SVAQW — price: 0.31, mktcap: N/A
+[2026-06-14 20:49:37]   [OK] SVCCU — price: 10.94, mktcap: 394,394,752
+[2026-06-14 20:49:38]   [OK] SVCCW — price: 0.24, mktcap: N/A
+[2026-06-14 20:49:40]   [OK] SVIVU — price: 10.35, mktcap: 316,317,664
+[2026-06-14 20:49:42]   [OK] SVIVW — price: 0.9151, mktcap: N/A
+[2026-06-14 20:49:42]   Batch 21 complete. Pausing 3.0s...
+[2026-06-14 20:49:45]   Batch 22/24 (50 tickers)...
+[2026-06-14 20:49:47]   [OK] SVIX — price: 22.06, mktcap: N/A
+[2026-06-14 20:49:48]   [OK] SVREW — price: 0.0099, mktcap: N/A
+[2026-06-14 20:49:50]   [OK] SVUWF — price: 0.0011, mktcap: N/A
+[2026-06-14 20:49:52]   [OK] SWVLW — price: 0.0088, mktcap: N/A
+[2026-06-14 20:49:53]   [OK] SZZLR — price: 0.16, mktcap: N/A
+[2026-06-14 20:49:55]   [OK] SZZLU — price: 10.46, mktcap: 326,395,968
+[2026-06-14 20:49:57]   [OK] TACHU — price: 10.66, mktcap: 367,265,856
+[2026-06-14 20:49:59]   [OK] TACHW — price: 0.54, mktcap: N/A
+[2026-06-14 20:50:00]   [OK] TACOU — price: 10.75, mktcap: 403,117,536
+[2026-06-14 20:50:02]   [OK] TACOW — price: 0.6, mktcap: N/A
+[2026-06-14 20:50:04]   [NO PRICE] yfinance has no price data for TACPF
+[2026-06-14 20:50:05]   [OK] TAPR — price: 26.41, mktcap: N/A
+[2026-06-14 20:50:07]   [NO PRICE] yfinance has no price data for TARX
+[2026-06-14 20:50:09]   [OK] TAVIR — price: 0.101, mktcap: N/A
+[2026-06-14 20:50:10]   [OK] TAVIU — price: 11.45, mktcap: 182,749,504
+[2026-06-14 20:50:12]   [OK] TBLAW — price: 0.0016, mktcap: N/A
+[2026-06-14 20:50:14]   [OK] TCANF — price: 13.9, mktcap: 86,119,997,440
+[2026-06-14 20:50:16]   [OK] TCEYF — price: 12.15, mktcap: 84,369,997,824
+[2026-06-14 20:50:17]   [NO PRICE] yfinance has no price data for TCNCF
+[2026-06-14 20:50:19]   [OK] TCPA — price: 23.58, mktcap: N/A
+[2026-06-14 20:50:21]   [OK] TDACU — price: 11.5, mktcap: 252,411,616
+[2026-06-14 20:50:22]   [OK] TDACW — price: 1.42, mktcap: 19,709,600
+[2026-06-14 20:50:24]   [OK] TDBCP — price: 17.5, mktcap: N/A
+[2026-06-14 20:50:26]   [NO PRICE] yfinance has no price data for TDDWW
+[2026-06-14 20:50:28]   [OK] TDGMW — price: 61.0, mktcap: N/A
+[2026-06-14 20:50:29]   [OK] TDOG — price: 17.6199, mktcap: N/A
+[2026-06-14 20:50:31]   [OK] TDWDR — price: 0.1215, mktcap: N/A
+[2026-06-14 20:50:33]   [OK] TDWDU — price: 10.2, mktcap: 239,287,632
+[2026-06-14 20:50:34]   [OK] TETH — price: 8.32, mktcap: N/A
+[2026-06-14 20:50:36]   [OK] THTG — price: 0.05, mktcap: N/A
+[2026-06-14 20:50:38]   [NO PRICE] yfinance has no price data for TKDG
+[2026-06-14 20:50:39]   [OK] TLGUF — price: 16.5, mktcap: 18,448,052
+[2026-06-14 20:50:41]   [NO PRICE] yfinance has no price data for TLGWF
+[2026-06-14 20:50:43]   [OK] TLNCU — price: 10.44, mktcap: 352,086,816
+[2026-06-14 20:50:45]   [OK] TLNCW — price: 0.55, mktcap: N/A
+[2026-06-14 20:50:46]   [OK] TMSOF — price: 11.507, mktcap: N/A
+[2026-06-14 20:50:48]   [OK] TMTSU — price: 10.15, mktcap: 310,312,544
+[2026-06-14 20:50:50]   [OK] TMTSW — price: 0.4994, mktcap: N/A
+[2026-06-14 20:50:51]   [OK] TNCAF — price: 14.5, mktcap: 86,720,004,096
+[2026-06-14 20:50:53]   [OK] TNMWF — price: 0.025, mktcap: N/A
+[2026-06-14 20:50:55]   [NO PRICE] yfinance has no price data for TOGIW
+[2026-06-14 20:50:57]   [OK] TOIIW — price: 0.0478, mktcap: N/A
+[2026-06-14 20:50:58]   [OK] TOXR — price: 11.04, mktcap: N/A
+[2026-06-14 20:51:00]   [OK] TOYWF — price: 0.05, mktcap: N/A
+[2026-06-14 20:51:02]   [NO PRICE] yfinance has no price data for TP
+[2026-06-14 20:51:03]   [OK] TRGSR — price: 0.22, mktcap: N/A
+[2026-06-14 20:51:05]   [OK] TRGSU — price: 10.03, mktcap: 259,727,872
+[2026-06-14 20:51:07]   [NO PRICE] yfinance has no price data for TRNTF
+[2026-06-14 20:51:08]   [OK] TRPEF — price: 10.5, mktcap: 82,719,997,952
+[2026-06-14 20:51:10]   [OK] TRPPF — price: 18.0, mktcap: N/A
+[2026-06-14 20:51:10]   Batch 22 complete. Pausing 3.0s...
+[2026-06-14 20:51:13]   Batch 23/24 (50 tickers)...
+[2026-06-14 20:51:15]   [OK] TSLTF — price: 18.8194, mktcap: 10,804,417,536
+[2026-06-14 20:51:17]   [OK] TSOL — price: 6.4762, mktcap: N/A
+[2026-06-14 20:51:18]   [OK] TSUI — price: 14.9624, mktcap: N/A
+[2026-06-14 20:51:20]   [OK] TVACU — price: 10.6, mktcap: 317,143,872
+[2026-06-14 20:51:22]   [OK] TVACW — price: 0.5, mktcap: N/A
+[2026-06-14 20:51:23]   [OK] TVAIR — price: 0.21, mktcap: N/A
+[2026-06-14 20:51:26]   [OK] TVAIU — price: 10.41, mktcap: 282,977,536
+[2026-06-14 20:51:27]   [NO PRICE] yfinance has no price data for TVCN
+[2026-06-14 20:51:29]   [OK] TVGNW — price: 0.0479, mktcap: N/A
+[2026-06-14 20:51:31]   [OK] TWLVR — price: 0.1999, mktcap: N/A
+[2026-06-14 20:51:32]   [OK] TWLVU — price: 10.1, mktcap: 236,025,248
+[2026-06-14 20:51:34]   [OK] TY-P — price: 42.0, mktcap: 2,347,724,400
+[2026-06-14 20:51:36]   [OK] UCASU — price: 0.262, mktcap: 3,863,311
+[2026-06-14 20:51:38]   [OK] UCIB — price: 33.671, mktcap: N/A
+[2026-06-14 20:51:39]   [OK] UDN — price: 18.1, mktcap: N/A
+[2026-06-14 20:51:41]   [NO PRICE] yfinance has no price data for ULIT
+[2026-06-14 20:51:43]   [OK] UMBFO — price: 26.58, mktcap: 3,806,830,592
+[2026-06-14 20:51:44]   [OK] UNMA — price: 22.4, mktcap: 5,064,684,800
+[2026-06-14 20:51:46]   [NO PRICE] yfinance has no price data for UPX
+[2026-06-14 20:51:48]   [OK] URSB — price: 11.3, mktcap: 59,954,436
+[2026-06-14 20:51:49]   [NO PRICE] yfinance has no price data for USAM
+[2026-06-14 20:51:51]   [NO PRICE] yfinance has no price data for USDW
+[2026-06-14 20:51:53]   [OK] USML — price: 42.67, mktcap: N/A
+[2026-06-14 20:51:54]   [OK] USOI — price: 52.2878, mktcap: N/A
+[2026-06-14 20:51:56]   [OK] UVIX — price: 3.78, mktcap: N/A
+[2026-06-14 20:51:58]   [OK] UYSCR — price: 0.14, mktcap: N/A
+[2026-06-14 20:52:00]   [OK] UYSCU — price: 11.41, mktcap: 87,684,504
+[2026-06-14 20:52:01]   [OK] VACHU — price: 14.5, mktcap: 92,878,640
+[2026-06-14 20:52:03]   [OK] VACHW — price: 0.2589, mktcap: N/A
+[2026-06-14 20:52:05]   [NO PRICE] yfinance has no price data for VAT
+[2026-06-14 20:52:06]   [OK] VAVX — price: 13.7341, mktcap: N/A
+[2026-06-14 20:52:08]   [OK] VCX — price: 130.0, mktcap: N/A
+[2026-06-14 20:52:10]   [OK] VFSWW — price: 0.3301, mktcap: N/A
+[2026-06-14 20:52:12]   [OK] VHCPU — price: 10.11, mktcap: 307,294,016
+[2026-06-14 20:52:14]   [OK] VHCPW — price: 0.44, mktcap: N/A
+[2026-06-14 20:52:15]   [OK] VLYPN — price: 25.95, mktcap: 16,622,244,864
+[2026-06-14 20:52:17]   [OK] VLYPO — price: 25.01, mktcap: 16,101,361,664
+[2026-06-14 20:52:19]   [OK] VLYPP — price: 25.02, mktcap: 16,106,902,528
+[2026-06-14 20:52:21]   [OK] VMCUF — price: 10.82, mktcap: 67,110,808
+[2026-06-14 20:52:22]   [OK] VMCWF — price: 0.0321, mktcap: N/A
+[2026-06-14 20:52:24]   [OK] VMO — price: 9.75, mktcap: 1,035,967,680
+[2026-06-14 20:52:26]   [OK] VNMEU — price: 10.28, mktcap: 256,591,920
+[2026-06-14 20:52:28]   [OK] VNMEW — price: 0.3, mktcap: 3,000,000
+[2026-06-14 20:52:30]   [OK] VUECF — price: 0.3357, mktcap: 13,644,562
+[2026-06-14 20:52:31]   [OK] VWAVW — price: 0.8501, mktcap: N/A
+[2026-06-14 20:52:33]   [OK] VXX — price: 24.2, mktcap: N/A
+[2026-06-14 20:52:35]   [OK] VXZ — price: 53.6239, mktcap: N/A
+[2026-06-14 20:52:36]   [OK] WALDW — price: 0.0537, mktcap: N/A
+[2026-06-14 20:52:38]   [NO PRICE] yfinance has no price data for WATR
+[2026-06-14 20:52:40]   [NO PRICE] yfinance has no price data for WBXWF
+[2026-06-14 20:52:40]   Batch 23 complete. Pausing 3.0s...
+[2026-06-14 20:52:43]   Batch 24/24 (40 tickers)...
+[2026-06-14 20:52:44]   [OK] WDS — price: 23.07, mktcap: 55,568,379,904
+[2026-06-14 20:52:46]   [NO PRICE] yfinance has no price data for WDSP
+[2026-06-14 20:52:48]   [OK] WENNU — price: 10.41, mktcap: 390,217,024
+[2026-06-14 20:52:50]   [OK] WENNW — price: 0.3999, mktcap: N/A
+[2026-06-14 20:52:51]   [OK] WINVR — price: 0.1411, mktcap: N/A
+[2026-06-14 20:52:53]   [OK] WINVU — price: 12.41, mktcap: N/A
+[2026-06-14 20:52:55]   [OK] WINVW — price: 0.0201, mktcap: N/A
+[2026-06-14 20:52:56]   [OK] WLDSW — price: 6.75, mktcap: N/A
+[2026-06-14 20:52:58]   [OK] WNFTD — price: 0.1596, mktcap: N/A
+[2026-06-14 20:53:00]   [NO PRICE] yfinance has no price data for WRDIF
+[2026-06-14 20:53:02]   [OK] WSBCO — price: 25.48, mktcap: 3,111,975,680
+[2026-06-14 20:53:03]   [OK] WSTNR — price: 0.18, mktcap: N/A
+[2026-06-14 20:53:05]   [OK] WSTNU — price: 10.23, mktcap: 74,382,104
+[2026-06-14 20:53:07]   [OK] WTGUR — price: 0.15, mktcap: N/A
+[2026-06-14 20:53:08]   [OK] WTGUU — price: 10.67, mktcap: 76,749,712
+[2026-06-14 20:53:10]   [OK] WTID — price: 4.73, mktcap: N/A
+[2026-06-14 20:53:12]   [OK] WTIU — price: 16.2799, mktcap: N/A
+[2026-06-14 20:53:13]   [NO PRICE] yfinance has no price data for XAEIU
+[2026-06-14 20:53:15]   [OK] XCBEU — price: 10.02, mktcap: 280,891,264
+[2026-06-14 20:53:17]   [OK] XCBEW — price: 0.2823, mktcap: N/A
+[2026-06-14 20:53:19]   [OK] XOSWW — price: 0.0091, mktcap: N/A
+[2026-06-14 20:53:20]   [OK] XRP — price: 12.65, mktcap: N/A
+[2026-06-14 20:53:22]   [OK] XRPNU — price: 10.77, mktcap: 340,135,648
+[2026-06-14 20:53:24]   [OK] XRPNW — price: 0.87, mktcap: N/A
+[2026-06-14 20:53:25]   [OK] XRPZ — price: 12.29, mktcap: N/A
+[2026-06-14 20:53:27]   [OK] XSIAX — price: 9.24, mktcap: N/A
+[2026-06-14 20:53:29]   [OK] XSLLU — price: 10.01, mktcap: 275,341,408
+[2026-06-14 20:53:31]   [OK] XSLLW — price: 0.2499, mktcap: N/A
+[2026-06-14 20:53:32]   [NO PRICE] yfinance has no price data for XTND
+[2026-06-14 20:53:34]   [NO PRICE] yfinance has no price data for XXC
+[2026-06-14 20:53:36]   [OK] YDESW — price: 0.34, mktcap: N/A
+[2026-06-14 20:53:37]   [OK] YHNAR — price: 0.1101, mktcap: N/A
+[2026-06-14 20:53:39]   [OK] YHNAU — price: 11.1, mktcap: 48,561,748
+[2026-06-14 20:53:41]   [OK] ZCSH — price: 27.94, mktcap: N/A
+[2026-06-14 20:53:42]   [NO PRICE] yfinance has no price data for ZHIHF
+[2026-06-14 20:53:44]   [OK] ZKPU — price: 10.44, mktcap: 390,086,688
+[2026-06-14 20:53:46]   [OK] ZKPW — price: 0.3215, mktcap: N/A
+[2026-06-14 20:53:48]   [OK] ZNOGW — price: 4.97, mktcap: N/A
+[2026-06-14 20:53:49]   [OK] ZOOZW — price: 0.028, mktcap: N/A
+[2026-06-14 20:53:51]   [OK] ZTR — price: 6.805, mktcap: 543,324,160
+[2026-06-14 20:53:51]   Batch 24 complete. Pausing 3.0s...
+[2026-06-14 20:53:54] Running validation...
+[2026-06-14 20:53:54]   Stocks still missing price: [(375,)]
+[2026-06-14 20:53:54]   Stocks still missing market cap: [(1699,)]
+[2026-06-14 20:53:54]   Stocks still missing shares: [(1881,)]
+[2026-06-14 20:53:55]   Halal status breakdown after recalc: [('Questionable', 4397), ('Non-Halal', 2769), ('Halal', 1431)]
+[2026-06-14 20:53:55]   Stocks with complete yfinance data: [(7847,)]
+[2026-06-14 20:53:55] =======================================================
+[2026-06-14 20:53:55] YFINANCE POPULATION COMPLETE — NEEDS ATTENTION
+[2026-06-14 20:53:55] Job ID:              917471b2
+[2026-06-14 20:53:55] Duration:            0:35:16.814949
+[2026-06-14 20:53:55] Total processed:     1190
+[2026-06-14 20:53:55] yfinance success:    1054
+[2026-06-14 20:53:55] yfinance failed:     136
+[2026-06-14 20:53:55] Price missing:       0
+[2026-06-14 20:53:55] Market cap missing:  651
+[2026-06-14 20:53:55] Shares missing:      936
+[2026-06-14 20:53:55] Halal recalculated:  0
+[2026-06-14 20:53:55] Failed tickers:      ['BCENF', 'TCNCF', 'CMCWF', 'NTMJ', 'WBXWF', 'ULIT', 'BSP', 'GFRWF', 'DAVI', 'NEUC', 'SNSC', 'CILFY', 'TARX', 'TKDG', 'BRBF', 'EVON', 'OBX', 'IQMX', 'CXII', 'EFGH']
+[2026-06-14 20:53:55] =======================================================

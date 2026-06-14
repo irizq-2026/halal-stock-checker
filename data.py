@@ -97,15 +97,30 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
                 f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
             )
         payload = _build_stock_payload(company, filing, normalized, result)
-        if payload.get("market_cap") in (None, 0):
-            latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
-            if latest_price_row and latest_price_row.get("market_cap") not in (None, 0):
-                payload["market_cap"] = _to_float(latest_price_row.get("market_cap"))
+        latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
+        if latest_price_row:
+            close_price = _to_float(latest_price_row.get("close_price"))
+            shares_outstanding = latest_price_row.get("shares_outstanding")
+            fallback_market_cap = _to_float(latest_price_row.get("market_cap"))
+
+            if fallback_market_cap in (None, 0) and close_price not in (None, 0):
+                shares_value = _to_float(shares_outstanding)
+                if shares_value not in (None, 0):
+                    fallback_market_cap = close_price * shares_value
+
+            if payload.get("market_cap") in (None, 0) and fallback_market_cap not in (None, 0):
+                payload["market_cap"] = fallback_market_cap
+
+            if any(
+                value not in (None, 0)
+                for value in (close_price, _to_float(shares_outstanding), fallback_market_cap)
+            ):
                 payload["_data_source"]["market_cap_fallback"] = {
                     "source": "stock_prices",
                     "price_date": str(latest_price_row.get("price_date")) if latest_price_row.get("price_date") else None,
-                    "close_price": _to_float(latest_price_row.get("close_price")),
-                    "shares_outstanding": latest_price_row.get("shares_outstanding"),
+                    "close_price": close_price,
+                    "shares_outstanding": shares_outstanding,
+                    "market_cap": fallback_market_cap,
                     "updated_at": str(latest_price_row.get("updated_at")) if latest_price_row.get("updated_at") else None,
                 }
         return payload
