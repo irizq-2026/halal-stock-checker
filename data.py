@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -78,6 +79,31 @@ def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any
     }
 
 
+def _load_stocks_price_snapshot(session: Session, ticker: str) -> dict[str, Any] | None:
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT
+                    stock_price,
+                    market_cap,
+                    shares_outstanding,
+                    last_updated
+                FROM stocks
+                WHERE ticker_symbol = :ticker
+                LIMIT 1
+                """
+            ),
+            {"ticker": ticker},
+        )
+        .mappings()
+        .first()
+    )
+    if not row:
+        return None
+    return dict(row)
+
+
 def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
     """Fetch latest normalized cached financial data from Postgres only."""
     normalized_symbol = (symbol or "").strip().upper()
@@ -97,17 +123,49 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
                 f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
             )
         payload = _build_stock_payload(company, filing, normalized, result)
-        if payload.get("market_cap") in (None, 0):
-            latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
-            if latest_price_row and latest_price_row.get("market_cap") not in (None, 0):
-                payload["market_cap"] = _to_float(latest_price_row.get("market_cap"))
-                payload["_data_source"]["market_cap_fallback"] = {
-                    "source": "stock_prices",
-                    "price_date": str(latest_price_row.get("price_date")) if latest_price_row.get("price_date") else None,
-                    "close_price": _to_float(latest_price_row.get("close_price")),
-                    "shares_outstanding": latest_price_row.get("shares_outstanding"),
-                    "updated_at": str(latest_price_row.get("updated_at")) if latest_price_row.get("updated_at") else None,
-                }
+        latest_price_row = get_cached_or_refresh_price_row(normalized_symbol) or {}
+        stocks_snapshot = _load_stocks_price_snapshot(session, normalized_symbol) or {}
+
+        resolved_close_price = _to_float(latest_price_row.get("close_price"))
+        if resolved_close_price is None:
+            resolved_close_price = _to_float(stocks_snapshot.get("stock_price"))
+
+        resolved_shares = latest_price_row.get("shares_outstanding")
+        if resolved_shares in (None, 0):
+            resolved_shares = normalized.shares_outstanding
+        if resolved_shares in (None, 0):
+            resolved_shares = stocks_snapshot.get("shares_outstanding")
+
+        resolved_market_cap = _to_float(payload.get("market_cap"))
+        if resolved_market_cap in (None, 0):
+            resolved_market_cap = _to_float(latest_price_row.get("market_cap"))
+        if resolved_market_cap in (None, 0):
+            resolved_market_cap = _to_float(stocks_snapshot.get("market_cap"))
+        if resolved_market_cap in (None, 0):
+            shares_value = _to_float(resolved_shares)
+            if shares_value not in (None, 0) and resolved_close_price not in (None, 0):
+                resolved_market_cap = resolved_close_price * shares_value
+
+        if payload.get("market_cap") in (None, 0) and resolved_market_cap not in (None, 0):
+            payload["market_cap"] = resolved_market_cap
+
+        if any(
+            value not in (None, 0)
+            for value in (
+                resolved_market_cap,
+                resolved_close_price,
+                _to_float(resolved_shares),
+            )
+        ):
+            payload["_data_source"]["market_cap_fallback"] = {
+                "source": "stock_prices+stocks",
+                "price_date": str(latest_price_row.get("price_date")) if latest_price_row.get("price_date") else None,
+                "close_price": resolved_close_price,
+                "shares_outstanding": resolved_shares,
+                "updated_at": str(latest_price_row.get("updated_at")) if latest_price_row.get("updated_at") else (
+                    str(stocks_snapshot.get("last_updated")) if stocks_snapshot.get("last_updated") else None
+                ),
+            }
         return payload
     except CachedDataNotReadyError:
         raise
