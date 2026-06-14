@@ -38,7 +38,8 @@ import psycopg2
 import yfinance as yf
 import pandas as pd
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+import threading
 from psycopg2.extras import execute_values
 from rapidfuzz import fuzz, process as fuzz_process
 from dotenv import load_dotenv
@@ -111,6 +112,40 @@ def log(message):
             handle.write(line + "\n")
     except Exception as exc:
         print(f"[{timestamp}] [LOG ERROR] Could not write to {LOG_FILE}: {exc}")
+
+
+def start_progress_reporter(stats, total, stop_event):
+    """
+    Runs in background thread. Prints a progress summary
+    every 15 minutes until stop_event is set.
+    """
+    REPORT_INTERVAL = 900  # 15 minutes in seconds
+
+    def report_loop():
+        while not stop_event.wait(REPORT_INTERVAL):
+            elapsed = datetime.now() - job_start
+            processed = (stats["sec_success"] + stats["sec_failed"] + stats["sec_skipped"])
+            remaining = total - processed
+            rate = processed / max(elapsed.seconds, 1)
+            eta_secs = int(remaining / rate) if rate > 0 else 0
+            eta_str = str(timedelta(seconds=eta_secs))
+
+            log("─" * 50)
+            log("PROGRESS REPORT")
+            log(f"  Elapsed:          {elapsed}")
+            log(f"  Processed:        {processed}/{total}")
+            log(f"  SEC success:      {stats['sec_success']}")
+            log(f"  SEC failed:       {stats['sec_failed']}")
+            log(f"  SEC skipped:      {stats['sec_skipped']}")
+            log(f"  yfinance success: {stats['yfinance_success']}")
+            log(f"  yfinance failed:  {stats['yfinance_failed']}")
+            log(f"  Market cap miss:  {stats['market_cap_missing']}")
+            log(f"  Estimated ETA:    {eta_str}")
+            log("─" * 50)
+
+    thread = threading.Thread(target=report_loop, daemon=True)
+    thread.start()
+    return thread
 
 
 def sec_get(url):
@@ -285,6 +320,7 @@ def parse_date_or_none(raw_date):
 
 
 def main():
+    global job_start
     for env_var in REQUIRED_ENV_VARS:
         if not os.environ.get(env_var):
             print(f"[FATAL] Missing required env var: {env_var}")
@@ -306,6 +342,8 @@ def main():
     conn = None
     sec_map = {}
     all_tickers = []
+    stop_event = None
+    reporter_thread = None
 
     try:
         try:
@@ -395,6 +433,10 @@ def main():
 
         stats["total_tickers"] = len(all_tickers)
         log(f"Master ticker list built: {stats['total_tickers']} unique US tickers.")
+        stop_event = threading.Event()
+        reporter_thread = start_progress_reporter(
+            stats, stats["total_tickers"], stop_event
+        )
 
         # STEP 5 — ticker_sic
         log("Populating ticker_sic table...")
@@ -918,6 +960,11 @@ def main():
         log(f"  Who Profits:       {stats['ethical_matches']['who_profits']}")
         log(f"Failed tickers:      {list(set(stats['failed_tickers']))[:20]}")
         log("=" * 65)
+
+        if stop_event is not None and reporter_thread is not None:
+            stop_event.set()
+            reporter_thread.join(timeout=5)
+            log("Progress reporter stopped.")
 
         if conn is not None:
             try:
