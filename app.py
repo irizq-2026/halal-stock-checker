@@ -30,7 +30,7 @@ from data import (
 from rules import screen_stock
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_stock_data_cached(symbol: str):
     """Cache successful fetches only (exceptions are not cached)."""
     return _fetch_stock_data(symbol)
@@ -167,7 +167,7 @@ def _extract_news_item(item: dict) -> dict:
         "published": str(published).strip(),
     }
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_ui_enrichment_cached(symbol: str) -> dict:
     """Fetch optional UI fields from local cached DB data only."""
     return _fetch_company_enrichment(symbol)
