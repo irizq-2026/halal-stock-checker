@@ -1806,6 +1806,22 @@ def _plain_english_financial_summary(data: dict, screening: dict) -> str:
 
 
 def _render_purification_estimator_card(data: dict, screening: dict) -> None:
+    stock_status = str((screening or {}).get("result") or "").strip()
+    if stock_status == "Not Halal":
+        st.markdown(
+            (
+                '<div class="plain-english"><strong>Purification Not Applicable</strong><br>'
+                "This stock has been screened as <strong>Not Halal</strong>. "
+                "Purification applies to otherwise permissible investments with a small proportion "
+                "of incidental impermissible income. Since this stock does not meet the threshold "
+                "for halal compliance, the appropriate step is to avoid holding it rather than to "
+                "purify dividends or gains."
+                '<br><span style="font-size:12px;color:#888;">For guidance, please consult a qualified Islamic finance scholar.</span>'
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        return
     company = _company_name(data)
     interest_income = _calc_float(data.get("interest_income"))
     _, _, income_ratio = _metric_data(data, "income")
