@@ -47,6 +47,8 @@ LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
     {"ticker": "AAPL", "company_name": "Apple Inc."},
     {"ticker": "CRCL", "company_name": "Circle Internet Group, Inc."},
     {"ticker": "MSFT", "company_name": "Microsoft Corporation"},
+    {"ticker": "PLTR", "company_name": "Palantir Technologies Inc."},
+    {"ticker": "QS", "company_name": "QuantumScape Corporation"},
     {"ticker": "SPCX", "company_name": "SpaceX (Test Symbol)"},
     {"ticker": "TSLA", "company_name": "Tesla, Inc."},
     {"ticker": "JPM", "company_name": "JPMorgan Chase & Co."},
@@ -2751,7 +2753,7 @@ def main() -> None:
             if not resolved_ticker:
                 st.markdown(
                     '<div class="info-msg">No local compliance profile match was found. '
-                    'Currently available: AAPL, CRCL, MSFT, SPCX, TSLA, JPM, XOM.</div>',
+                    'Currently available: AAPL, CRCL, MSFT, PLTR, QS, SPCX, TSLA, JPM, XOM.</div>',
                     unsafe_allow_html=True,
                 )
             elif (
