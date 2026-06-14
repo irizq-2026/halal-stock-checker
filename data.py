@@ -47,6 +47,13 @@ def _to_float(value: Any) -> float | None:
 def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any) -> dict[str, Any]:
     interest_income = _to_float(normalized.interest_income) or 0.0
     total_revenue = _to_float(normalized.total_revenue)
+    source_metadata = normalized.source_metadata_json or {}
+    ethical_insights = {}
+    if isinstance(source_metadata.get("ethical_insights"), dict):
+        ethical_insights = source_metadata.get("ethical_insights") or {}
+    elif isinstance(result.mapped_tags_json, dict) and isinstance(result.mapped_tags_json.get("ethical_insights"), dict):
+        # Backward-compatible fallback for rows populated from result metadata.
+        ethical_insights = result.mapped_tags_json.get("ethical_insights") or {}
     return {
         "symbol": company.ticker,
         "company_name": company.company_name,
@@ -59,13 +66,14 @@ def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any
         "interest_income": interest_income,
         # Preserve existing screening behavior by feeding non-halal income field.
         "non_halal_income": interest_income,
+        "ethical_insights": ethical_insights,
         "_data_source": {
             "name": result.data_source,
             "filing_date": str(result.source_filing_date) if result.source_filing_date else str(filing.filing_date),
             "last_updated": result.last_updated.isoformat() if result.last_updated else None,
             "accession_number": filing.accession_number,
             "filing_type": filing.filing_type,
-            "mapped_tags": normalized.source_metadata_json or {},
+            "mapped_tags": source_metadata,
         },
     }
 
