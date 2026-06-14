@@ -57,7 +57,7 @@ LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
 
 # ── TEMPORARY: Force fresh fetch for fintech testing ──────────────
 # ── Remove or set to [] once CRCL and SPCX are verified ───────────
-FORCE_REFRESH_TICKERS = ["CRCL", "SPCX"]
+FORCE_REFRESH_TICKERS = ["SPCX"]
 
 
 def _extract_news_item(item: dict) -> dict:
