@@ -41,6 +41,7 @@ FINTECH_STABLECOIN_CONCEPTS = (
     "StablecoinReserveRevenue",
     "InterestOnSegregatedAssets",
     "InterestIncomeOperating",
+    "InterestAndDividendIncomeOperating",
 )
 FINTECH_STABLECOIN_TERMS = tuple(
     term.lower()
@@ -50,6 +51,7 @@ FINTECH_STABLECOIN_TERMS = tuple(
         "Stablecoin Reserve Revenue",
         "Interest on Segregated Assets",
         "Interest Income, Operating",
+        "Interest And Dividend Income Operating",
     )
 )
 
@@ -586,6 +588,8 @@ def _log_ratio3_source(ticker: str, point: ConceptPoint, source_tag: str) -> Non
 
 
 def _matches_fintech_stablecoin_term(concept_name: str) -> bool:
+    if concept_name in FINTECH_STABLECOIN_CONCEPTS:
+        return True
     normalized = (concept_name or "").replace("_", " ").replace("-", " ").lower()
     return any(term in normalized for term in FINTECH_STABLECOIN_TERMS)
 
@@ -627,11 +631,18 @@ def _select_interest_income_with_fallback(
         )
 
     if selected.value is None:
-        bundled_selection = _income_ttm_or_10k(bundled_rows)
-        if _is_non_zero(bundled_selection.value):
-            bundled_selection.concept = INTEREST_BUNDLED_CONCEPT
+        bundled_candidates = (
+            INTEREST_BUNDLED_CONCEPT,
+            "InterestAndDividendIncomeOperating",
+            "InterestIncomeOperating",
+        )
+        for bundled_concept in bundled_candidates:
+            bundled_selection = _income_ttm_or_10k(rows_by_concept.get(bundled_concept) or [])
+            if not _is_non_zero(bundled_selection.value):
+                continue
+            bundled_selection.concept = bundled_concept
             for point in bundled_selection.points:
-                _log_ratio3_source(ticker, point, INTEREST_BUNDLED_CONCEPT)
+                _log_ratio3_source(ticker, point, bundled_concept)
             selected = bundled_selection
             fallback_step = "step2"
             fallback_disclaimer = (
@@ -640,13 +651,19 @@ def _select_interest_income_with_fallback(
             )
             total_impermissible_income = bundled_selection.value
             captured_amounts.add(round(float(bundled_selection.value), 6))
+            detail_line_name = "Interest Income, Operating (Bundled)"
+            if bundled_concept == "InterestAndDividendIncomeOperating":
+                detail_line_name = "Stablecoin Reserve Income"
+            elif bundled_concept == "InterestIncomeOperating":
+                detail_line_name = "Interest Income, Operating"
             calculation_details.append(
                 {
-                    "lineName": "Interest Income, Operating (Bundled)",
+                    "lineName": detail_line_name,
                     "amount": float(bundled_selection.value),
-                    "sourceSection": "Non-Operating",
+                    "sourceSection": "Revenue/Operating Income",
                 }
             )
+            break
 
     if selected.value is None:
         upper_selection = _income_ttm_or_10k(upper_rows)
@@ -664,11 +681,13 @@ def _select_interest_income_with_fallback(
             total_impermissible_income = upper_selection.value
             if upper_selection.value is not None:
                 captured_amounts.add(round(float(upper_selection.value), 6))
+                upper_line_name = "Apple-Other Income Fallback" if ticker.upper() == "AAPL" else "Non-Operating Income Fallback"
+                upper_source_section = "Apple-Other Income" if ticker.upper() == "AAPL" else "Non-Operating"
                 calculation_details.append(
                     {
-                        "lineName": "Apple-Other Income Fallback",
+                        "lineName": upper_line_name,
                         "amount": float(upper_selection.value),
-                        "sourceSection": "Apple-Other Income",
+                        "sourceSection": upper_source_section,
                     }
                 )
 
