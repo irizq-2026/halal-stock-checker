@@ -1272,6 +1272,31 @@ def _build_enriched_stock_data(stock_data: dict, enrichment: dict) -> dict:
     return enriched
 
 
+def _needs_valuation_cache_refresh(stock_data: dict) -> bool:
+    """Detect stale cached payloads missing valuation detail fields."""
+    if not isinstance(stock_data, dict):
+        return False
+    source = stock_data.get("_data_source") if isinstance(stock_data.get("_data_source"), dict) else {}
+    mapped_tags = source.get("mapped_tags") if isinstance(source.get("mapped_tags"), dict) else {}
+    components = mapped_tags.get("components") if isinstance(mapped_tags.get("components"), dict) else {}
+    valuation = components.get("valuation") if isinstance(components.get("valuation"), dict) else {}
+    fallback = source.get("market_cap_fallback") if isinstance(source.get("market_cap_fallback"), dict) else {}
+
+    shares = valuation.get("shares_outstanding")
+    if shares in (None, 0, 0.0, ""):
+        shares = fallback.get("shares_outstanding")
+
+    latest_price = valuation.get("latest_closing_price")
+    if latest_price in (None, 0, 0.0, ""):
+        latest_price = fallback.get("close_price")
+
+    # If a market cap exists but valuation detail rows are missing, force fresh read.
+    market_cap = stock_data.get("market_cap")
+    has_market_cap = market_cap not in (None, 0, 0.0, "")
+    missing_detail = shares in (None, 0, 0.0, "") or latest_price in (None, 0, 0.0, "")
+    return has_market_cap and missing_detail
+
+
 def _company_name(data: dict) -> str:
     symbol = data.get("symbol", "N/A")
     company = (data.get("company_name") or data.get("_ui_info", {}).get("longName") or "").strip()
@@ -2734,6 +2759,9 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
         else:
             stock_data = fetch_stock_data_cached(ticker)
             enrichment = fetch_ui_enrichment_cached(ticker)
+            if _needs_valuation_cache_refresh(stock_data):
+                fetch_stock_data_cached.clear()
+                stock_data = _fetch_stock_data(ticker)
 
         if stock_data is None or stock_data.get("error"):
             clear_results_for_error(ticker)
