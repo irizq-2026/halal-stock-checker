@@ -14,6 +14,7 @@ from urllib.parse import quote, urlparse
 import psycopg2
 import pandas as pd
 import streamlit as st
+from psycopg2 import pool as psycopg2_pool
 from psycopg2.extras import RealDictCursor
 from streamlit_searchbox import st_searchbox
 
@@ -48,22 +49,97 @@ NEWS_FLAG_KEYWORDS = (
 WEAPONS_KEYWORDS = ("defense", "aerospace", "weapon", "military", "arms")
 ISRAEL_KEYWORDS = ("israel", "israeli", "tel aviv", "jerusalem", "idf", "gaza", "west bank")
 
-# Local search universe intentionally constrained to currently validated profiles only.
-LOCAL_SEARCH_STOCKS: tuple[dict[str, str], ...] = (
-    {"ticker": "AAPL", "company_name": "Apple Inc."},
-    {"ticker": "CRCL", "company_name": "Circle Internet Group, Inc."},
-    {"ticker": "MSFT", "company_name": "Microsoft Corporation"},
-    {"ticker": "PLTR", "company_name": "Palantir Technologies Inc."},
-    {"ticker": "QS", "company_name": "QuantumScape Corporation"},
-    {"ticker": "SPCX", "company_name": "SpaceX (Test Symbol)"},
-    {"ticker": "TSLA", "company_name": "Tesla, Inc."},
-    {"ticker": "JPM", "company_name": "JPMorgan Chase & Co."},
-    {"ticker": "XOM", "company_name": "Exxon Mobil Corporation"},
-)
-
 # ── TEMPORARY: Force fresh fetch for fintech testing ──────────────
 # ── Remove or set to [] once CRCL and SPCX are verified ───────────
 FORCE_REFRESH_TICKERS = []
+
+
+@st.cache_resource(show_spinner=False)
+def get_connection_pool() -> psycopg2_pool.SimpleConnectionPool:
+    dsn = os.environ.get("DATABASE_URL") or settings.database_url
+    return psycopg2_pool.SimpleConnectionPool(
+        minconn=1,
+        maxconn=5,
+        dsn=dsn,
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def ensure_search_index() -> None:
+    """
+    Creates indexes on stocks table for fast search.
+    Runs once at startup, skipped if already exists.
+    """
+    try:
+        db_pool = get_connection_pool()
+        conn = db_pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_stocks_ticker
+                    ON stocks (ticker_symbol);
+
+                    CREATE INDEX IF NOT EXISTS idx_stocks_name
+                    ON stocks (company_name);
+                    """
+                )
+            conn.commit()
+        finally:
+            db_pool.putconn(conn)
+    except Exception as exc:
+        print(f"Index creation skipped: {exc}")
+
+
+def _search_stocks_rows(query: str, *, limit: int = 10) -> list[tuple[str, str]]:
+    if not query or len(query.strip()) < 1:
+        return []
+    query = query.strip()
+    db_pool: psycopg2_pool.SimpleConnectionPool | None = None
+    conn = None
+    try:
+        db_pool = get_connection_pool()
+        conn = db_pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    ticker_symbol,
+                    company_name
+                FROM stocks
+                WHERE
+                    ticker_symbol ILIKE %s
+                    OR company_name ILIKE %s
+                ORDER BY
+                    CASE
+                        WHEN ticker_symbol ILIKE %s
+                        THEN 0 ELSE 1
+                    END,
+                    market_cap DESC NULLS LAST
+                LIMIT %s
+                """,
+                (
+                    f"{query}%",
+                    f"%{query}%",
+                    f"{query}%",
+                    limit,
+                ),
+            )
+            rows = cur.fetchall()
+        return [
+            (
+                str(row[0]).upper().strip(),
+                str(row[1]).strip() if row[1] else "",
+            )
+            for row in rows
+            if row and row[0]
+        ]
+    except Exception as exc:
+        print(f"Search error: {exc}")
+        return []
+    finally:
+        if conn is not None and db_pool is not None:
+            db_pool.putconn(conn)
 
 
 def _extract_news_item(item: dict) -> dict:
@@ -2495,31 +2571,18 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
 
 
 def _filter_local_stock_candidates(raw_query: str) -> list[dict[str, str]]:
-    query = (raw_query or "").strip().lower()
-    if not query:
-        return []
-    matches = [
-        stock
-        for stock in LOCAL_SEARCH_STOCKS
-        if query in stock["ticker"].lower() or query in stock["company_name"].lower()
-    ]
-    return sorted(
-        matches,
-        key=lambda stock: (
-            0 if stock["ticker"].lower().startswith(query) else 1,
-            0 if stock["company_name"].lower().startswith(query) else 1,
-            stock["ticker"],
-        ),
-    )
+    rows = _search_stocks_rows(raw_query, limit=10)
+    return [{"ticker": ticker, "company_name": company_name} for ticker, company_name in rows]
 
 
 def _find_exact_local_match(raw_query: str) -> dict[str, str] | None:
     query = (raw_query or "").strip().lower()
     if not query:
         return None
-    for stock in LOCAL_SEARCH_STOCKS:
-        if query == stock["ticker"].lower() or query == stock["company_name"].lower():
-            return stock
+    rows = _search_stocks_rows(raw_query, limit=10)
+    for ticker, company_name in rows:
+        if query == ticker.lower() or query == (company_name or "").lower():
+            return {"ticker": ticker, "company_name": company_name}
     return None
 
 
@@ -2534,10 +2597,10 @@ def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
 
 
 def _searchbox_local_stock_options(search_query: str) -> list[tuple[str, str]]:
-    matches = _filter_local_stock_candidates(search_query)
+    matches = _search_stocks_rows(search_query, limit=10)
     return [
-        (f'{stock["company_name"]} ({stock["ticker"]})', stock["ticker"])
-        for stock in matches
+        (f"{ticker} — {company_name}" if company_name else ticker, ticker)
+        for ticker, company_name in matches
     ]
 
 
@@ -3138,6 +3201,7 @@ def main() -> None:
     initialize_session_state()
     inject_head_and_styles()
     _ensure_analytics_table_once()
+    ensure_search_index()
 
     requested_page = _query_param_value("page").lower()
     if requested_page == "admin":
@@ -3166,6 +3230,8 @@ def main() -> None:
         label="Search by Ticker or Company Name:",
         placeholder="e.g. AAPL or Apple Inc.",
         key="stock_searchbox",
+        clear_on_submit=False,
+        debounce=300,
     )
     st.markdown(
         "<p style='font-size: 12px; color: #888; margin-top: -10px;'>"
@@ -3193,8 +3259,8 @@ def main() -> None:
             st.session_state.resolved_ticker = resolved_ticker or ""
             if not resolved_ticker:
                 st.markdown(
-                    '<div class="info-msg">No local compliance profile match was found. '
-                    'Currently available: AAPL, CRCL, MSFT, PLTR, QS, SPCX, TSLA, JPM, XOM.</div>',
+                    '<div class="info-msg">No matching stock was found in the database. '
+                    "Please try a different ticker or company name.</div>",
                     unsafe_allow_html=True,
                 )
             else:
