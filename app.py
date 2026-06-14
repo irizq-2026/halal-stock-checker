@@ -1637,12 +1637,24 @@ def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
     if marketable_debt_securities is None:
         marketable_debt_securities = _calc_float(liquid.get("marketable_debt_securities"))
 
+    fallback_total = _calc_float(liquid.get("total_interest_earning_pools"))
+    if fallback_total is None:
+        fallback_total = _calc_float(data.get("cash"))
+
     # Ratio 2 numerator should include both parent buckets.
     total_interest_earning_pools = _sum_present([cash_and_equivalents, marketable_debt_securities])
     if total_interest_earning_pools is None:
-        total_interest_earning_pools = _calc_float(liquid.get("total_interest_earning_pools"))
-    if total_interest_earning_pools is None:
-        total_interest_earning_pools = _calc_float(data.get("cash"))
+        total_interest_earning_pools = fallback_total
+
+    # If no detailed cash/securities components exist, keep the full total
+    # visible under the first parent bucket instead of showing all zeros/N/A.
+    if (
+        fallback_total is not None
+        and cash_and_equivalents is None
+        and marketable_debt_securities is None
+    ):
+        cash_and_equivalents = fallback_total
+        marketable_debt_securities = 0.0
 
     return {
         "cash_and_equivalents": cash_and_equivalents,
@@ -1695,16 +1707,30 @@ def _calculation_details_for_metric(
 
     short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
     if short_term_borrowings is None:
-        short_term_borrowings = (
-            (_calc_float(debt.get("commercial_paper")) or 0.0)
-            + (_calc_float(debt.get("short_term_notes_pay")) or 0.0)
+        short_term_borrowings = _sum_present(
+            [
+                _calc_float(debt.get("commercial_paper")),
+                _calc_float(debt.get("short_term_notes_pay")),
+            ]
         )
     long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
     if long_term_borrowings is None:
-        long_term_borrowings = (
-            (_calc_float(debt.get("current_long_term_debt")) or 0.0)
-            + (_calc_float(debt.get("noncurrent_debt_obligations")) or 0.0)
+        long_term_borrowings = _sum_present(
+            [
+                _calc_float(debt.get("current_long_term_debt")),
+                _calc_float(debt.get("noncurrent_debt_obligations")),
+            ]
         )
+
+    debt_total = _calc_float(debt.get("total_borrowed_capital"))
+    if debt_total is None:
+        debt_total = _calc_float(numerator)
+    if debt_total is None:
+        debt_total = _calc_float(data.get("total_debt"))
+    # When detailed debt tags are missing, use the known total so users can
+    # still see where the numerator value comes from.
+    if short_term_borrowings is None and long_term_borrowings is None:
+        long_term_borrowings = debt_total
 
     liquid_totals = _resolve_liquid_component_totals(data)
     cash_and_equivalents = liquid_totals["cash_and_equivalents"]
@@ -1712,10 +1738,17 @@ def _calculation_details_for_metric(
 
     passive_yield = _calc_float(purging.get("passive_financial_yield"))
     if passive_yield is None:
-        passive_yield = (
-            (_calc_float(purging.get("non_operating_cash_interest")) or 0.0)
-            + (_calc_float(purging.get("equity_investment_dividends")) or 0.0)
+        passive_yield = _sum_present(
+            [
+                _calc_float(purging.get("non_operating_cash_interest")),
+                _calc_float(purging.get("equity_investment_dividends")),
+            ]
         )
+    total_prohibited_revenue = _calc_float(purging.get("total_annual_prohibited_revenue"))
+    if total_prohibited_revenue is None:
+        total_prohibited_revenue = _calc_float(numerator)
+    if passive_yield is None:
+        passive_yield = total_prohibited_revenue
 
     numerator_rows: list[dict[str, object]]
     denominator_rows: list[dict[str, object]]
@@ -1726,7 +1759,7 @@ def _calculation_details_for_metric(
         numerator_title = "Total Debt"
         denominator_title = "Market Cap"
         numerator_rows = [
-            {"label": "Total Borrowed Capital", "value": debt.get("total_borrowed_capital", numerator)},
+            {"label": "Total Borrowed Capital", "value": debt_total},
             {"label": "Short-Term Borrowings", "value": short_term_borrowings},
             {"label": "Commercial Paper", "value": debt.get("commercial_paper"), "depth": 1},
             {"label": "Short-Term Notes Pay", "value": debt.get("short_term_notes_pay"), "depth": 1},
@@ -1750,7 +1783,7 @@ def _calculation_details_for_metric(
         numerator_title = "Total Annual Prohibited Revenue"
         denominator_title = "Total Revenue"
         numerator_rows = [
-            {"label": "Total Annual Prohibited Revenue", "value": purging.get("total_annual_prohibited_revenue", numerator)},
+            {"label": "Total Annual Prohibited Revenue", "value": total_prohibited_revenue},
             {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
             {"label": "Passive Financial Yield", "value": passive_yield},
             {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
