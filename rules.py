@@ -63,6 +63,8 @@ def _business_display_value(sector: str, industry: str) -> str:
 def _contains_prohibited(text: str) -> str | None:
     text_lower = (text or "").lower()
     for kw in PROHIBITED_KEYWORDS:
+        if kw == "alcohol" and ("non-alcoholic" in text_lower or "non alcoholic" in text_lower):
+            continue
         if kw in text_lower:
             return kw
     return None
