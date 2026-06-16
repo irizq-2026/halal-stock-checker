@@ -467,7 +467,7 @@ def _parse_concept_points(payload: dict[str, Any] | None, concept: str) -> list[
 
 
 def _latest_10k(rows: list[ConceptPoint]) -> ConceptPoint | None:
-    ten_k = [row for row in rows if row.form == "10-K"]
+    ten_k = [row for row in rows if row.form.startswith("10-K")]
     if not ten_k:
         return None
     ten_k.sort(
@@ -481,7 +481,7 @@ def _latest_10k(rows: list[ConceptPoint]) -> ConceptPoint | None:
 
 
 def _income_ttm_or_10k(rows: list[ConceptPoint]) -> MetricSelection:
-    quarters = _dedupe_quarter_rows([row for row in rows if row.form == "10-Q"])
+    quarters = _dedupe_quarter_rows([row for row in rows if row.form.startswith("10-Q")])
     if len(quarters) >= 4:
         selected = quarters[:4]
         value = sum(row.value for row in selected)
@@ -570,6 +570,46 @@ def _select_first_income(rows_by_concept: dict[str, list[ConceptPoint]], concept
         method="missing",
         concept=None,
     )
+
+
+def _select_best_income(rows_by_concept: dict[str, list[ConceptPoint]], concepts: tuple[str, ...]) -> MetricSelection:
+    """
+    Choose the freshest valid income selection across candidate concepts.
+
+    Some issuers expose stale values on one revenue tag while publishing recent
+    TTM values on another (e.g. `RevenueFromContractWithCustomer...` vs
+    `Revenues`). Prefer the most recent period end, then TTM method, then
+    concept order for deterministic ties.
+    """
+    candidates: list[tuple[tuple[date, int, int], MetricSelection]] = []
+    method_rank = {
+        "ttm_10q": 2,
+        "latest_10k_fallback": 1,
+    }
+
+    for index, concept in enumerate(concepts):
+        selection = _income_ttm_or_10k(rows_by_concept.get(concept) or [])
+        if selection.value is None:
+            continue
+        selection.concept = concept
+        score = (
+            selection.period_end or date.min,
+            method_rank.get(selection.method, 0),
+            -index,
+        )
+        candidates.append((score, selection))
+
+    if not candidates:
+        return MetricSelection(
+            value=None,
+            period_end=None,
+            points=[],
+            method="missing",
+            concept=None,
+        )
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
 
 
 def _is_non_zero(value: float | None) -> bool:
@@ -941,7 +981,7 @@ async def _fetch_ticker_packet(
     debt_selection = _select_sum_balance(rows_by_concept, DEBT_CONCEPTS)
     cash_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
     ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
-    revenue_selection = _select_first_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
+    revenue_selection = _select_best_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
     interest_result, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
         rows_by_concept,
         symbol,
