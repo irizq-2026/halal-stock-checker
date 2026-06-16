@@ -29,6 +29,9 @@ from data import (
 )
 from rules import screen_stock
 
+from sitemap_server import register_sitemap_route
+register_sitemap_route()
+
 st.set_page_config(
     page_title="Halal Stock Checker | iRizq",
     page_icon="📈",
