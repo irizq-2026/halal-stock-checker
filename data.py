@@ -44,10 +44,42 @@ def _to_float(value: Any) -> float | None:
     return out
 
 
+def _sum_present(values: list[float | None]) -> float | None:
+    present = [value for value in values if value is not None]
+    if not present:
+        return None
+    return sum(present)
+
+
+def _resolved_total_debt(source_metadata: dict[str, Any], fallback_total_debt: float | None) -> float | None:
+    components = source_metadata.get("components") if isinstance(source_metadata, dict) else None
+    debt = components.get("debt") if isinstance(components, dict) else None
+    if not isinstance(debt, dict):
+        return fallback_total_debt
+
+    commercial_paper = _to_float(debt.get("commercial_paper"))
+    short_term_notes = _to_float(debt.get("short_term_notes_pay"))
+    short_term_borrowings = _to_float(debt.get("short_term_borrowings"))
+    if short_term_borrowings is None:
+        short_term_borrowings = _sum_present([commercial_paper, short_term_notes])
+
+    current_long_term_debt = _to_float(debt.get("current_long_term_debt"))
+    noncurrent_debt = _to_float(debt.get("noncurrent_debt_obligations"))
+    long_term_borrowings = _to_float(debt.get("long_term_borrowings"))
+    if long_term_borrowings is None:
+        long_term_borrowings = _sum_present([current_long_term_debt, noncurrent_debt])
+
+    recomputed_total = _sum_present([short_term_borrowings, long_term_borrowings])
+    if recomputed_total is not None:
+        return recomputed_total
+    return fallback_total_debt
+
+
 def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any) -> dict[str, Any]:
     interest_income = _to_float(normalized.interest_income) or 0.0
     total_revenue = _to_float(normalized.total_revenue)
     source_metadata = normalized.source_metadata_json or {}
+    resolved_total_debt = _resolved_total_debt(source_metadata, _to_float(normalized.total_debt))
     ethical_insights = {}
     if isinstance(source_metadata.get("ethical_insights"), dict):
         ethical_insights = source_metadata.get("ethical_insights") or {}
@@ -60,7 +92,7 @@ def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any
         "sector": company.sector or "",
         "industry": company.industry or "",
         "market_cap": _to_float(normalized.market_cap),
-        "total_debt": _to_float(normalized.total_debt) or 0.0,
+        "total_debt": resolved_total_debt or 0.0,
         "cash": _to_float(normalized.cash_and_equivalents) or 0.0,
         "total_revenue": total_revenue,
         "interest_income": interest_income,
