@@ -1356,6 +1356,38 @@ def _main_issue(screening: dict) -> str:
     name, value, threshold = min(available, key=lambda item: abs(item[2] - item[1]))
     return f"{name} is closest to its {threshold * 100:.0f}% threshold at {value * 100:.1f}%."
 
+
+def _parse_optional_date(value: object) -> datetime.date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        for candidate in (raw, raw.replace("Z", "+00:00")):
+            try:
+                return datetime.datetime.fromisoformat(candidate).date()
+            except ValueError:
+                pass
+        if len(raw) >= 10:
+            try:
+                return datetime.date.fromisoformat(raw[:10])
+            except ValueError:
+                return None
+    return None
+
+
+def _quarter_label_for_date(value: datetime.date | None) -> str:
+    if value is None:
+        return "Latest filing"
+    quarter = ((value.month - 1) // 3) + 1
+    return f"Q{quarter} {value.year}"
+
+
 def _render_overview_tab(data: dict, screening: dict) -> None:
     symbol = html.escape(str(data.get("symbol", "N/A")))
     company = _company_name(data)
@@ -1365,14 +1397,18 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
-    # ── DATA FRESHNESS DATES — update these manually ──────────────────
-    # stock_last_updated:      update every Sunday after price download
-    # financial_last_updated:  update each quarter after SEC data download
-    # financial_quarter_label: e.g. "Q1 2025", "Q2 2025" etc.
-    # ──────────────────────────────────────────────────────────────────
-    stock_last_updated = datetime.date(2025, 6, 1)
-    financial_last_updated = datetime.date(2025, 3, 31)
-    financial_quarter_label = "Q1 2025"
+    source = data.get("_data_source", {}) if isinstance(data.get("_data_source"), dict) else {}
+    valuation_fallback = source.get("market_cap_fallback", {}) if isinstance(source.get("market_cap_fallback"), dict) else {}
+
+    stock_last_updated = (
+        _parse_optional_date(valuation_fallback.get("price_date"))
+        or _parse_optional_date(valuation_fallback.get("updated_at"))
+        or _parse_optional_date(source.get("last_updated"))
+    )
+    financial_filing_date = _parse_optional_date(source.get("filing_date"))
+    financial_last_updated = _parse_optional_date(source.get("last_updated")) or financial_filing_date
+    financial_quarter_label = _quarter_label_for_date(financial_filing_date)
+
     data_last_updated_html = """
     <div style="font-size: 13px; color: #888; line-height: 1.8;">
         <strong style="color: #888;">Data Last Updated</strong><br>
@@ -1384,8 +1420,12 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
         </span>
     </div>
     """.format(
-        stock_date=stock_last_updated.strftime("%B %d, %Y"),
-        financial_date=financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})",
+        stock_date=stock_last_updated.strftime("%B %d, %Y") if stock_last_updated else "Not available",
+        financial_date=(
+            financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})"
+            if financial_last_updated
+            else "Not available"
+        ),
     )
     st.markdown(f'''
         <div class="overview-card">
@@ -1656,6 +1696,14 @@ def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
         cash_and_equivalents = fallback_total
         marketable_debt_securities = 0.0
 
+    # If child rows are missing, infer a readable parent decomposition.
+    if cash_and_equivalents is not None and bank_cash is None and restricted_cash is None:
+        bank_cash = cash_and_equivalents
+        restricted_cash = 0.0
+    if marketable_debt_securities is not None and short_term_securities is None and long_term_bonds is None:
+        short_term_securities = marketable_debt_securities
+        long_term_bonds = 0.0
+
     return {
         "cash_and_equivalents": cash_and_equivalents,
         "marketable_debt_securities": marketable_debt_securities,
@@ -1730,7 +1778,20 @@ def _calculation_details_for_metric(
     # When detailed debt tags are missing, use the known total so users can
     # still see where the numerator value comes from.
     if short_term_borrowings is None and long_term_borrowings is None:
+        short_term_borrowings = 0.0
         long_term_borrowings = debt_total
+
+    commercial_paper = _calc_float(debt.get("commercial_paper"))
+    short_term_notes_pay = _calc_float(debt.get("short_term_notes_pay"))
+    current_long_term_debt = _calc_float(debt.get("current_long_term_debt"))
+    noncurrent_debt_obligations = _calc_float(debt.get("noncurrent_debt_obligations"))
+
+    if short_term_borrowings is not None and commercial_paper is None and short_term_notes_pay is None:
+        commercial_paper = short_term_borrowings
+        short_term_notes_pay = 0.0
+    if long_term_borrowings is not None and current_long_term_debt is None and noncurrent_debt_obligations is None:
+        current_long_term_debt = 0.0
+        noncurrent_debt_obligations = long_term_borrowings
 
     liquid_totals = _resolve_liquid_component_totals(data)
     cash_and_equivalents = liquid_totals["cash_and_equivalents"]
@@ -1750,6 +1811,12 @@ def _calculation_details_for_metric(
     if passive_yield is None:
         passive_yield = total_prohibited_revenue
 
+    non_operating_cash_interest = _calc_float(purging.get("non_operating_cash_interest"))
+    equity_investment_dividends = _calc_float(purging.get("equity_investment_dividends"))
+    if passive_yield is not None and non_operating_cash_interest is None and equity_investment_dividends is None:
+        non_operating_cash_interest = passive_yield
+        equity_investment_dividends = 0.0
+
     numerator_rows: list[dict[str, object]]
     denominator_rows: list[dict[str, object]]
     numerator_title = numerator_label
@@ -1761,11 +1828,11 @@ def _calculation_details_for_metric(
         numerator_rows = [
             {"label": "Total Borrowed Capital", "value": debt_total},
             {"label": "Short-Term Borrowings", "value": short_term_borrowings},
-            {"label": "Commercial Paper", "value": debt.get("commercial_paper"), "depth": 1},
-            {"label": "Short-Term Notes Pay", "value": debt.get("short_term_notes_pay"), "depth": 1},
+            {"label": "Commercial Paper", "value": commercial_paper, "depth": 1},
+            {"label": "Short-Term Notes Pay", "value": short_term_notes_pay, "depth": 1},
             {"label": "Long-Term Borrowings", "value": long_term_borrowings},
-            {"label": "Current Long-Term Debt", "value": debt.get("current_long_term_debt"), "depth": 1},
-            {"label": "Noncurrent Debt Obligations", "value": debt.get("noncurrent_debt_obligations"), "depth": 1},
+            {"label": "Current Long-Term Debt", "value": current_long_term_debt, "depth": 1},
+            {"label": "Noncurrent Debt Obligations", "value": noncurrent_debt_obligations, "depth": 1},
         ]
     elif metric == "cash":
         numerator_title = "Total Cash"
@@ -1786,8 +1853,8 @@ def _calculation_details_for_metric(
             {"label": "Total Annual Prohibited Revenue", "value": total_prohibited_revenue},
             {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
             {"label": "Passive Financial Yield", "value": passive_yield},
-            {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
-            {"label": "Equity Investment Dividends", "value": purging.get("equity_investment_dividends"), "depth": 1},
+            {"label": "Non-Operating Cash Interest", "value": non_operating_cash_interest, "depth": 1},
+            {"label": "Equity Investment Dividends", "value": equity_investment_dividends, "depth": 1},
         ]
         additional_details = purging.get("calculation_details")
         if isinstance(additional_details, list):
