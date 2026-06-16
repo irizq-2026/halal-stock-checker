@@ -1500,13 +1500,13 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
 def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, float | None]:
     if _is_core_interest_business(data):
         if metric == "debt":
-            return data.get("total_debt"), data.get("market_cap"), None
+            return _resolve_debt_component_totals(data)["total_borrowed_capital"], data.get("market_cap"), None
         if metric == "cash":
             return _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap"), None
         return data.get("interest_income"), data.get("total_revenue"), None
 
     if metric == "debt":
-        numerator, denominator = data.get("total_debt"), data.get("market_cap")
+        numerator, denominator = _resolve_debt_component_totals(data)["total_borrowed_capital"], data.get("market_cap")
     elif metric == "cash":
         numerator, denominator = _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap")
     else:
@@ -1660,6 +1660,38 @@ def _sum_present(values: list[float | None]) -> float | None:
     return sum(present)
 
 
+def _resolve_debt_component_totals(data: dict) -> dict[str, float | None]:
+    debt = _nested_component_map(data)["debt"]
+
+    commercial_paper = _calc_float(debt.get("commercial_paper"))
+    short_term_notes_pay = _calc_float(debt.get("short_term_notes_pay"))
+    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
+    if short_term_borrowings is None:
+        short_term_borrowings = _sum_present([commercial_paper, short_term_notes_pay])
+
+    current_long_term_debt = _calc_float(debt.get("current_long_term_debt"))
+    noncurrent_debt_obligations = _calc_float(debt.get("noncurrent_debt_obligations"))
+    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
+    if long_term_borrowings is None:
+        long_term_borrowings = _sum_present([current_long_term_debt, noncurrent_debt_obligations])
+
+    total_borrowed_capital = _sum_present([short_term_borrowings, long_term_borrowings])
+    if total_borrowed_capital is None:
+        total_borrowed_capital = _calc_float(debt.get("total_borrowed_capital"))
+    if total_borrowed_capital is None:
+        total_borrowed_capital = _calc_float(data.get("total_debt"))
+
+    return {
+        "total_borrowed_capital": total_borrowed_capital,
+        "short_term_borrowings": short_term_borrowings,
+        "commercial_paper": commercial_paper,
+        "short_term_notes_pay": short_term_notes_pay,
+        "long_term_borrowings": long_term_borrowings,
+        "current_long_term_debt": current_long_term_debt,
+        "noncurrent_debt_obligations": noncurrent_debt_obligations,
+    }
+
+
 def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
     liquid = _nested_component_map(data)["liquid_assets"]
 
@@ -1753,38 +1785,19 @@ def _calculation_details_for_metric(
     liquid = components["liquid_assets"]
     purging = components["purging"]
 
-    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
-    if short_term_borrowings is None:
-        short_term_borrowings = _sum_present(
-            [
-                _calc_float(debt.get("commercial_paper")),
-                _calc_float(debt.get("short_term_notes_pay")),
-            ]
-        )
-    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
-    if long_term_borrowings is None:
-        long_term_borrowings = _sum_present(
-            [
-                _calc_float(debt.get("current_long_term_debt")),
-                _calc_float(debt.get("noncurrent_debt_obligations")),
-            ]
-        )
+    debt_totals = _resolve_debt_component_totals(data)
+    short_term_borrowings = debt_totals["short_term_borrowings"]
+    long_term_borrowings = debt_totals["long_term_borrowings"]
+    debt_total = debt_totals["total_borrowed_capital"]
 
-    debt_total = _calc_float(debt.get("total_borrowed_capital"))
-    if debt_total is None:
-        debt_total = _calc_float(numerator)
-    if debt_total is None:
-        debt_total = _calc_float(data.get("total_debt"))
-    # When detailed debt tags are missing, use the known total so users can
-    # still see where the numerator value comes from.
     if short_term_borrowings is None and long_term_borrowings is None:
         short_term_borrowings = 0.0
         long_term_borrowings = debt_total
 
-    commercial_paper = _calc_float(debt.get("commercial_paper"))
-    short_term_notes_pay = _calc_float(debt.get("short_term_notes_pay"))
-    current_long_term_debt = _calc_float(debt.get("current_long_term_debt"))
-    noncurrent_debt_obligations = _calc_float(debt.get("noncurrent_debt_obligations"))
+    commercial_paper = debt_totals["commercial_paper"]
+    short_term_notes_pay = debt_totals["short_term_notes_pay"]
+    current_long_term_debt = debt_totals["current_long_term_debt"]
+    noncurrent_debt_obligations = debt_totals["noncurrent_debt_obligations"]
 
     if short_term_borrowings is not None and commercial_paper is None and short_term_notes_pay is None:
         commercial_paper = short_term_borrowings
