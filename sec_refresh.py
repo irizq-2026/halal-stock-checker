@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -655,7 +655,28 @@ def _select_interest_income_with_fallback(
     fallback_disclaimer: str | None = None
 
     primary_selection = _income_ttm_or_10k(primary_rows)
-    if _is_non_zero(primary_selection.value):
+    freshest_interest_period = max(
+        [
+            selection.period_end
+            for selection in (
+                primary_selection,
+                _income_ttm_or_10k(bundled_rows),
+                _income_ttm_or_10k(upper_rows),
+                _income_ttm_or_10k(rows_by_concept.get("InterestAndDividendIncomeOperating") or []),
+                _income_ttm_or_10k(rows_by_concept.get("InterestIncomeOperating") or []),
+            )
+            if selection.period_end is not None and _is_non_zero(selection.value)
+        ],
+        default=None,
+    )
+    primary_is_stale = (
+        freshest_interest_period is not None
+        and primary_selection.period_end is not None
+        # If the dedicated interest tag lags well behind fresher bundled tags,
+        # treat it as stale metadata and allow fallback logic to use fresh data.
+        and (freshest_interest_period - primary_selection.period_end) > timedelta(days=550)
+    )
+    if _is_non_zero(primary_selection.value) and not primary_is_stale:
         primary_selection.concept = INTEREST_PRIMARY_CONCEPT
         for point in primary_selection.points:
             _log_ratio3_source(ticker, point, INTEREST_PRIMARY_CONCEPT)
