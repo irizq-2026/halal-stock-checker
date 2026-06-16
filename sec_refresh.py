@@ -238,6 +238,7 @@ class TickerEdgarPacket:
     interest_income_fallback_step: str | None
     interest_income_disclaimer: str | None
     interest_income_calculation_details: list[dict[str, Any]]
+    interest_income_points: list[ConceptPoint]
     balance_sheet_date: date | None
     income_statement_date: date | None
     primary_filing_type: str
@@ -424,10 +425,23 @@ class AsyncEdgarClient:
 
 def _dedupe_quarter_rows(rows: list[ConceptPoint]) -> list[ConceptPoint]:
     best_by_end: dict[date, ConceptPoint] = {}
+
+    def _quarter_frame_rank(point: ConceptPoint) -> int:
+        frame = (point.frame or "").upper()
+        # Prefer explicit quarter frames (e.g. CY2025Q3) over frame-less/ytd rows.
+        return 1 if "Q" in frame else 0
+
     for row in rows:
         previous = best_by_end.get(row.end)
         if previous is None:
             best_by_end[row.end] = row
+            continue
+        prev_rank = _quarter_frame_rank(previous)
+        curr_rank = _quarter_frame_rank(row)
+        if curr_rank > prev_rank:
+            best_by_end[row.end] = row
+            continue
+        if curr_rank < prev_rank:
             continue
         prev_filed = previous.filed or date.min
         curr_filed = row.filed or date.min
@@ -511,17 +525,52 @@ def _income_ttm_or_10k(rows: list[ConceptPoint]) -> MetricSelection:
     )
 
 
-def _select_first_balance(rows_by_concept: dict[str, list[ConceptPoint]], concepts: tuple[str, ...]) -> MetricSelection:
-    for concept in concepts:
-        point = _latest_10k(rows_by_concept.get(concept) or [])
-        if point is not None:
+def _select_first_balance(
+    rows_by_concept: dict[str, list[ConceptPoint]],
+    concepts: tuple[str, ...],
+    *,
+    reference_period: date | None = None,
+    max_staleness_days: int = 550,
+) -> MetricSelection:
+    candidates: list[tuple[tuple[date, date, int], ConceptPoint, str]] = []
+    for index, concept in enumerate(concepts):
+        points = [
+            row
+            for row in (rows_by_concept.get(concept) or [])
+            if row.form.startswith("10-Q") or row.form.startswith("10-K")
+        ]
+        if not points:
+            continue
+        points.sort(key=lambda row: (row.end, row.filed or date.min), reverse=True)
+        point = points[0]
+        score = (
+            point.end,
+            point.filed or date.min,
+            -index,
+        )
+        candidates.append((score, point, concept))
+
+    if candidates:
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        _, point, concept = candidates[0]
+        if (
+            reference_period is not None
+            and (reference_period - point.end) > timedelta(days=max_staleness_days)
+        ):
             return MetricSelection(
-                value=point.value,
-                period_end=point.end,
-                points=[point],
-                method="latest_10k_first_match",
-                concept=concept,
+                value=None,
+                period_end=None,
+                points=[],
+                method="stale_older_than_reference",
+                concept=None,
             )
+        return MetricSelection(
+            value=point.value,
+            period_end=point.end,
+            points=[point],
+            method="latest_supported_first_match",
+            concept=concept,
+        )
     return MetricSelection(
         value=None,
         period_end=None,
@@ -531,12 +580,57 @@ def _select_first_balance(rows_by_concept: dict[str, list[ConceptPoint]], concep
     )
 
 
-def _select_sum_balance(rows_by_concept: dict[str, list[ConceptPoint]], concepts: tuple[str, ...]) -> MetricSelection:
+def _select_sum_balance(
+    rows_by_concept: dict[str, list[ConceptPoint]],
+    concepts: tuple[str, ...],
+    *,
+    reference_period: date | None = None,
+    max_staleness_days: int = 550,
+) -> MetricSelection:
+    by_concept: dict[str, list[ConceptPoint]] = {}
+    for concept in concepts:
+        supported = [
+            row
+            for row in (rows_by_concept.get(concept) or [])
+            if row.form.startswith("10-Q") or row.form.startswith("10-K")
+        ]
+        if supported:
+            by_concept[concept] = supported
+
+    if not by_concept:
+        return MetricSelection(
+            value=None,
+            period_end=None,
+            points=[],
+            method="missing",
+            concept=None,
+        )
+
+    latest_period = max(
+        row.end
+        for rows in by_concept.values()
+        for row in rows
+    )
+    if (
+        reference_period is not None
+        and (reference_period - latest_period) > timedelta(days=max_staleness_days)
+    ):
+        return MetricSelection(
+            value=None,
+            period_end=None,
+            points=[],
+            method="stale_older_than_reference",
+            concept=None,
+        )
+
     selected_points: list[ConceptPoint] = []
     for concept in concepts:
-        point = _latest_10k(rows_by_concept.get(concept) or [])
-        if point is not None:
-            selected_points.append(point)
+        rows = by_concept.get(concept) or []
+        same_period = [row for row in rows if row.end == latest_period]
+        if not same_period:
+            continue
+        same_period.sort(key=lambda row: (row.filed or date.min), reverse=True)
+        selected_points.append(same_period[0])
 
     if not selected_points:
         return MetricSelection(
@@ -547,12 +641,11 @@ def _select_sum_balance(rows_by_concept: dict[str, list[ConceptPoint]], concepts
             concept=None,
         )
 
-    period_end = max(point.end for point in selected_points)
     return MetricSelection(
         value=sum(point.value for point in selected_points),
-        period_end=period_end,
+        period_end=latest_period,
         points=selected_points,
-        method="sum_latest_10k",
+        method="sum_latest_supported_period",
         concept=None,
     )
 
@@ -939,6 +1032,7 @@ async def _fetch_ticker_packet(
             interest_income_fallback_step=None,
             interest_income_disclaimer=None,
             interest_income_calculation_details=[],
+            interest_income_points=[],
             balance_sheet_date=None,
             income_statement_date=None,
             primary_filing_type=PLACEHOLDER_FILING_TYPE,
@@ -1031,20 +1125,46 @@ async def _fetch_ticker_packet(
     non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
     dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
 
-    commercial_paper_selection = _select_first_balance(rows_by_concept, ("CommercialPaper",))
+    commercial_paper_selection = _select_first_balance(
+        rows_by_concept,
+        ("CommercialPaper",),
+        reference_period=debt_selection.period_end,
+    )
     short_term_notes_selection = _select_first_balance(
         rows_by_concept,
         ("ShortTermBorrowings",) + SHORT_TERM_NOTES_PAY_CONCEPTS,
+        reference_period=debt_selection.period_end,
     )
-    current_long_term_debt_selection = _select_first_balance(rows_by_concept, ("LongTermDebtCurrent",))
-    noncurrent_debt_selection = _select_first_balance(rows_by_concept, ("LongTermDebt",))
-    bank_cash_selection = _select_first_balance(rows_by_concept, ("CashAndCashEquivalentsAtCarryingValue",))
-    restricted_cash_selection = _select_sum_balance(rows_by_concept, RESTRICTED_CASH_CONCEPTS)
+    current_long_term_debt_selection = _select_first_balance(
+        rows_by_concept,
+        ("LongTermDebtCurrent",),
+        reference_period=debt_selection.period_end,
+    )
+    noncurrent_debt_selection = _select_first_balance(
+        rows_by_concept,
+        ("LongTermDebt",),
+        reference_period=debt_selection.period_end,
+    )
+    bank_cash_selection = _select_first_balance(
+        rows_by_concept,
+        ("CashAndCashEquivalentsAtCarryingValue",),
+        reference_period=cash_selection.period_end,
+    )
+    restricted_cash_selection = _select_sum_balance(
+        rows_by_concept,
+        RESTRICTED_CASH_CONCEPTS,
+        reference_period=cash_selection.period_end,
+    )
     short_term_securities_selection = _select_sum_balance(
         rows_by_concept,
         ("ShortTermInvestments", "MarketableSecuritiesCurrent"),
+        reference_period=cash_selection.period_end,
     )
-    long_term_bonds_selection = _select_sum_balance(rows_by_concept, LONG_TERM_SECURITIES_CONCEPTS)
+    long_term_bonds_selection = _select_sum_balance(
+        rows_by_concept,
+        LONG_TERM_SECURITIES_CONCEPTS,
+        reference_period=cash_selection.period_end,
+    )
 
     selected_points = (
         debt_selection.points
@@ -1140,6 +1260,7 @@ async def _fetch_ticker_packet(
         interest_income_fallback_step=interest_fallback_step,
         interest_income_disclaimer=interest_disclaimer,
         interest_income_calculation_details=interest_calculation_details,
+        interest_income_points=interest_selection.points,
         balance_sheet_date=balance_sheet_date,
         income_statement_date=income_statement_date,
         primary_filing_type=primary_form,
@@ -1322,15 +1443,14 @@ class SecRefreshService:
             "interest_income": {
                 "tag": packet.interest_income_source,
                 "method": packet.interest_income_method,
-                "periods": [point.end.isoformat() for point in packet.points if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}],
-                "forms": [point.form for point in packet.points if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}],
+                "periods": [point.end.isoformat() for point in packet.interest_income_points],
+                "forms": [point.form for point in packet.interest_income_points],
                 "fallback_step": packet.interest_income_fallback_step,
                 "fallback_disclaimer": packet.interest_income_disclaimer,
                 "calculationDetails": packet.interest_income_calculation_details,
                 "selected_tags_by_period": [
                     {"period": point.end.isoformat(), "tag": point.concept}
-                    for point in packet.points
-                    if point.concept in {INTEREST_PRIMARY_CONCEPT, INTEREST_BUNDLED_CONCEPT, INTEREST_UPPER_BOUNDARY_CONCEPT}
+                    for point in packet.interest_income_points
                 ],
             },
             "updated_at": datetime.now(UTC).isoformat(),
