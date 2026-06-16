@@ -2846,6 +2846,36 @@ def _searchbox_local_stock_options(search_query: str) -> list[tuple[str, str]]:
     ]
 
 
+def _stock_searchbox_pending(selected_value: str) -> bool:
+    searchbox_state = st.session_state.get("stock_searchbox")
+    if not isinstance(searchbox_state, dict):
+        return False
+    active_search = str(searchbox_state.get("search") or "").strip()
+    return bool(active_search) and not bool(selected_value.strip())
+
+
+def _render_stock_searchbox_safe() -> str:
+    try:
+        selected = st_searchbox(
+            search_function=_searchbox_local_stock_options,
+            label="Search by Ticker or Company Name:",
+            placeholder="e.g. AAPL or Apple Inc.",
+            key="stock_searchbox",
+            clear_on_submit=False,
+            debounce=300,
+        )
+        st.session_state.stock_searchbox_recovery_count = 0
+        return str(selected or "").strip()
+    except (KeyError, IndexError, TypeError):
+        attempts = int(st.session_state.get("stock_searchbox_recovery_count", 0))
+        st.session_state.stock_searchbox_recovery_count = attempts + 1
+        st.session_state.pop("stock_searchbox", None)
+        if attempts < 2:
+            st.rerun()
+        st.warning("Search is syncing. Please select the ticker again.")
+        return ""
+
+
 def _sync_autocomplete_state(raw_query: str) -> None:
     query = (raw_query or "").strip()
     if not query:
@@ -2936,6 +2966,7 @@ def initialize_session_state() -> None:
         "analytics_visit_tracked": False,
         "analytics_table_ready": False,
         "analytics_error": "",
+        "stock_searchbox_recovery_count": 0,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -3461,26 +3492,26 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    selected = st_searchbox(
-        search_function=_searchbox_local_stock_options,
-        label="Search by Ticker or Company Name:",
-        placeholder="e.g. AAPL or Apple Inc.",
-        key="stock_searchbox",
-        clear_on_submit=False,
-        debounce=300,
-    )
+    search_query = _render_stock_searchbox_safe()
     st.markdown(
         "<p style='font-size: 12px; color: #888; margin-top: -10px;'>"
         "Screens US-listed stocks only. ETFs, index funds, and foreign "
         "stocks are not supported.</p>",
         unsafe_allow_html=True
     )
-    search_query = str(selected or "").strip()
-    if selected:
+    if search_query:
         st.session_state.resolved_ticker = search_query
     st.session_state.ticker_input = search_query
+    search_pending = _stock_searchbox_pending(search_query)
 
-    check_clicked = st.button("Check Status", type="primary", use_container_width=True)
+    check_clicked = st.button(
+        "Check Status",
+        type="primary",
+        use_container_width=True,
+        disabled=search_pending,
+    )
+    if search_pending:
+        st.caption("Finishing search selection...")
 
     if check_clicked:
         st.session_state.is_dropdown_open = False
