@@ -1678,6 +1678,59 @@ def _sum_present(values: list[float | None]) -> float | None:
     return sum(present)
 
 
+def _normalize_near_zero(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return 0.0 if abs(value) < 0.005 else value
+
+
+def _reconcile_two_child_rollup(
+    parent: float | None,
+    first_child: float | None,
+    second_child: float | None,
+) -> tuple[float | None, float | None, float | None]:
+    """
+    Keep a parent rollup and two child rows numerically consistent.
+
+    - If parent exists, infer missing children as residuals.
+    - If all values exist but don't add up, adjust the smaller child to residual.
+    - If parent is missing, derive it from available children.
+    """
+    parent_value = _calc_float(parent)
+    first_value = _calc_float(first_child)
+    second_value = _calc_float(second_child)
+
+    if parent_value is None:
+        parent_value = _sum_present([first_value, second_value])
+        return (
+            _normalize_near_zero(parent_value),
+            _normalize_near_zero(first_value),
+            _normalize_near_zero(second_value),
+        )
+
+    if first_value is None and second_value is None:
+        first_value = parent_value
+        second_value = 0.0
+    elif first_value is None:
+        first_value = parent_value - (second_value or 0.0)
+    elif second_value is None:
+        second_value = parent_value - (first_value or 0.0)
+    else:
+        child_total = first_value + second_value
+        tolerance = max(0.01, abs(parent_value) * 1e-9)
+        if abs(child_total - parent_value) > tolerance:
+            if abs(first_value) >= abs(second_value):
+                second_value = parent_value - first_value
+            else:
+                first_value = parent_value - second_value
+
+    return (
+        _normalize_near_zero(parent_value),
+        _normalize_near_zero(first_value),
+        _normalize_near_zero(second_value),
+    )
+
+
 def _resolve_debt_component_totals(data: dict) -> dict[str, float | None]:
     debt = _nested_component_map(data)["debt"]
 
@@ -1686,18 +1739,43 @@ def _resolve_debt_component_totals(data: dict) -> dict[str, float | None]:
     short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
     if short_term_borrowings is None:
         short_term_borrowings = _sum_present([commercial_paper, short_term_notes_pay])
+    short_term_borrowings, commercial_paper, short_term_notes_pay = _reconcile_two_child_rollup(
+        short_term_borrowings,
+        commercial_paper,
+        short_term_notes_pay,
+    )
 
     current_long_term_debt = _calc_float(debt.get("current_long_term_debt"))
     noncurrent_debt_obligations = _calc_float(debt.get("noncurrent_debt_obligations"))
     long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
     if long_term_borrowings is None:
         long_term_borrowings = _sum_present([current_long_term_debt, noncurrent_debt_obligations])
+    long_term_borrowings, current_long_term_debt, noncurrent_debt_obligations = _reconcile_two_child_rollup(
+        long_term_borrowings,
+        current_long_term_debt,
+        noncurrent_debt_obligations,
+    )
 
     total_borrowed_capital = _sum_present([short_term_borrowings, long_term_borrowings])
     if total_borrowed_capital is None:
         total_borrowed_capital = _calc_float(debt.get("total_borrowed_capital"))
     if total_borrowed_capital is None:
         total_borrowed_capital = _calc_float(data.get("total_debt"))
+    total_borrowed_capital, short_term_borrowings, long_term_borrowings = _reconcile_two_child_rollup(
+        total_borrowed_capital,
+        short_term_borrowings,
+        long_term_borrowings,
+    )
+    short_term_borrowings, commercial_paper, short_term_notes_pay = _reconcile_two_child_rollup(
+        short_term_borrowings,
+        commercial_paper,
+        short_term_notes_pay,
+    )
+    long_term_borrowings, current_long_term_debt, noncurrent_debt_obligations = _reconcile_two_child_rollup(
+        long_term_borrowings,
+        current_long_term_debt,
+        noncurrent_debt_obligations,
+    )
 
     return {
         "total_borrowed_capital": total_borrowed_capital,
@@ -1736,23 +1814,31 @@ def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
     if total_interest_earning_pools is None:
         total_interest_earning_pools = fallback_total
 
-    # If no detailed cash/securities components exist, keep the full total
-    # visible under the first parent bucket instead of showing all zeros/N/A.
-    if (
-        fallback_total is not None
-        and cash_and_equivalents is None
-        and marketable_debt_securities is None
-    ):
-        cash_and_equivalents = fallback_total
-        marketable_debt_securities = 0.0
-
-    # If child rows are missing, infer a readable parent decomposition.
-    if cash_and_equivalents is not None and bank_cash is None and restricted_cash is None:
-        bank_cash = cash_and_equivalents
-        restricted_cash = 0.0
-    if marketable_debt_securities is not None and short_term_securities is None and long_term_bonds is None:
-        short_term_securities = marketable_debt_securities
-        long_term_bonds = 0.0
+    cash_and_equivalents, bank_cash, restricted_cash = _reconcile_two_child_rollup(
+        cash_and_equivalents,
+        bank_cash,
+        restricted_cash,
+    )
+    marketable_debt_securities, short_term_securities, long_term_bonds = _reconcile_two_child_rollup(
+        marketable_debt_securities,
+        short_term_securities,
+        long_term_bonds,
+    )
+    total_interest_earning_pools, cash_and_equivalents, marketable_debt_securities = _reconcile_two_child_rollup(
+        total_interest_earning_pools,
+        cash_and_equivalents,
+        marketable_debt_securities,
+    )
+    cash_and_equivalents, bank_cash, restricted_cash = _reconcile_two_child_rollup(
+        cash_and_equivalents,
+        bank_cash,
+        restricted_cash,
+    )
+    marketable_debt_securities, short_term_securities, long_term_bonds = _reconcile_two_child_rollup(
+        marketable_debt_securities,
+        short_term_securities,
+        long_term_bonds,
+    )
 
     return {
         "cash_and_equivalents": cash_and_equivalents,
@@ -1858,14 +1944,25 @@ def _calculation_details_for_metric(
 
     non_operating_cash_interest = _calc_float(purging.get("non_operating_cash_interest"))
     equity_investment_dividends = _calc_float(purging.get("equity_investment_dividends"))
-    if (
-        not valid_additional_details
-        and passive_yield is not None
-        and non_operating_cash_interest is None
-        and equity_investment_dividends is None
-    ):
-        non_operating_cash_interest = passive_yield
-        equity_investment_dividends = 0.0
+    if valid_additional_details:
+        details_total = _sum_present([_calc_float(row.get("value")) for row in valid_additional_details])
+        if details_total is not None:
+            passive_yield = details_total
+    else:
+        passive_yield, non_operating_cash_interest, equity_investment_dividends = _reconcile_two_child_rollup(
+            passive_yield,
+            non_operating_cash_interest,
+            equity_investment_dividends,
+        )
+
+    core_prohibited_operations = _calc_float(purging.get("core_prohibited_operations"))
+    if core_prohibited_operations is None:
+        core_prohibited_operations = 0.0
+    total_prohibited_revenue, core_prohibited_operations, passive_yield = _reconcile_two_child_rollup(
+        total_prohibited_revenue,
+        core_prohibited_operations,
+        passive_yield,
+    )
 
     numerator_rows: list[dict[str, object]]
     denominator_rows: list[dict[str, object]]
@@ -1901,7 +1998,7 @@ def _calculation_details_for_metric(
         denominator_title = "Total Revenue"
         numerator_rows = [
             {"label": "Total Annual Prohibited Revenue", "value": total_prohibited_revenue},
-            {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
+            {"label": "Core Prohibited Operations", "value": core_prohibited_operations},
             {"label": "Passive Financial Yield", "value": passive_yield},
         ]
         if valid_additional_details:
