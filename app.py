@@ -29,6 +29,24 @@ from data import (
 )
 from rules import screen_stock
 
+st.set_page_config(
+    page_title="Halal Stock Checker | iRizq",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <head>
+        <meta name="description" content="Check if a stock is Halal. Screen 9,000+ US stocks against Islamic finance principles using SEC EDGAR data.">
+        <meta name="keywords" content="halal stocks, islamic investing, halal stock screener, halal investing, shariah compliant stocks">
+        <link rel="canonical" href="https://stocks.irizq.com">
+    </head>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_stock_data_cached(symbol: str):
@@ -3319,12 +3337,6 @@ def _render_streamlit_admin_page() -> None:
     st.dataframe(last_events, use_container_width=True)
 
 def main() -> None:
-    st.set_page_config(
-        page_title="Halal Stock Checker | iRizq",
-        page_icon="static/icon.png",
-        layout="centered",
-    )
-
     initialize_session_state()
     inject_head_and_styles()
     _ensure_analytics_table_once()
