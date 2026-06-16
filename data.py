@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -75,6 +76,52 @@ def _resolved_total_debt(source_metadata: dict[str, Any], fallback_total_debt: f
     return fallback_total_debt
 
 
+def _load_ethical_flags_from_tables(session: Session, ticker: str) -> dict[str, object]:
+    """
+    Fallback ethical flags sourced directly from canonical ethical tables.
+
+    This keeps UI flags accurate even when SEC refresh rewrites metadata rows
+    without preserving embedded ethical_insights blocks.
+    """
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT
+                    EXISTS (
+                        SELECT 1 FROM ethical_bds b
+                        WHERE b.ticker_symbol = :ticker AND b.listed = TRUE
+                    ) AS official_bds,
+                    EXISTS (
+                        SELECT 1 FROM ethical_afsc a
+                        WHERE a.ticker_symbol = :ticker AND a.listed = TRUE
+                    ) AS afsc,
+                    EXISTS (
+                        SELECT 1 FROM ethical_un_ohchr u
+                        WHERE u.ticker_symbol = :ticker AND u.listed = TRUE
+                    ) AS un_ohchr,
+                    EXISTS (
+                        SELECT 1 FROM ethical_who_profits w
+                        WHERE w.ticker_symbol = :ticker AND w.listed = TRUE
+                    ) AS who_profits
+                """
+            ),
+            {"ticker": ticker},
+        )
+        .mappings()
+        .first()
+    )
+    if not row:
+        return {}
+    return {
+        "official_bds": bool(row.get("official_bds")),
+        "afsc": bool(row.get("afsc")),
+        "un_ohchr": bool(row.get("un_ohchr")),
+        "who_profits": bool(row.get("who_profits")),
+        "sources_reviewed": 4,
+    }
+
+
 def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any) -> dict[str, Any]:
     interest_income = _to_float(normalized.interest_income) or 0.0
     total_revenue = _to_float(normalized.total_revenue)
@@ -129,6 +176,14 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
                 f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
             )
         payload = _build_stock_payload(company, filing, normalized, result)
+        table_ethical = _load_ethical_flags_from_tables(session, normalized_symbol)
+        if table_ethical:
+            merged_ethical = dict(payload.get("ethical_insights") or {})
+            for key in ("official_bds", "afsc", "un_ohchr", "who_profits"):
+                merged_ethical[key] = bool(merged_ethical.get(key)) or bool(table_ethical.get(key))
+            if "sources_reviewed" not in merged_ethical:
+                merged_ethical["sources_reviewed"] = table_ethical.get("sources_reviewed")
+            payload["ethical_insights"] = merged_ethical
         latest_price_row = get_cached_or_refresh_price_row(normalized_symbol)
         if latest_price_row:
             close_price = _to_float(latest_price_row.get("close_price"))
