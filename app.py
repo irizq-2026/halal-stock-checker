@@ -1356,6 +1356,38 @@ def _main_issue(screening: dict) -> str:
     name, value, threshold = min(available, key=lambda item: abs(item[2] - item[1]))
     return f"{name} is closest to its {threshold * 100:.0f}% threshold at {value * 100:.1f}%."
 
+
+def _parse_optional_date(value: object) -> datetime.date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        for candidate in (raw, raw.replace("Z", "+00:00")):
+            try:
+                return datetime.datetime.fromisoformat(candidate).date()
+            except ValueError:
+                pass
+        if len(raw) >= 10:
+            try:
+                return datetime.date.fromisoformat(raw[:10])
+            except ValueError:
+                return None
+    return None
+
+
+def _quarter_label_for_date(value: datetime.date | None) -> str:
+    if value is None:
+        return "Latest filing"
+    quarter = ((value.month - 1) // 3) + 1
+    return f"Q{quarter} {value.year}"
+
+
 def _render_overview_tab(data: dict, screening: dict) -> None:
     symbol = html.escape(str(data.get("symbol", "N/A")))
     company = _company_name(data)
@@ -1365,14 +1397,18 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
-    # ── DATA FRESHNESS DATES — update these manually ──────────────────
-    # stock_last_updated:      update every Sunday after price download
-    # financial_last_updated:  update each quarter after SEC data download
-    # financial_quarter_label: e.g. "Q1 2025", "Q2 2025" etc.
-    # ──────────────────────────────────────────────────────────────────
-    stock_last_updated = datetime.date(2025, 6, 1)
-    financial_last_updated = datetime.date(2025, 3, 31)
-    financial_quarter_label = "Q1 2025"
+    source = data.get("_data_source", {}) if isinstance(data.get("_data_source"), dict) else {}
+    valuation_fallback = source.get("market_cap_fallback", {}) if isinstance(source.get("market_cap_fallback"), dict) else {}
+
+    stock_last_updated = (
+        _parse_optional_date(valuation_fallback.get("price_date"))
+        or _parse_optional_date(valuation_fallback.get("updated_at"))
+        or _parse_optional_date(source.get("last_updated"))
+    )
+    financial_filing_date = _parse_optional_date(source.get("filing_date"))
+    financial_last_updated = _parse_optional_date(source.get("last_updated")) or financial_filing_date
+    financial_quarter_label = _quarter_label_for_date(financial_filing_date)
+
     data_last_updated_html = """
     <div style="font-size: 13px; color: #888; line-height: 1.8;">
         <strong style="color: #888;">Data Last Updated</strong><br>
@@ -1384,8 +1420,12 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
         </span>
     </div>
     """.format(
-        stock_date=stock_last_updated.strftime("%B %d, %Y"),
-        financial_date=financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})",
+        stock_date=stock_last_updated.strftime("%B %d, %Y") if stock_last_updated else "Not available",
+        financial_date=(
+            financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})"
+            if financial_last_updated
+            else "Not available"
+        ),
     )
     st.markdown(f'''
         <div class="overview-card">
