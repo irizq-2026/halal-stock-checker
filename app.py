@@ -1356,6 +1356,38 @@ def _main_issue(screening: dict) -> str:
     name, value, threshold = min(available, key=lambda item: abs(item[2] - item[1]))
     return f"{name} is closest to its {threshold * 100:.0f}% threshold at {value * 100:.1f}%."
 
+
+def _parse_optional_date(value: object) -> datetime.date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        for candidate in (raw, raw.replace("Z", "+00:00")):
+            try:
+                return datetime.datetime.fromisoformat(candidate).date()
+            except ValueError:
+                pass
+        if len(raw) >= 10:
+            try:
+                return datetime.date.fromisoformat(raw[:10])
+            except ValueError:
+                return None
+    return None
+
+
+def _quarter_label_for_date(value: datetime.date | None) -> str:
+    if value is None:
+        return "Latest filing"
+    quarter = ((value.month - 1) // 3) + 1
+    return f"Q{quarter} {value.year}"
+
+
 def _render_overview_tab(data: dict, screening: dict) -> None:
     symbol = html.escape(str(data.get("symbol", "N/A")))
     company = _company_name(data)
@@ -1365,14 +1397,18 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     result = _display_result(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
-    # ── DATA FRESHNESS DATES — update these manually ──────────────────
-    # stock_last_updated:      update every Sunday after price download
-    # financial_last_updated:  update each quarter after SEC data download
-    # financial_quarter_label: e.g. "Q1 2025", "Q2 2025" etc.
-    # ──────────────────────────────────────────────────────────────────
-    stock_last_updated = datetime.date(2025, 6, 1)
-    financial_last_updated = datetime.date(2025, 3, 31)
-    financial_quarter_label = "Q1 2025"
+    source = data.get("_data_source", {}) if isinstance(data.get("_data_source"), dict) else {}
+    valuation_fallback = source.get("market_cap_fallback", {}) if isinstance(source.get("market_cap_fallback"), dict) else {}
+
+    stock_last_updated = (
+        _parse_optional_date(valuation_fallback.get("price_date"))
+        or _parse_optional_date(valuation_fallback.get("updated_at"))
+        or _parse_optional_date(source.get("last_updated"))
+    )
+    financial_filing_date = _parse_optional_date(source.get("filing_date"))
+    financial_last_updated = _parse_optional_date(source.get("last_updated")) or financial_filing_date
+    financial_quarter_label = _quarter_label_for_date(financial_filing_date)
+
     data_last_updated_html = """
     <div style="font-size: 13px; color: #888; line-height: 1.8;">
         <strong style="color: #888;">Data Last Updated</strong><br>
@@ -1384,8 +1420,12 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
         </span>
     </div>
     """.format(
-        stock_date=stock_last_updated.strftime("%B %d, %Y"),
-        financial_date=financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})",
+        stock_date=stock_last_updated.strftime("%B %d, %Y") if stock_last_updated else "Not available",
+        financial_date=(
+            financial_last_updated.strftime("%B %d, %Y") + f" ({financial_quarter_label})"
+            if financial_last_updated
+            else "Not available"
+        ),
     )
     st.markdown(f'''
         <div class="overview-card">
@@ -1460,13 +1500,13 @@ def _render_at_a_glance(data: dict, screening: dict) -> None:
 def _metric_data(data: dict, metric: str) -> tuple[float | None, float | None, float | None]:
     if _is_core_interest_business(data):
         if metric == "debt":
-            return data.get("total_debt"), data.get("market_cap"), None
+            return _resolve_debt_component_totals(data)["total_borrowed_capital"], data.get("market_cap"), None
         if metric == "cash":
             return _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap"), None
         return data.get("interest_income"), data.get("total_revenue"), None
 
     if metric == "debt":
-        numerator, denominator = data.get("total_debt"), data.get("market_cap")
+        numerator, denominator = _resolve_debt_component_totals(data)["total_borrowed_capital"], data.get("market_cap")
     elif metric == "cash":
         numerator, denominator = _resolve_liquid_component_totals(data)["total_interest_earning_pools"], data.get("market_cap")
     else:
@@ -1620,6 +1660,38 @@ def _sum_present(values: list[float | None]) -> float | None:
     return sum(present)
 
 
+def _resolve_debt_component_totals(data: dict) -> dict[str, float | None]:
+    debt = _nested_component_map(data)["debt"]
+
+    commercial_paper = _calc_float(debt.get("commercial_paper"))
+    short_term_notes_pay = _calc_float(debt.get("short_term_notes_pay"))
+    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
+    if short_term_borrowings is None:
+        short_term_borrowings = _sum_present([commercial_paper, short_term_notes_pay])
+
+    current_long_term_debt = _calc_float(debt.get("current_long_term_debt"))
+    noncurrent_debt_obligations = _calc_float(debt.get("noncurrent_debt_obligations"))
+    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
+    if long_term_borrowings is None:
+        long_term_borrowings = _sum_present([current_long_term_debt, noncurrent_debt_obligations])
+
+    total_borrowed_capital = _sum_present([short_term_borrowings, long_term_borrowings])
+    if total_borrowed_capital is None:
+        total_borrowed_capital = _calc_float(debt.get("total_borrowed_capital"))
+    if total_borrowed_capital is None:
+        total_borrowed_capital = _calc_float(data.get("total_debt"))
+
+    return {
+        "total_borrowed_capital": total_borrowed_capital,
+        "short_term_borrowings": short_term_borrowings,
+        "commercial_paper": commercial_paper,
+        "short_term_notes_pay": short_term_notes_pay,
+        "long_term_borrowings": long_term_borrowings,
+        "current_long_term_debt": current_long_term_debt,
+        "noncurrent_debt_obligations": noncurrent_debt_obligations,
+    }
+
+
 def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
     liquid = _nested_component_map(data)["liquid_assets"]
 
@@ -1655,6 +1727,14 @@ def _resolve_liquid_component_totals(data: dict) -> dict[str, float | None]:
     ):
         cash_and_equivalents = fallback_total
         marketable_debt_securities = 0.0
+
+    # If child rows are missing, infer a readable parent decomposition.
+    if cash_and_equivalents is not None and bank_cash is None and restricted_cash is None:
+        bank_cash = cash_and_equivalents
+        restricted_cash = 0.0
+    if marketable_debt_securities is not None and short_term_securities is None and long_term_bonds is None:
+        short_term_securities = marketable_debt_securities
+        long_term_bonds = 0.0
 
     return {
         "cash_and_equivalents": cash_and_equivalents,
@@ -1705,32 +1785,26 @@ def _calculation_details_for_metric(
     liquid = components["liquid_assets"]
     purging = components["purging"]
 
-    short_term_borrowings = _calc_float(debt.get("short_term_borrowings"))
-    if short_term_borrowings is None:
-        short_term_borrowings = _sum_present(
-            [
-                _calc_float(debt.get("commercial_paper")),
-                _calc_float(debt.get("short_term_notes_pay")),
-            ]
-        )
-    long_term_borrowings = _calc_float(debt.get("long_term_borrowings"))
-    if long_term_borrowings is None:
-        long_term_borrowings = _sum_present(
-            [
-                _calc_float(debt.get("current_long_term_debt")),
-                _calc_float(debt.get("noncurrent_debt_obligations")),
-            ]
-        )
+    debt_totals = _resolve_debt_component_totals(data)
+    short_term_borrowings = debt_totals["short_term_borrowings"]
+    long_term_borrowings = debt_totals["long_term_borrowings"]
+    debt_total = debt_totals["total_borrowed_capital"]
 
-    debt_total = _calc_float(debt.get("total_borrowed_capital"))
-    if debt_total is None:
-        debt_total = _calc_float(numerator)
-    if debt_total is None:
-        debt_total = _calc_float(data.get("total_debt"))
-    # When detailed debt tags are missing, use the known total so users can
-    # still see where the numerator value comes from.
     if short_term_borrowings is None and long_term_borrowings is None:
+        short_term_borrowings = 0.0
         long_term_borrowings = debt_total
+
+    commercial_paper = debt_totals["commercial_paper"]
+    short_term_notes_pay = debt_totals["short_term_notes_pay"]
+    current_long_term_debt = debt_totals["current_long_term_debt"]
+    noncurrent_debt_obligations = debt_totals["noncurrent_debt_obligations"]
+
+    if short_term_borrowings is not None and commercial_paper is None and short_term_notes_pay is None:
+        commercial_paper = short_term_borrowings
+        short_term_notes_pay = 0.0
+    if long_term_borrowings is not None and current_long_term_debt is None and noncurrent_debt_obligations is None:
+        current_long_term_debt = 0.0
+        noncurrent_debt_obligations = long_term_borrowings
 
     liquid_totals = _resolve_liquid_component_totals(data)
     cash_and_equivalents = liquid_totals["cash_and_equivalents"]
@@ -1750,6 +1824,31 @@ def _calculation_details_for_metric(
     if passive_yield is None:
         passive_yield = total_prohibited_revenue
 
+    valid_additional_details: list[dict[str, object]] = []
+    additional_details_raw = purging.get("calculation_details")
+    if isinstance(additional_details_raw, list):
+        for detail in additional_details_raw:
+            if not isinstance(detail, dict):
+                continue
+            amount = detail.get("amount")
+            if amount is None:
+                continue
+            line_name = str(detail.get("lineName") or "Additional Impermissible Income")
+            source_section = str(detail.get("sourceSection") or "").strip()
+            label = line_name if not source_section else f"{line_name} ({source_section})"
+            valid_additional_details.append({"label": label, "value": amount, "depth": 1})
+
+    non_operating_cash_interest = _calc_float(purging.get("non_operating_cash_interest"))
+    equity_investment_dividends = _calc_float(purging.get("equity_investment_dividends"))
+    if (
+        not valid_additional_details
+        and passive_yield is not None
+        and non_operating_cash_interest is None
+        and equity_investment_dividends is None
+    ):
+        non_operating_cash_interest = passive_yield
+        equity_investment_dividends = 0.0
+
     numerator_rows: list[dict[str, object]]
     denominator_rows: list[dict[str, object]]
     numerator_title = numerator_label
@@ -1761,11 +1860,11 @@ def _calculation_details_for_metric(
         numerator_rows = [
             {"label": "Total Borrowed Capital", "value": debt_total},
             {"label": "Short-Term Borrowings", "value": short_term_borrowings},
-            {"label": "Commercial Paper", "value": debt.get("commercial_paper"), "depth": 1},
-            {"label": "Short-Term Notes Pay", "value": debt.get("short_term_notes_pay"), "depth": 1},
+            {"label": "Commercial Paper", "value": commercial_paper, "depth": 1},
+            {"label": "Short-Term Notes Pay", "value": short_term_notes_pay, "depth": 1},
             {"label": "Long-Term Borrowings", "value": long_term_borrowings},
-            {"label": "Current Long-Term Debt", "value": debt.get("current_long_term_debt"), "depth": 1},
-            {"label": "Noncurrent Debt Obligations", "value": debt.get("noncurrent_debt_obligations"), "depth": 1},
+            {"label": "Current Long-Term Debt", "value": current_long_term_debt, "depth": 1},
+            {"label": "Noncurrent Debt Obligations", "value": noncurrent_debt_obligations, "depth": 1},
         ]
     elif metric == "cash":
         numerator_title = "Total Cash"
@@ -1786,21 +1885,16 @@ def _calculation_details_for_metric(
             {"label": "Total Annual Prohibited Revenue", "value": total_prohibited_revenue},
             {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
             {"label": "Passive Financial Yield", "value": passive_yield},
-            {"label": "Non-Operating Cash Interest", "value": purging.get("non_operating_cash_interest"), "depth": 1},
-            {"label": "Equity Investment Dividends", "value": purging.get("equity_investment_dividends"), "depth": 1},
         ]
-        additional_details = purging.get("calculation_details")
-        if isinstance(additional_details, list):
-            for detail in additional_details:
-                if not isinstance(detail, dict):
-                    continue
-                amount = detail.get("amount")
-                if amount is None:
-                    continue
-                line_name = str(detail.get("lineName") or "Additional Impermissible Income")
-                source_section = str(detail.get("sourceSection") or "").strip()
-                label = line_name if not source_section else f"{line_name} ({source_section})"
-                numerator_rows.append({"label": label, "value": amount, "depth": 1})
+        if valid_additional_details:
+            numerator_rows.extend(valid_additional_details)
+        else:
+            numerator_rows.extend(
+                [
+                    {"label": "Non-Operating Cash Interest", "value": non_operating_cash_interest, "depth": 1},
+                    {"label": "Equity Investment Dividends", "value": equity_investment_dividends, "depth": 1},
+                ]
+            )
 
     baseline_label = valuation.get("baseline_label") or "Market Cap Baseline"
     denominator_rows = [
