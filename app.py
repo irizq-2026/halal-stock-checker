@@ -1824,9 +1824,28 @@ def _calculation_details_for_metric(
     if passive_yield is None:
         passive_yield = total_prohibited_revenue
 
+    valid_additional_details: list[dict[str, object]] = []
+    additional_details_raw = purging.get("calculation_details")
+    if isinstance(additional_details_raw, list):
+        for detail in additional_details_raw:
+            if not isinstance(detail, dict):
+                continue
+            amount = detail.get("amount")
+            if amount is None:
+                continue
+            line_name = str(detail.get("lineName") or "Additional Impermissible Income")
+            source_section = str(detail.get("sourceSection") or "").strip()
+            label = line_name if not source_section else f"{line_name} ({source_section})"
+            valid_additional_details.append({"label": label, "value": amount, "depth": 1})
+
     non_operating_cash_interest = _calc_float(purging.get("non_operating_cash_interest"))
     equity_investment_dividends = _calc_float(purging.get("equity_investment_dividends"))
-    if passive_yield is not None and non_operating_cash_interest is None and equity_investment_dividends is None:
+    if (
+        not valid_additional_details
+        and passive_yield is not None
+        and non_operating_cash_interest is None
+        and equity_investment_dividends is None
+    ):
         non_operating_cash_interest = passive_yield
         equity_investment_dividends = 0.0
 
@@ -1866,21 +1885,16 @@ def _calculation_details_for_metric(
             {"label": "Total Annual Prohibited Revenue", "value": total_prohibited_revenue},
             {"label": "Core Prohibited Operations", "value": purging.get("core_prohibited_operations")},
             {"label": "Passive Financial Yield", "value": passive_yield},
-            {"label": "Non-Operating Cash Interest", "value": non_operating_cash_interest, "depth": 1},
-            {"label": "Equity Investment Dividends", "value": equity_investment_dividends, "depth": 1},
         ]
-        additional_details = purging.get("calculation_details")
-        if isinstance(additional_details, list):
-            for detail in additional_details:
-                if not isinstance(detail, dict):
-                    continue
-                amount = detail.get("amount")
-                if amount is None:
-                    continue
-                line_name = str(detail.get("lineName") or "Additional Impermissible Income")
-                source_section = str(detail.get("sourceSection") or "").strip()
-                label = line_name if not source_section else f"{line_name} ({source_section})"
-                numerator_rows.append({"label": label, "value": amount, "depth": 1})
+        if valid_additional_details:
+            numerator_rows.extend(valid_additional_details)
+        else:
+            numerator_rows.extend(
+                [
+                    {"label": "Non-Operating Cash Interest", "value": non_operating_cash_interest, "depth": 1},
+                    {"label": "Equity Investment Dividends", "value": equity_investment_dividends, "depth": 1},
+                ]
+            )
 
     baseline_label = valuation.get("baseline_label") or "Market Cap Baseline"
     denominator_rows = [
