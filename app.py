@@ -160,6 +160,11 @@ def _search_stocks_rows(query: str, *, limit: int = 10) -> list[tuple[str, str]]
             db_pool.putconn(conn)
 
 
+@st.cache_data(ttl=120, show_spinner=False)
+def _search_stocks_rows_cached(query: str, limit: int = 10) -> list[tuple[str, str]]:
+    return _search_stocks_rows(query, limit=limit)
+
+
 def _extract_news_item(item: dict) -> dict:
     if not isinstance(item, dict):
         return {}
@@ -1006,6 +1011,7 @@ RESULT_ICONS = {
 }
 
 
+@st.cache_data(show_spinner=False)
 def _logo_data_uri(logo_path: str) -> str:
     try:
         with open(logo_path, "rb") as logo_file:
@@ -2812,34 +2818,22 @@ def render_whatsapp_share(data: dict, screening: dict) -> None:
         ''', unsafe_allow_html=True)
 
 
-def _filter_local_stock_candidates(raw_query: str) -> list[dict[str, str]]:
-    rows = _search_stocks_rows(raw_query, limit=10)
-    return [{"ticker": ticker, "company_name": company_name} for ticker, company_name in rows]
-
-
-def _find_exact_local_match(raw_query: str) -> dict[str, str] | None:
-    query = (raw_query or "").strip().lower()
+def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
+    query = (raw_query or "").strip()
     if not query:
         return None
-    rows = _search_stocks_rows(raw_query, limit=10)
-    for ticker, company_name in rows:
-        if query == ticker.lower() or query == (company_name or "").lower():
-            return {"ticker": ticker, "company_name": company_name}
-    return None
-
-
-def _resolve_ticker_from_search_query(raw_query: str) -> str | None:
-    exact = _find_exact_local_match(raw_query)
-    if exact:
-        return exact["ticker"]
-    candidates = _filter_local_stock_candidates(raw_query)
-    if not candidates:
+    rows = _search_stocks_rows_cached(query, limit=10)
+    if not rows:
         return None
-    return candidates[0]["ticker"]
+    query_lower = query.lower()
+    for ticker, company_name in rows:
+        if query_lower == ticker.lower() or query_lower == (company_name or "").lower():
+            return ticker
+    return rows[0][0]
 
 
 def _searchbox_local_stock_options(search_query: str) -> list[tuple[str, str]]:
-    matches = _search_stocks_rows(search_query, limit=10)
+    matches = _search_stocks_rows_cached(search_query, limit=10)
     return [
         (f"{ticker} — {company_name}" if company_name else ticker, ticker)
         for ticker, company_name in matches
@@ -2863,6 +2857,9 @@ def _render_stock_searchbox_safe() -> str:
             key="stock_searchbox",
             clear_on_submit=False,
             debounce=300,
+            style_overrides={
+                "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
+            },
         )
         st.session_state.stock_searchbox_recovery_count = 0
         return str(selected or "").strip()
@@ -2876,89 +2873,13 @@ def _render_stock_searchbox_safe() -> str:
         return ""
 
 
-def _sync_autocomplete_state(raw_query: str) -> None:
-    query = (raw_query or "").strip()
-    if not query:
-        st.session_state.filtered_results = []
-        st.session_state.is_dropdown_open = False
-        return
-    exact = _find_exact_local_match(query)
-    if (
-        exact
-        and st.session_state.get("has_results")
-        and st.session_state.get("last_ticker") == exact["ticker"]
-    ):
-        st.session_state.filtered_results = []
-        st.session_state.is_dropdown_open = False
-        return
-    filtered = _filter_local_stock_candidates(query)
-    st.session_state.filtered_results = filtered
-    st.session_state.is_dropdown_open = True
-
-
-def _select_ticker_from_autocomplete(ticker: str) -> None:
-    selected = (ticker or "").strip().upper()
-    if not selected:
-        return
-    st.session_state.resolved_ticker = selected
-    st.session_state.pending_selection_ticker = selected
-    st.session_state.ticker_input_prefill = selected
-    st.session_state.is_dropdown_open = False
-    st.session_state.filtered_results = []
-    st.rerun()
-
-
-def _on_search_input_change() -> None:
-    raw = str(st.session_state.get("ticker_input_widget", "") or "")
-    st.session_state.ticker_input = raw
-    _sync_autocomplete_state(raw)
-
-
-def _render_autocomplete_dropdown() -> None:
-    if not st.session_state.get("is_dropdown_open"):
-        return
-    filtered = st.session_state.get("filtered_results") or []
-    suggestion_count = max(len(filtered), 1)
-    spacer_height_rem = min(16.0, max(4.1, 3.1 * suggestion_count))
-    st.markdown('<div class="autocomplete-anchor"><div class="autocomplete-dropdown">', unsafe_allow_html=True)
-    if filtered:
-        for stock in filtered:
-            ticker = stock["ticker"]
-            company_name = stock["company_name"]
-            if st.button(
-                f"{ticker}\n",
-                key=f"autocomplete_select_{ticker}",
-                use_container_width=True,
-            ):
-                _select_ticker_from_autocomplete(ticker)
-            st.markdown(
-                f'<div class="autocomplete-item-name">{html.escape(company_name)}</div>',
-                unsafe_allow_html=True,
-            )
-    else:
-        st.markdown(
-            '<div class="autocomplete-empty">No matches in the current local stock universe.</div>',
-            unsafe_allow_html=True,
-        )
-    st.markdown(
-        '</div></div>'
-        f'<div class="autocomplete-spacer" style="height:{spacer_height_rem:.2f}rem;"></div>',
-        unsafe_allow_html=True,
-    )
-
-
 def initialize_session_state() -> None:
     defaults = {
         "stock_data": None,
         "screening": None,
         "last_ticker": "",
         "ticker_input": "",
-        "ticker_input_widget": "",
-        "ticker_input_prefill": "",
-        "filtered_results": [],
-        "is_dropdown_open": False,
         "resolved_ticker": "",
-        "pending_selection_ticker": "",
         "tabs_reset_token": 0,
         "has_results": False,
         "admin_authenticated": False,
@@ -3514,8 +3435,6 @@ def main() -> None:
         st.caption("Finishing search selection...")
 
     if check_clicked:
-        st.session_state.is_dropdown_open = False
-        st.session_state.filtered_results = []
         if not search_query:
             st.markdown(
                 '<div class="info-msg">Please enter a stock ticker or company name to continue.</div>',
