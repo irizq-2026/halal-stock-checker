@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import csv
 import datetime
 import html
 import os
@@ -194,6 +195,138 @@ def _extract_news_item(item: dict) -> dict:
 def fetch_ui_enrichment_cached(symbol: str) -> dict:
     """Fetch optional UI fields from local cached DB data only."""
     return _fetch_company_enrichment(symbol)
+
+
+COMMODITY_TRUST_CHECKLIST_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "data",
+    "aaoifi_commodity_trust_checklist.csv",
+)
+
+
+def _clean_lookup_text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+@st.cache_data(show_spinner=False)
+def _load_commodity_trust_lookup() -> dict[str, dict[str, str]]:
+    """
+    Commodity trust source-of-truth lookup.
+
+    IMPORTANT:
+    Some true grantor trusts include "ETF" in the marketing name
+    (e.g., SGOL, AAAU). This lookup MUST run before name-based
+    heuristics so those tickers are not misclassified.
+    """
+    lookup: dict[str, dict[str, str]] = {}
+    if not os.path.exists(COMMODITY_TRUST_CHECKLIST_PATH):
+        return lookup
+
+    try:
+        with open(COMMODITY_TRUST_CHECKLIST_PATH, "r", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                if not isinstance(row, dict):
+                    continue
+                ticker = _clean_lookup_text(row.get("ticker")).upper()
+                if not ticker:
+                    continue
+                normalized_row = {
+                    str(key or "").strip(): _clean_lookup_text(value)
+                    for key, value in row.items()
+                }
+                lookup[ticker] = normalized_row
+    except Exception as exc:
+        print(f"Commodity trust checklist load error: {exc}")
+        return {}
+    return lookup
+
+
+def classify_security(ticker: str, profile: dict) -> dict[str, object]:
+    symbol = _clean_lookup_text(ticker).upper()
+    trust_lookup = _load_commodity_trust_lookup()
+    if symbol and symbol in trust_lookup:
+        return {
+            "security_type": "TRUST",
+            "category": "Commodity",
+            "commodity_data": trust_lookup[symbol],
+        }
+
+    quote_type = _clean_lookup_text((profile or {}).get("quoteType")).lower()
+    security_type = _clean_lookup_text((profile or {}).get("securityType")).lower()
+    industry = _clean_lookup_text((profile or {}).get("industry")).lower()
+    company_name = _clean_lookup_text((profile or {}).get("companyName")).lower()
+    security_name = _clean_lookup_text((profile or {}).get("securityName")).lower()
+    name_or_type = " ".join(part for part in (quote_type, security_type, company_name, security_name) if part)
+
+    # Keep broad ETFs (e.g., "ETF Trust" in fund names) out of TRUST fallback.
+    # Commodity trust tickers that market with "ETF" are captured above by CSV.
+    if "trust" in name_or_type and "etf" not in name_or_type:
+        return {"security_type": "TRUST", "category": None, "commodity_data": None}
+    if "etf" in name_or_type:
+        return {"security_type": "ETF", "category": None, "commodity_data": None}
+    if "reit" in industry:
+        return {"security_type": "REIT", "category": None, "commodity_data": None}
+    return {"security_type": "COMMON_STOCK", "category": None, "commodity_data": None}
+
+
+def unsupported_security_result(classification: dict[str, object]) -> dict[str, object]:
+    message = "AAOIFI stock screening currently supports operating companies only."
+    return {
+        "status": "NOT_SUPPORTED",
+        "result": "Not Supported",
+        "security_type": "TRUST",
+        "category": classification.get("category"),
+        "commodity_data": classification.get("commodity_data"),
+        "message": message,
+        "reason": message,
+        "breakdown": [],
+        "debt_ratio": None,
+        "cash_ratio": None,
+        "income_ratio": None,
+        "profile_unknown": False,
+        "business_pass": False,
+    }
+
+
+def _security_classification(data: dict, screening: dict | None = None) -> dict[str, object]:
+    from_data = data.get("_security_classification") if isinstance(data.get("_security_classification"), dict) else None
+    if from_data:
+        return from_data
+    if isinstance(screening, dict):
+        fallback = {
+            "security_type": screening.get("security_type"),
+            "category": screening.get("category"),
+            "commodity_data": screening.get("commodity_data"),
+        }
+        if any(fallback.values()):
+            return fallback
+    return {
+        "security_type": "COMMON_STOCK",
+        "category": None,
+        "commodity_data": None,
+    }
+
+
+def _is_trust_security(data: dict, screening: dict | None = None) -> bool:
+    classification = _security_classification(data, screening)
+    return str(classification.get("security_type") or "").upper() == "TRUST"
+
+
+def _commodity_data_row(data: dict, screening: dict | None = None) -> dict[str, str] | None:
+    classification = _security_classification(data, screening)
+    row = classification.get("commodity_data")
+    if isinstance(row, dict):
+        return row
+    return None
+
+
+def _is_commodity_category(data: dict, screening: dict | None = None) -> bool:
+    classification = _security_classification(data, screening)
+    category = str(classification.get("category") or "").strip().lower()
+    return category == "commodity" or _commodity_data_row(data, screening) is not None
 
 
 PWA_HEAD = """
@@ -1160,6 +1293,8 @@ def _result_kind(result: str) -> str:
         return "pass"
     if result == "Not Halal":
         return "fail"
+    if result == "Not Supported":
+        return "not_supported"
     return "questionable"
 
 
@@ -1168,6 +1303,7 @@ def _pill(label: str, kind: str) -> str:
         "pass": ("#1B5E20", "#A5D6A7", "#2E7D32"),
         "fail": ("#7F1515", "#FFCDD2", "#C62828"),
         "questionable": ("#7B4F00", "#FFE0B2", "#F59E0B"),
+        "not_supported": ("#0D2F5B", "#C6E5FF", "#2F80ED"),
         "limited": ("#162032", "#C9A84C", "#2A3F55"),
         "neutral": ("#162032", "#8A9BB0", "#2A3F55"),
     }
@@ -1181,6 +1317,8 @@ def _status_badge(result: str, *, large: bool = False) -> str:
         label = "🟢 HALAL"
     elif kind == "fail":
         label = "🔴 NOT HALAL"
+    elif kind == "not_supported":
+        label = "🔵 NOT SUPPORTED"
     else:
         label = "🟡 QUESTIONABLE"
 
@@ -1191,6 +1329,7 @@ def _status_badge(result: str, *, large: bool = False) -> str:
         "pass": ("#1B5E20", "#A5D6A7", "#2E7D32"),
         "fail": ("#7F1515", "#FFCDD2", "#C62828"),
         "questionable": ("#7B4F00", "#FFE0B2", "#F59E0B"),
+        "not_supported": ("#0D2F5B", "#C6E5FF", "#2F80ED"),
     }
     bg, fg, border = colors[kind]
     return (
@@ -1305,6 +1444,12 @@ def _company_name(data: dict) -> str:
 
 
 def _financial_statuses(screening: dict) -> dict[str, str]:
+    if str((screening or {}).get("status") or "").upper() == "NOT_SUPPORTED":
+        return {
+            "debt": "unavailable",
+            "cash": "unavailable",
+            "income": "unavailable",
+        }
     return {
         "debt": _ratio_status(screening.get("debt_ratio"), 0.33, 0.28),
         "cash": _ratio_status(screening.get("cash_ratio"), 0.33, 0.28),
@@ -1344,6 +1489,8 @@ def _is_core_interest_business(data: dict) -> bool:
 
 
 def _display_result(data: dict, screening: dict) -> str:
+    if str((screening or {}).get("status") or "").upper() == "NOT_SUPPORTED":
+        return "Not Supported"
     business_row = _breakdown_row(screening, "Business")
     business_class = business_row.get("result_class", "unknown")
     statuses = _financial_statuses(screening)
@@ -1355,6 +1502,8 @@ def _display_result(data: dict, screening: dict) -> str:
 
 
 def _criteria_summary(data: dict, screening: dict) -> tuple[int, int, list[str]]:
+    if str((screening or {}).get("status") or "").upper() == "NOT_SUPPORTED":
+        return 0, 0, []
     statuses = _financial_statuses(screening)
     business_row = _breakdown_row(screening, "Business")
     profile_text = " ".join(str(data.get(key, "")) for key in ("sector", "industry"))
@@ -1370,6 +1519,8 @@ def _criteria_summary(data: dict, screening: dict) -> tuple[int, int, list[str]]
     return sum(1 for _, passed in checks if passed), len(checks), [label for label, passed in checks if passed]
 
 def _main_issue(screening: dict) -> str:
+    if str((screening or {}).get("status") or "").upper() == "NOT_SUPPORTED":
+        return str((screening or {}).get("message") or "AAOIFI stock screening currently supports operating companies only.")
     business_row = _breakdown_row(screening, "Business")
     if business_row.get("result_class") == "unknown":
         return "Business activity could not be fully verified from available sector data."
@@ -1412,6 +1563,55 @@ def _quarter_label_for_date(value: datetime.date | None) -> str:
     return f"Q{quarter} {value.year}"
 
 
+def _render_trust_overview_copy(data: dict, screening: dict) -> None:
+    commodity_data = _commodity_data_row(data, screening)
+    if commodity_data:
+        commodity = _safe_text(commodity_data.get("commodity"))
+        reason_copy = (
+            f"This is a {commodity} trust, not an operating company, so AAOIFI's "
+            "financial-ratio screening (debt, interest income, receivables) doesn't "
+            "apply — there's no income statement or balance sheet to screen."
+        )
+        structural_notes = "; ".join(
+            _safe_text(commodity_data.get(key))
+            for key in ("allocation_status", "interest_bearing_cash", "securities_lending")
+        )
+        aaoifi_gold_status = _safe_text(commodity_data.get("aaoifi_gold_standard_status"))
+        st.markdown(
+            (
+                '<div class="overview-card">'
+                '<div class="card-title">Trust Classification Details</div>'
+                f'<div class="muted-copy"><strong>Security Type:</strong> {html.escape(f"Commodity Trust ({commodity})")}</div>'
+                '<div class="muted-copy"><strong>Status:</strong> Not Supported</div>'
+                f'<div class="muted-copy"><strong>Reason:</strong> {html.escape(reason_copy)}</div>'
+                f'<div class="muted-copy"><strong>Structural notes:</strong> {html.escape(structural_notes)}</div>'
+                f'<div class="muted-copy"><strong>AAOIFI Gold Standard status:</strong> {html.escape(aaoifi_gold_status)}</div>'
+                '<div class="muted-copy"><strong>Supported Today:</strong> US-listed operating companies. '
+                'Commodity trust classification (this screen) and broader ETF/REIT/Fund screening '
+                "will be added in a future release.</div>"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        return
+
+    reason_copy = str(
+        (screening or {}).get("message")
+        or "AAOIFI stock screening currently supports operating companies only."
+    )
+    st.markdown(
+        (
+            '<div class="overview-card">'
+            '<div class="card-title">Trust Classification Details</div>'
+            '<div class="muted-copy"><strong>Security Type:</strong> Trust</div>'
+            '<div class="muted-copy"><strong>Status:</strong> Not Supported</div>'
+            f'<div class="muted-copy"><strong>Reason:</strong> {html.escape(reason_copy)}</div>'
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def _render_overview_tab(data: dict, screening: dict) -> None:
     symbol = html.escape(str(data.get("symbol", "N/A")))
     company = _company_name(data)
@@ -1419,6 +1619,7 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
     info = data.get("_ui_info", {})
     exchange = _safe_text(info.get("exchange"))
     result = _display_result(data, screening)
+    is_trust = _is_trust_security(data, screening)
     passed, total, passed_labels = _criteria_summary(data, screening)
     passed_copy = ", ".join(passed_labels) if passed_labels else "No criteria fully passed yet"
     source = data.get("_data_source", {}) if isinstance(data.get("_data_source"), dict) else {}
@@ -1451,6 +1652,21 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
             else "Not available"
         ),
     )
+    criteria_block_html = (
+        '<div style="margin-top:1rem;background-color:#162032;border-radius:10px;padding:0.9rem 1rem;border:1px solid #2A3F55;">'
+        '<div style="color:#C6E5FF;font-weight:800;font-size:1rem;">AAOIFI Screening Not Available</div>'
+        '<div class="muted-copy">Reason: Financial ratios required by AAOIFI are not applicable to this security type.</div>'
+        '</div>'
+        if is_trust
+        else (
+            '<div style="margin-top:1rem;background-color:#162032;border-radius:10px;padding:0.9rem 1rem;border:1px solid #2A3F55;">'
+            f'<div style="color:#C9A84C;font-weight:800;font-size:1.25rem;">{passed}/{total}</div>'
+            '<div class="muted-copy">Screening criteria passed</div>'
+            f'<div class="muted-copy" style="margin-top:0.35rem;">Passed: {html.escape(passed_copy)}</div>'
+            '</div>'
+        )
+    )
+
     st.markdown(f'''
         <div class="overview-card">
           <div style="display:flex;gap:0.9rem;align-items:center;">
@@ -1459,19 +1675,69 @@ def _render_overview_tab(data: dict, screening: dict) -> None:
           </div>
           <div class="muted-copy" style="margin-top:0.9rem;">{html.escape(industry)} • {html.escape(exchange)}</div>
           <div style="margin-top:0.85rem;">{_status_badge(result, large=True)}</div>
-          <div style="margin-top:1rem;background-color:#162032;border-radius:10px;padding:0.9rem 1rem;border:1px solid #2A3F55;">
-            <div style="color:#C9A84C;font-weight:800;font-size:1.25rem;">{passed}/{total}</div>
-            <div class="muted-copy">Screening criteria passed</div>
-            <div class="muted-copy" style="margin-top:0.35rem;">Passed: {html.escape(passed_copy)}</div>
-          </div>
+          {criteria_block_html}
           <div class="muted-copy" style="margin-top:0.8rem;">{data_last_updated_html}</div>
         </div>
         ''', unsafe_allow_html=True)
+    if is_trust:
+        _render_trust_overview_copy(data, screening)
     _render_at_a_glance(data, screening)
     _render_quick_summary(data, screening)
-    _render_purification_estimator_card(data, screening)
+    if not _is_commodity_category(data, screening):
+        _render_purification_estimator_card(data, screening)
 
 def _render_quick_summary(data: dict, screening: dict) -> None:
+    if _is_trust_security(data, screening):
+        commodity_data = _commodity_data_row(data, screening)
+        if commodity_data:
+            commodity = _safe_text(commodity_data.get("commodity"))
+            ribawi = _safe_text(commodity_data.get("ribawi_metal"))
+            allocation = _safe_text(commodity_data.get("allocation_status"))
+            interest_cash = _safe_text(commodity_data.get("interest_bearing_cash"))
+            securities_lending = _safe_text(commodity_data.get("securities_lending"))
+            suggested_tier = _safe_text(commodity_data.get("suggested_status_tier"))
+            bullets = [
+                ("✓", f"Security identified as a Commodity Trust ({commodity})"),
+            ]
+            if ribawi.lower().startswith("yes"):
+                bullets.append(
+                    (
+                        "⚠️",
+                        "Classified as a ribawi (monetary) metal under classical Islamic commercial law "
+                        "— subject to stricter possession rules than non-monetary commodities",
+                    )
+                )
+            bullets.extend(
+                [
+                    ("⚠️", f"Allocation structure: {allocation}"),
+                    ("⚠️", f"Interest-bearing cash policy: {interest_cash}"),
+                    ("⚠️", f"Securities lending policy: {securities_lending}"),
+                    ("ⓘ", "AAOIFI financial ratios not applicable — this is not an operating company"),
+                    ("ⓘ", f"Suggested status: {suggested_tier}"),
+                ]
+            )
+        else:
+            bullets = [
+                ("ⓘ", "Security identified as a trust (non-operating company structure)"),
+                ("ⓘ", "AAOIFI financial ratios are not applicable to this security type"),
+                (
+                    "ⓘ",
+                    str(
+                        (screening or {}).get("message")
+                        or "AAOIFI stock screening currently supports operating companies only."
+                    ),
+                ),
+            ]
+        bullet_html = "".join(
+            f'<div class="summary-bullet"><span>{icon}</span><span>{html.escape(text)}</span></div>'
+            for icon, text in bullets
+        )
+        st.markdown(
+            f'<div class="overview-card"><div class="card-title">Quick Summary</div>{bullet_html}</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
     result = _display_result(data, screening)
     business_row = _breakdown_row(screening, "Business")
     business_class = business_row.get("result_class", "unknown")
@@ -1501,6 +1767,25 @@ def _render_quick_summary(data: dict, screening: dict) -> None:
 
 
 def _render_at_a_glance(data: dict, screening: dict) -> None:
+    if _is_trust_security(data, screening):
+        classification = _security_classification(data, screening)
+        category = _safe_text(classification.get("category"), "Not specified")
+        rows = [
+            ("Security Type", _pill("TRUST", "not_supported")),
+            ("Category", _pill(category, "neutral")),
+            ("Financial Screening", _pill("NOT APPLICABLE", "not_supported")),
+            ("Overall", _status_badge(_display_result(data, screening))),
+        ]
+        body = "".join(
+            f'<div class="glance-row"><span class="glance-label">{html.escape(label)}</span>{badge}</div>'
+            for label, badge in rows
+        )
+        st.markdown(
+            f'<div class="overview-card"><div class="card-title">At a Glance</div>{body}</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
     business_row = _breakdown_row(screening, "Business")
     business_kind = {"pass": "pass", "fail": "fail", "unknown": "questionable"}.get(business_row.get("result_class", "unknown"), "questionable")
     statuses = _financial_statuses(screening)
@@ -2183,6 +2468,17 @@ def _render_methodology_notice_card() -> None:
 
 
 def _render_financial_tab(data: dict, screening: dict) -> None:
+    if _is_trust_security(data, screening):
+        st.markdown(
+            (
+                '<div class="overview-card"><div class="card-title">AAOIFI Financial Screening — Not Applicable</div>'
+                '<div class="muted-copy">This security does not have the financial statements required for AAOIFI stock screening.</div>'
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        return
+
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
@@ -2482,6 +2778,20 @@ def _render_glossary_card() -> None:
 
 
 def _render_details_tab(data: dict, screening: dict) -> None:
+    if _is_trust_security(data, screening):
+        st.markdown(
+            (
+                '<div class="overview-card"><div class="card-title">AAOIFI Screening Not Available</div>'
+                '<div class="muted-copy">Reason: Financial ratios required by AAOIFI are not applicable to this security type.</div>'
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        _render_glossary_card()
+        render_disclaimer()
+        render_feedback()
+        return
+
     st.markdown(
         """
   <div style="
@@ -2901,6 +3211,18 @@ def clear_results_for_error(ticker: str) -> None:
     st.session_state.has_results = False
 
 
+def _classification_profile(ticker: str, stock_data: dict, enrichment: dict) -> dict[str, str]:
+    info = enrichment.get("info", {}) if isinstance(enrichment, dict) else {}
+    return {
+        "ticker": _safe_text(ticker, ""),
+        "quoteType": _safe_text(info.get("quoteType"), ""),
+        "securityType": _safe_text(info.get("securityType"), ""),
+        "industry": _safe_text(stock_data.get("industry") or info.get("industry"), ""),
+        "companyName": _safe_text(stock_data.get("company_name") or info.get("longName"), ""),
+        "securityName": _safe_text(info.get("longName") or stock_data.get("company_name"), ""),
+    }
+
+
 def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
     if refresh:
         fetch_stock_data_cached.clear()
@@ -2936,7 +3258,12 @@ def run_screening_flow(ticker: str, *, refresh: bool = False) -> None:
 
         status_text.markdown("🧮 Running AAOIFI screening...")
         progress_bar.progress(80)
-        screening = screen_stock(stock_data)
+        classification = classify_security(ticker, _classification_profile(ticker, stock_data, enrichment))
+        stock_data["_security_classification"] = classification
+        if str(classification.get("security_type") or "").upper() == "TRUST":
+            screening = unsupported_security_result(classification)
+        else:
+            screening = screen_stock(stock_data)
 
         st.session_state.stock_data = _build_enriched_stock_data(stock_data, enrichment)
         st.session_state.screening = screening
