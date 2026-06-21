@@ -1394,6 +1394,7 @@ class SecRefreshService:
         row.operating_income = None
         row.net_income = None
         row.shares_outstanding = yfinance_data.shares_outstanding
+        row.calculated_at = datetime.now(UTC)
 
         components = dict(packet.component_breakdown or {})
         valuation = dict(components.get("valuation") or {})
