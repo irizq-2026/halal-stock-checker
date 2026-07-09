@@ -1843,6 +1843,17 @@ def _income_ratio_disclaimer(data: dict) -> str | None:
         return None
     return str(disclaimer)
 
+def _annual_data_only_notice(data: dict) -> str | None:
+    data_source = data.get("_data_source")
+    if not isinstance(data_source, dict) or not data_source.get("annual_data_only"):
+        return None
+    filing_form = str(data_source.get("filing_form") or data_source.get("filing_type") or "").upper().strip()
+    if filing_form not in {"20-F", "20-F/A", "40-F", "40-F/A"}:
+        return None
+    return (
+        "Financial data sourced from annual report (Form 20-F / 40-F). "
+        "Quarterly data is not available for this company."
+    )
 
 def _calc_float(value: object) -> float | None:
     if value is None:
@@ -2479,6 +2490,12 @@ def _render_financial_tab(data: dict, screening: dict) -> None:
         )
         return
 
+    annual_notice = _annual_data_only_notice(data)
+    if annual_notice:
+        st.markdown(
+            f'<div class="plain-english"><strong>Annual financial data</strong><br>{html.escape(annual_notice)}</div>',
+            unsafe_allow_html=True,
+        )
     _render_metric_card("Debt Ratio", "debt", 0.33, 0.28, "Total Debt", "Market Cap", "Shows how much debt the company carries compared with its market value.", "AAOIFI screening limits excessive debt because it can signal heavy reliance on interest-based financing.")
     _render_metric_card("Interest Income Ratio", "income", 0.05, 0.04, "Interest Income", "Total Revenue", "Shows how much reported income may come from interest compared with total revenue.", "Interest income is monitored because riba is not permissible in Islamic finance.", "Interest income may not be separately reported by all companies.")
     _render_metric_card("Cash & Interest-Bearing Securities Ratio", "cash", 0.33, 0.28, "Total Cash", "Market Cap", "Shows cash and similar holdings compared with the company's market value.", "Large cash or interest-bearing balances can create concern under common halal screening standards.")
@@ -2960,7 +2977,7 @@ def _render_details_tab(data: dict, screening: dict) -> None:
         unsafe_allow_html=True,
     )
     st.markdown('''<div class="overview-card"><div class="card-title">How iRizq Screens Stocks</div><div class="muted-copy">iRizq applies an AAOIFI-style screen using available business activity information and financial ratios such as debt, cash, and income ratios. This app uses available market data only, so results are educational and should be reviewed with qualified guidance.</div><div style="margin-top:0.7rem;"><a href="https://aaoifi.com" target="_blank" style="color:#C9A84C;text-decoration:none;">Learn more about AAOIFI standards →</a></div></div>''', unsafe_allow_html=True)
-    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ SEC 10-K / 10-Q filings</div><div class="muted-copy">✅ SEC XBRL company facts</div><div class="muted-copy">✅ Company profile (cached)</div><div class="muted-copy">✅ Income statement (normalized)</div><div class="muted-copy">✅ Balance sheet (normalized)</div></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="overview-card"><div class="card-title">Data Sources Used</div><div class="muted-copy">✅ SEC 10-K / 10-Q / 20-F / 40-F filings</div><div class="muted-copy">✅ SEC XBRL company facts</div><div class="muted-copy">✅ Company profile (cached)</div><div class="muted-copy">✅ Income statement (normalized)</div><div class="muted-copy">✅ Balance sheet (normalized)</div></div>''', unsafe_allow_html=True)
     st.markdown('''<div class="overview-card"><div class="card-title">What is NOT Included</div><div class="muted-copy">❌ Segment revenue breakdowns</div><div class="muted-copy">❌ Subsidiary analysis</div><div class="muted-copy">❌ Verified geopolitical data</div><div class="muted-copy">❌ ESG scores</div><div class="muted-copy">❌ Shariah board certifications</div><div class="muted-copy">❌ Personalized fatwa guidance</div></div>''', unsafe_allow_html=True)
     debt_num, debt_den, debt_ratio = _metric_data(data, "debt")
     cash_num, cash_den, cash_ratio = _metric_data(data, "cash")
@@ -3004,7 +3021,7 @@ def render_error(
     elif cache_missing:
         message = (
             f"Recent SEC data is currently unavailable for <strong>{ticker.upper()}</strong>. "
-            "This ticker may not have a recent 10-Q/10-K filing or SEC company-facts coverage yet."
+            "This ticker may not have a recent 10-Q/10-K/20-F/40-F filing or SEC company-facts coverage yet."
         )
     elif transient:
         message = (

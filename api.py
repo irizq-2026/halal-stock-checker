@@ -161,6 +161,11 @@ def get_cached_screen(ticker: str, request: Request, response: Response) -> dict
                 "name": result.data_source,
                 "filing_date": str(result.source_filing_date) if result.source_filing_date else None,
                 "last_updated": result.last_updated.isoformat() if result.last_updated else None,
+                "filing_form": (normalized.source_metadata_json or {}).get("filing_form") or filing.filing_type,
+                "data_frequency": (normalized.source_metadata_json or {}).get("data_frequency"),
+                "filer_type": (normalized.source_metadata_json or {}).get("filer_type"),
+                "taxonomy": (normalized.source_metadata_json or {}).get("taxonomy"),
+                "annual_data_only": bool((normalized.source_metadata_json or {}).get("annual_data_only")),
             },
         }
     finally:

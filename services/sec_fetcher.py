@@ -10,6 +10,8 @@ from typing import Any, Protocol
 
 import httpx
 
+from services.edgar_xbrl import is_supported_report_form
+
 LOGGER = logging.getLogger(__name__)
 
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -29,7 +31,6 @@ SHARES_TAG_PRIORITY = (
     ("us-gaap", "SharesOutstanding"),
     ("dei", "EntityCommonStockSharesOutstanding"),
 )
-VALID_FORMS = {"10-K", "10-Q"}
 
 
 class DbConnProtocol(Protocol):
@@ -67,7 +68,7 @@ def _extract_latest_shares(company_facts: dict[str, Any]) -> tuple[int | None, d
         filtered_rows = []
         for row in tagged:
             form = str((row or {}).get("form") or "").upper().strip()
-            if form not in VALID_FORMS:
+            if not is_supported_report_form(form):
                 continue
             shares_val = (row or {}).get("val")
             try:
