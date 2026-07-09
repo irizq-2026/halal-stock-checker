@@ -43,6 +43,7 @@ import threading
 from psycopg2.extras import execute_values
 from rapidfuzz import fuzz, process as fuzz_process
 from dotenv import load_dotenv
+from services.edgar_xbrl import is_supported_report_form, taxonomy_priority
 
 load_dotenv()
 
@@ -264,16 +265,22 @@ def extract_financial_value(facts, concept, form_types=None):
     Returns (value, filed_date, form_type) or (None, None, None)
     """
     if form_types is None:
-        form_types = ["10-K", "10-Q"]
+        form_types = []
     try:
-        us_gaap = facts.get("facts", {}).get("us-gaap", {})
-        concept_data = us_gaap.get(concept, {})
-        units = concept_data.get("units", {})
-        usd_entries = units.get("USD", [])
+        facts_by_taxonomy = facts.get("facts", {})
+        entries = []
+        for taxonomy in taxonomy_priority(facts_by_taxonomy):
+            concept_data = (facts_by_taxonomy.get(taxonomy) or {}).get(concept, {})
+            units = concept_data.get("units", {})
+            for unit_name, unit_entries in units.items():
+                if unit_name.lower() in {"shares", "pure"}:
+                    continue
+                entries.extend(unit_entries or [])
         filtered = [
             entry
-            for entry in usd_entries
-            if entry.get("form") in form_types and entry.get("val") is not None
+            for entry in entries
+            if (entry.get("form") in form_types if form_types else is_supported_report_form(entry.get("form")))
+            and entry.get("val") is not None
         ]
         if not filtered:
             return None, None, None
