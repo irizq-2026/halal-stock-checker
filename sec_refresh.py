@@ -12,7 +12,7 @@ from typing import Any
 
 import aiohttp
 import yfinance as yf
-from sqlalchemy import delete, desc, select
+from sqlalchemy import case, delete, desc, select
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -2134,6 +2134,7 @@ def refresh_single_ticker(ticker: str, *, force: bool = False, max_filings: int 
 
 def latest_cached_screen_row(session: Session, ticker: str) -> tuple[Company, Filing, NormalizedFinancial, HalalScreenResult] | None:
     """Return latest locally cached screening record for API/UI read path."""
+    placeholder_rank = case((Filing.filing_type == PLACEHOLDER_FILING_TYPE, 1), else_=0)
     query = (
         select(Company, Filing, NormalizedFinancial, HalalScreenResult)
         .join(Filing, Filing.company_id == Company.id)
@@ -2148,7 +2149,7 @@ def latest_cached_screen_row(session: Session, ticker: str) -> tuple[Company, Fi
             & (HalalScreenResult.filing_id == Filing.id),
         )
         .where(Company.ticker == ticker.upper().strip())
-        .order_by(desc(Filing.filing_date), desc(Filing.created_at))
+        .order_by(placeholder_rank.asc(), desc(Filing.filing_date), desc(Filing.created_at))
         .limit(1)
     )
     row = session.execute(query).first()
