@@ -152,6 +152,11 @@ def _build_stock_payload(company: Any, filing: Any, normalized: Any, result: Any
             "last_updated": result.last_updated.isoformat() if result.last_updated else None,
             "accession_number": filing.accession_number,
             "filing_type": filing.filing_type,
+            "filing_form": source_metadata.get("filing_form") or filing.filing_type,
+            "data_frequency": source_metadata.get("data_frequency"),
+            "filer_type": source_metadata.get("filer_type"),
+            "taxonomy": source_metadata.get("taxonomy"),
+            "annual_data_only": bool(source_metadata.get("annual_data_only")),
             "mapped_tags": source_metadata,
         },
     }
@@ -173,7 +178,7 @@ def fetch_stock_data(symbol: str) -> dict[str, Any] | None:
         company, filing, normalized, result = row
         if (result.data_source or "").strip().lower() == "sec_placeholder":
             raise CachedDataNotReadyError(
-                f"No recent SEC 10-Q/10-K or company-facts data is available for {normalized_symbol}.",
+                f"No recent SEC 10-Q/10-K/20-F/40-F or company-facts data is available for {normalized_symbol}.",
             )
         payload = _build_stock_payload(company, filing, normalized, result)
         table_ethical = _load_ethical_flags_from_tables(session, normalized_symbol)

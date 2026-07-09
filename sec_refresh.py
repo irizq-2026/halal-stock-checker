@@ -19,12 +19,29 @@ from config import settings
 from db import session_scope
 from models import Company, Filing, HalalScreenResult, NormalizedFinancial, RawFinancialFact
 from rules import screen_stock
+from services.edgar_xbrl import (
+    DATA_FREQUENCY_ANNUAL,
+    DATA_FREQUENCY_QUARTERLY,
+    FILER_UNKNOWN,
+    TAXONOMY_IFRS_FULL,
+    TAXONOMY_US_GAAP,
+    aliases_for,
+    detect_filer_type,
+    detect_taxonomy,
+    is_annual_form,
+    is_fpi_filer_type,
+    is_quarterly_form,
+    is_supported_report_form,
+    normalize_form,
+    taxonomy_priority,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 SEC_TICKER_MAPPING_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 SEC_COMPANY_CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}/us-gaap/{concept}.json"
+SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 
 FIELD_TOTAL_DEBT = "total_debt"
 FIELD_TOTAL_CASH = "total_cash"
@@ -106,7 +123,7 @@ TOTAL_REVENUE_CONCEPTS = (
     "SalesRevenueNet",
 )
 
-ALL_REQUIRED_CONCEPTS = tuple(
+DOMESTIC_REQUIRED_CONCEPTS = tuple(
     dict.fromkeys(
         DEBT_CONCEPTS
         + CASH_CONCEPTS
@@ -135,7 +152,21 @@ RAW_FACTS_VALUE_LIMIT = 10**18
 RATIO_NUMERIC_LIMIT = 10**4
 PLACEHOLDER_ACCESSION = "NO-DATA-PLACEHOLDER"
 PLACEHOLDER_FILING_TYPE = "NO-DATA"
-SUPPORTED_FORMS = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
+MONETARY_UNITS = {
+    "USD",
+    "EUR",
+    "JPY",
+    "CAD",
+    "GBP",
+    "CHF",
+    "CNY",
+    "HKD",
+    "KRW",
+    "AUD",
+    "SEK",
+    "NOK",
+    "DKK",
+}
 
 
 def _normalize_cik(cik: str | int) -> str:
@@ -159,8 +190,8 @@ def _latest_supported_filing(submissions: dict[str, Any]) -> dict[str, Any] | No
     total = min(len(forms), len(accessions), len(filing_dates))
     rows: list[dict[str, Any]] = []
     for idx in range(total):
-        form = str(forms[idx] or "").upper().strip()
-        if form not in SUPPORTED_FORMS:
+        form = normalize_form(forms[idx])
+        if not is_supported_report_form(form):
             continue
         filing_date = _parse_date(filing_dates[idx])
         if filing_date is None:
@@ -193,6 +224,60 @@ def _to_float(raw: Any) -> float | None:
     return value
 
 
+def _scale_optional(value: float | None, multiplier: float | None) -> float | None:
+    if value is None:
+        return None
+    factor = multiplier if multiplier not in (None, 0) else 1.0
+    return value * factor
+
+
+def _scale_calculation_details(details: list[dict[str, Any]], multiplier: float | None) -> list[dict[str, Any]]:
+    factor = multiplier if multiplier not in (None, 0) else 1.0
+    scaled: list[dict[str, Any]] = []
+    for detail in details:
+        row = dict(detail)
+        amount = _to_float(row.get("amount"))
+        if amount is not None:
+            row["amount"] = amount * factor
+        scaled.append(row)
+    return scaled
+
+
+def _scale_financial_components(components: dict[str, Any], multiplier: float | None) -> dict[str, Any]:
+    factor = multiplier if multiplier not in (None, 0) else 1.0
+    scaled = dict(components or {})
+    for section_name in ("debt", "liquid_assets", "purging"):
+        section = scaled.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        updated_section = dict(section)
+        for key, raw_value in section.items():
+            numeric = _to_float(raw_value)
+            if numeric is not None:
+                updated_section[key] = numeric * factor
+        scaled[section_name] = updated_section
+    return scaled
+
+
+def _fetch_fx_rate_to_market_currency(source_currency: str | None, market_currency: str | None) -> float | None:
+    source = (source_currency or "").upper().strip()
+    target = (market_currency or "").upper().strip()
+    if not source or not target or source == target:
+        return 1.0
+    pair = f"{source}{target}=X"
+    try:
+        history = yf.Ticker(pair).history(period="5d")
+        if history.empty:
+            return None
+        close_values = history["Close"].dropna()
+        if close_values.empty:
+            return None
+        return _to_float(close_values.iloc[-1])
+    except Exception:
+        LOGGER.exception("Failed to fetch FX rate for %s", pair)
+        return None
+
+
 @dataclass
 class RefreshSummary:
     ticker: str
@@ -205,6 +290,7 @@ class RefreshSummary:
 @dataclass
 class ConceptPoint:
     concept: str
+    taxonomy: str
     value: float
     end: date
     filed: date | None
@@ -247,8 +333,13 @@ class TickerEdgarPacket:
     points: list[ConceptPoint]
     missing_fields: list[str]
     placeholder_reason: str | None
+    filer_type: str
+    taxonomy: str | None
+    data_frequency: str | None
+    concept_resolution: dict[str, Any]
     has_10k: bool
     has_20f: bool
+    has_40f: bool
     sic_code: str | None
     sic_description: str | None
     component_breakdown: dict[str, Any]
@@ -261,6 +352,9 @@ class YFinanceSnapshot:
     industry: str | None
     shares_outstanding: float | None
     latest_closing_price: float | None
+    market_currency: str | None
+    financial_currency: str | None
+    fx_rate_to_market_currency: float | None
 
 
 @dataclass
@@ -422,6 +516,10 @@ class AsyncEdgarClient:
             SEC_COMPANY_CONCEPT_URL.format(cik=_normalize_cik(cik), concept=concept),
         )
 
+    async def fetch_company_facts(self, cik: str) -> dict[str, Any] | None:
+        _, payload = await self._request_json(SEC_COMPANY_FACTS_URL.format(cik=_normalize_cik(cik)))
+        return payload
+
 
 def _dedupe_quarter_rows(rows: list[ConceptPoint]) -> list[ConceptPoint]:
     best_by_end: dict[date, ConceptPoint] = {}
@@ -452,13 +550,18 @@ def _dedupe_quarter_rows(rows: list[ConceptPoint]) -> list[ConceptPoint]:
     return ordered
 
 
-def _parse_concept_points(payload: dict[str, Any] | None, concept: str) -> list[ConceptPoint]:
+def _parse_concept_points(
+    payload: dict[str, Any] | None,
+    concept: str,
+    *,
+    taxonomy: str = TAXONOMY_US_GAAP,
+) -> list[ConceptPoint]:
     if not payload:
         return []
     units = payload.get("units") or {}
     points: list[ConceptPoint] = []
     for unit_name, entries in units.items():
-        if unit_name != "USD" or not isinstance(entries, list):
+        if unit_name not in MONETARY_UNITS or not isinstance(entries, list):
             continue
         for raw in entries:
             end_date = _parse_date((raw or {}).get("end"))
@@ -468,6 +571,7 @@ def _parse_concept_points(payload: dict[str, Any] | None, concept: str) -> list[
             points.append(
                 ConceptPoint(
                     concept=concept,
+                    taxonomy=taxonomy,
                     value=value,
                     end=end_date,
                     filed=_parse_date((raw or {}).get("filed")),
@@ -480,22 +584,32 @@ def _parse_concept_points(payload: dict[str, Any] | None, concept: str) -> list[
     return points
 
 
-def _latest_10k(rows: list[ConceptPoint]) -> ConceptPoint | None:
-    ten_k = [row for row in rows if row.form.startswith("10-K")]
-    if not ten_k:
+def _parse_companyfacts_points(
+    company_facts: dict[str, Any] | None,
+    taxonomy: str,
+    concept: str,
+) -> list[ConceptPoint]:
+    facts = (company_facts or {}).get("facts") or {}
+    payload = (facts.get(taxonomy) or {}).get(concept)
+    return _parse_concept_points(payload, concept, taxonomy=taxonomy)
+
+
+def _latest_annual(rows: list[ConceptPoint]) -> ConceptPoint | None:
+    annual_rows = [row for row in rows if is_annual_form(row.form)]
+    if not annual_rows:
         return None
-    ten_k.sort(
+    annual_rows.sort(
         key=lambda row: (
             row.end,
             row.filed or date.min,
         ),
         reverse=True,
     )
-    return ten_k[0]
+    return annual_rows[0]
 
 
-def _income_ttm_or_10k(rows: list[ConceptPoint]) -> MetricSelection:
-    quarters = _dedupe_quarter_rows([row for row in rows if row.form.startswith("10-Q")])
+def _income_ttm_or_annual(rows: list[ConceptPoint]) -> MetricSelection:
+    quarters = _dedupe_quarter_rows([row for row in rows if is_quarterly_form(row.form)])
     if len(quarters) >= 4:
         selected = quarters[:4]
         value = sum(row.value for row in selected)
@@ -507,13 +621,13 @@ def _income_ttm_or_10k(rows: list[ConceptPoint]) -> MetricSelection:
             concept=selected[0].concept,
         )
 
-    annual = _latest_10k(rows)
+    annual = _latest_annual(rows)
     if annual is not None:
         return MetricSelection(
             value=annual.value,
             period_end=annual.end,
             points=[annual],
-            method="latest_10k_fallback",
+            method="latest_annual_fallback",
             concept=annual.concept,
         )
     return MetricSelection(
@@ -537,7 +651,7 @@ def _select_first_balance(
         points = [
             row
             for row in (rows_by_concept.get(concept) or [])
-            if row.form.startswith("10-Q") or row.form.startswith("10-K")
+            if is_supported_report_form(row.form)
         ]
         if not points:
             continue
@@ -592,7 +706,7 @@ def _select_sum_balance(
         supported = [
             row
             for row in (rows_by_concept.get(concept) or [])
-            if row.form.startswith("10-Q") or row.form.startswith("10-K")
+            if is_supported_report_form(row.form)
         ]
         if supported:
             by_concept[concept] = supported
@@ -652,7 +766,7 @@ def _select_sum_balance(
 
 def _select_first_income(rows_by_concept: dict[str, list[ConceptPoint]], concepts: tuple[str, ...]) -> MetricSelection:
     for concept in concepts:
-        selection = _income_ttm_or_10k(rows_by_concept.get(concept) or [])
+        selection = _income_ttm_or_annual(rows_by_concept.get(concept) or [])
         if selection.value is not None:
             selection.concept = concept
             return selection
@@ -677,11 +791,11 @@ def _select_best_income(rows_by_concept: dict[str, list[ConceptPoint]], concepts
     candidates: list[tuple[tuple[date, int, int], MetricSelection]] = []
     method_rank = {
         "ttm_10q": 2,
-        "latest_10k_fallback": 1,
+        "latest_annual_fallback": 1,
     }
 
     for index, concept in enumerate(concepts):
-        selection = _income_ttm_or_10k(rows_by_concept.get(concept) or [])
+        selection = _income_ttm_or_annual(rows_by_concept.get(concept) or [])
         if selection.value is None:
             continue
         selection.concept = concept
@@ -703,6 +817,86 @@ def _select_best_income(rows_by_concept: dict[str, list[ConceptPoint]], concepts
 
     candidates.sort(key=lambda item: item[0], reverse=True)
     return candidates[0][1]
+
+
+def _concepts_for_companyfacts(company_facts: dict[str, Any], field_names: tuple[str, ...]) -> tuple[str, ...]:
+    facts = company_facts.get("facts") or {}
+    concepts: list[str] = []
+    for field_name in field_names:
+        concepts.extend(aliases_for(field_name, facts))
+    return tuple(dict.fromkeys(concepts))
+
+
+def _build_rows_from_companyfacts(
+    company_facts: dict[str, Any] | None,
+    field_names: tuple[str, ...],
+) -> dict[str, list[ConceptPoint]]:
+    if not company_facts:
+        return {}
+    facts = company_facts.get("facts") or {}
+    rows_by_concept: dict[str, list[ConceptPoint]] = {}
+    for taxonomy in taxonomy_priority(facts):
+        for concept in _concepts_for_companyfacts(company_facts, field_names):
+            points = _parse_companyfacts_points(company_facts, taxonomy, concept)
+            if points:
+                rows_by_concept.setdefault(concept, []).extend(points)
+    return rows_by_concept
+
+
+def _selection_resolution(
+    selection: MetricSelection,
+    aliases: tuple[str, ...],
+    *,
+    field_name: str,
+) -> dict[str, Any]:
+    point = selection.points[0] if selection.points else None
+    concept = selection.concept or (point.concept if point else None)
+    alias_index = aliases.index(concept) if concept in aliases else None
+    return {
+        "field": field_name,
+        "concept": concept,
+        "taxonomy": point.taxonomy if point else None,
+        "unit": point.unit if point else None,
+        "form": point.form if point else None,
+        "period_end": point.end.isoformat() if point else None,
+        "method": selection.method,
+        "alias_index": alias_index,
+        "used_primary_alias": alias_index == 0 if alias_index is not None else False,
+        "available_aliases": list(aliases),
+        "value": selection.value,
+    }
+
+
+def _select_total_debt_for_taxonomy(
+    rows_by_concept: dict[str, list[ConceptPoint]],
+    aliases: tuple[str, ...],
+    *,
+    taxonomy: str | None,
+) -> MetricSelection:
+    if taxonomy == TAXONOMY_IFRS_FULL:
+        selection = _select_first_balance(rows_by_concept, aliases)
+        if selection.value is not None:
+            return selection
+    domestic_selection = _select_sum_balance(rows_by_concept, DEBT_CONCEPTS)
+    if domestic_selection.value is not None:
+        return domestic_selection
+    return _select_first_balance(rows_by_concept, aliases)
+
+
+def _select_total_cash_for_taxonomy(
+    rows_by_concept: dict[str, list[ConceptPoint]],
+    aliases: tuple[str, ...],
+    *,
+    taxonomy: str | None,
+) -> MetricSelection:
+    if taxonomy == TAXONOMY_IFRS_FULL:
+        selection = _select_first_balance(rows_by_concept, aliases)
+        if selection.value is not None:
+            return selection
+    domestic_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
+    if domestic_selection.value is not None:
+        return domestic_selection
+    return _select_first_balance(rows_by_concept, aliases)
 
 
 def _is_non_zero(value: float | None) -> bool:
@@ -747,16 +941,16 @@ def _select_interest_income_with_fallback(
     fallback_step: str | None = None
     fallback_disclaimer: str | None = None
 
-    primary_selection = _income_ttm_or_10k(primary_rows)
+    primary_selection = _income_ttm_or_annual(primary_rows)
     freshest_interest_period = max(
         [
             selection.period_end
             for selection in (
                 primary_selection,
-                _income_ttm_or_10k(bundled_rows),
-                _income_ttm_or_10k(upper_rows),
-                _income_ttm_or_10k(rows_by_concept.get("InterestAndDividendIncomeOperating") or []),
-                _income_ttm_or_10k(rows_by_concept.get("InterestIncomeOperating") or []),
+                _income_ttm_or_annual(bundled_rows),
+                _income_ttm_or_annual(upper_rows),
+                _income_ttm_or_annual(rows_by_concept.get("InterestAndDividendIncomeOperating") or []),
+                _income_ttm_or_annual(rows_by_concept.get("InterestIncomeOperating") or []),
             )
             if selection.period_end is not None and _is_non_zero(selection.value)
         ],
@@ -791,7 +985,7 @@ def _select_interest_income_with_fallback(
             "InterestIncomeOperating",
         )
         for bundled_concept in bundled_candidates:
-            bundled_selection = _income_ttm_or_10k(rows_by_concept.get(bundled_concept) or [])
+            bundled_selection = _income_ttm_or_annual(rows_by_concept.get(bundled_concept) or [])
             if not _is_non_zero(bundled_selection.value):
                 continue
             bundled_selection.concept = bundled_concept
@@ -820,7 +1014,7 @@ def _select_interest_income_with_fallback(
             break
 
     if selected.value is None:
-        upper_selection = _income_ttm_or_10k(upper_rows)
+        upper_selection = _income_ttm_or_annual(upper_rows)
         if upper_selection.value is not None:
             upper_selection.concept = INTEREST_UPPER_BOUNDARY_CONCEPT
             for point in upper_selection.points:
@@ -850,7 +1044,7 @@ def _select_interest_income_with_fallback(
     for concept_name, concept_rows in rows_by_concept.items():
         if not _matches_fintech_stablecoin_term(concept_name):
             continue
-        fintech_selection = _income_ttm_or_10k(concept_rows or [])
+        fintech_selection = _income_ttm_or_annual(concept_rows or [])
         fintech_value = fintech_selection.value
         if not _is_non_zero(fintech_value):
             continue
@@ -911,7 +1105,7 @@ def _points_to_raw_rows(points: list[ConceptPoint]) -> list[dict[str, Any]]:
         seen.add(key)
         rows.append(
             {
-                "taxonomy": "us-gaap",
+                "taxonomy": point.taxonomy,
                 "tag": point.concept,
                 "unit": point.unit,
                 "value": point.value,
@@ -920,7 +1114,7 @@ def _points_to_raw_rows(points: list[ConceptPoint]) -> list[dict[str, Any]]:
                 "filed_date": point.filed,
                 "frame": point.frame,
                 "raw_json": {
-                    "taxonomy": "us-gaap",
+                    "taxonomy": point.taxonomy,
                     "tag": point.concept,
                     "unit": point.unit,
                     "value": point.value,
@@ -1047,8 +1241,13 @@ async def _fetch_ticker_packet(
                 FIELD_INTEREST_INCOME,
             ],
             placeholder_reason="CIK not found in SEC ticker map.",
+            filer_type=FILER_UNKNOWN,
+            taxonomy=None,
+            data_frequency=None,
+            concept_resolution={},
             has_10k=False,
             has_20f=False,
+            has_40f=False,
             sic_code=None,
             sic_description=None,
             component_breakdown=_build_component_breakdown(
@@ -1071,100 +1270,186 @@ async def _fetch_ticker_packet(
 
     cik = mapped["cik"]
     submissions = await client.fetch_submissions(cik) or {}
+    company_facts = await client.fetch_company_facts(cik) or {}
+    facts = company_facts.get("facts") or {}
+    filer_type = detect_filer_type(submissions)
+    taxonomy = detect_taxonomy(facts)
     company_name = str(submissions.get("name") or mapped["company_name"]).strip() or symbol
     sic_code = str(submissions.get("sic") or "").strip() or None
     sic_description = str(submissions.get("sicDescription") or "").strip() or None
     latest_filing = _latest_supported_filing(submissions)
 
     recent_forms_raw = (((submissions.get("filings") or {}).get("recent") or {}).get("form") or [])
-    recent_forms = {str(form or "").upper().strip() for form in recent_forms_raw if form}
-    has_10k = "10-K" in recent_forms
-    has_20f = "20-F" in recent_forms
+    recent_forms = {normalize_form(form) for form in recent_forms_raw if form}
+    has_10k = "10-K" in recent_forms or "10-K/A" in recent_forms
+    has_20f = "20-F" in recent_forms or "20-F/A" in recent_forms
+    has_40f = "40-F" in recent_forms or "40-F/A" in recent_forms
 
-    concept_tasks = {
-        concept: asyncio.create_task(client.fetch_company_concept(cik, concept))
-        for concept in ALL_REQUIRED_CONCEPTS
-    }
-    rows_by_concept: dict[str, list[ConceptPoint]] = {}
-    for concept, task in concept_tasks.items():
-        status, payload = await task
-        if status == 404:
-            rows_by_concept[concept] = []
-            continue
-        rows_by_concept[concept] = _parse_concept_points(payload, concept)
-
-    debt_selection = _select_sum_balance(rows_by_concept, DEBT_CONCEPTS)
-    cash_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
-    ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
-    revenue_selection = _select_best_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
-    interest_result, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
-        rows_by_concept,
-        symbol,
+    empty_selection = MetricSelection(
+        value=None,
+        period_end=None,
+        points=[],
+        method="missing",
+        concept=None,
     )
-    interest_total = _to_float(interest_result.get("totalImpermissibleIncome"))
-    interest_selection = interest_result.get("selection")
-    if not isinstance(interest_selection, MetricSelection):
-        interest_selection = MetricSelection(
-            value=None,
-            period_end=None,
-            points=[],
-            method="missing",
-            concept=None,
+    concept_resolution: dict[str, Any] = {}
+
+    if is_fpi_filer_type(filer_type):
+        rows_by_concept = _build_rows_from_companyfacts(
+            company_facts,
+            (
+                "total_debt",
+                "total_cash",
+                "accounts_receivable",
+                "total_revenue",
+                "interest_income",
+            ),
         )
-    elif interest_total is not None:
-        interest_selection = MetricSelection(
-            value=interest_total,
-            period_end=interest_selection.period_end,
-            points=interest_selection.points,
-            method=interest_selection.method,
-            concept=interest_selection.concept,
-        )
-    interest_calculation_details = interest_result.get("calculationDetails")
-    if not isinstance(interest_calculation_details, list):
+        debt_aliases = aliases_for("total_debt", facts)
+        cash_aliases = aliases_for("total_cash", facts)
+        ar_aliases = aliases_for("accounts_receivable", facts)
+        revenue_aliases = aliases_for("total_revenue", facts)
+        interest_aliases = aliases_for("interest_income", facts)
+
+        debt_selection = _select_total_debt_for_taxonomy(rows_by_concept, debt_aliases, taxonomy=taxonomy)
+        cash_selection = _select_total_cash_for_taxonomy(rows_by_concept, cash_aliases, taxonomy=taxonomy)
+        ar_selection = _select_first_balance(rows_by_concept, ar_aliases)
+        revenue_selection = _select_best_income(rows_by_concept, revenue_aliases)
+        interest_selection = _select_first_income(rows_by_concept, interest_aliases)
+        interest_fallback_step = None
+        interest_disclaimer = None
         interest_calculation_details = []
-    non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
-    dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
+        if interest_selection.value is not None:
+            interest_calculation_details.append(
+                {
+                    "lineName": interest_selection.concept or "Interest Income",
+                    "amount": float(interest_selection.value),
+                    "sourceSection": "IFRS Company Facts",
+                }
+            )
+        non_operating_interest_selection = empty_selection
+        dividend_selection = empty_selection
+        commercial_paper_selection = empty_selection
+        short_term_notes_selection = empty_selection
+        current_long_term_debt_selection = empty_selection
+        noncurrent_debt_selection = empty_selection
+        bank_cash_selection = cash_selection
+        restricted_cash_selection = empty_selection
+        short_term_securities_selection = empty_selection
+        long_term_bonds_selection = empty_selection
+        data_frequency = DATA_FREQUENCY_ANNUAL
+    else:
+        concept_tasks = {
+            concept: asyncio.create_task(client.fetch_company_concept(cik, concept))
+            for concept in DOMESTIC_REQUIRED_CONCEPTS
+        }
+        rows_by_concept = {}
+        for concept, task in concept_tasks.items():
+            status, payload = await task
+            if status == 404:
+                rows_by_concept[concept] = []
+                continue
+            rows_by_concept[concept] = _parse_concept_points(payload, concept)
 
-    commercial_paper_selection = _select_first_balance(
-        rows_by_concept,
-        ("CommercialPaper",),
-        reference_period=debt_selection.period_end,
-    )
-    short_term_notes_selection = _select_first_balance(
-        rows_by_concept,
-        ("ShortTermBorrowings",) + SHORT_TERM_NOTES_PAY_CONCEPTS,
-        reference_period=debt_selection.period_end,
-    )
-    current_long_term_debt_selection = _select_first_balance(
-        rows_by_concept,
-        ("LongTermDebtCurrent",),
-        reference_period=debt_selection.period_end,
-    )
-    noncurrent_debt_selection = _select_first_balance(
-        rows_by_concept,
-        ("LongTermDebt",),
-        reference_period=debt_selection.period_end,
-    )
-    bank_cash_selection = _select_first_balance(
-        rows_by_concept,
-        ("CashAndCashEquivalentsAtCarryingValue",),
-        reference_period=cash_selection.period_end,
-    )
-    restricted_cash_selection = _select_sum_balance(
-        rows_by_concept,
-        RESTRICTED_CASH_CONCEPTS,
-        reference_period=cash_selection.period_end,
-    )
-    short_term_securities_selection = _select_sum_balance(
-        rows_by_concept,
-        ("ShortTermInvestments", "MarketableSecuritiesCurrent"),
-        reference_period=cash_selection.period_end,
-    )
-    long_term_bonds_selection = _select_sum_balance(
-        rows_by_concept,
-        LONG_TERM_SECURITIES_CONCEPTS,
-        reference_period=cash_selection.period_end,
-    )
+        debt_selection = _select_sum_balance(rows_by_concept, DEBT_CONCEPTS)
+        cash_selection = _select_sum_balance(rows_by_concept, CASH_CONCEPTS)
+        ar_selection = _select_first_balance(rows_by_concept, ACCOUNTS_RECEIVABLE_CONCEPTS)
+        revenue_selection = _select_best_income(rows_by_concept, TOTAL_REVENUE_CONCEPTS)
+        interest_result, interest_fallback_step, interest_disclaimer = _select_interest_income_with_fallback(
+            rows_by_concept,
+            symbol,
+        )
+        interest_total = _to_float(interest_result.get("totalImpermissibleIncome"))
+        interest_selection = interest_result.get("selection")
+        if not isinstance(interest_selection, MetricSelection):
+            interest_selection = empty_selection
+        elif interest_total is not None:
+            interest_selection = MetricSelection(
+                value=interest_total,
+                period_end=interest_selection.period_end,
+                points=interest_selection.points,
+                method=interest_selection.method,
+                concept=interest_selection.concept,
+            )
+        interest_calculation_details = interest_result.get("calculationDetails")
+        if not isinstance(interest_calculation_details, list):
+            interest_calculation_details = []
+        non_operating_interest_selection = _select_first_income(rows_by_concept, NON_OPERATING_INTEREST_CONCEPTS)
+        dividend_selection = _select_first_income(rows_by_concept, DIVIDEND_INCOME_CONCEPTS)
+
+        commercial_paper_selection = _select_first_balance(
+            rows_by_concept,
+            ("CommercialPaper",),
+            reference_period=debt_selection.period_end,
+        )
+        short_term_notes_selection = _select_first_balance(
+            rows_by_concept,
+            ("ShortTermBorrowings",) + SHORT_TERM_NOTES_PAY_CONCEPTS,
+            reference_period=debt_selection.period_end,
+        )
+        current_long_term_debt_selection = _select_first_balance(
+            rows_by_concept,
+            ("LongTermDebtCurrent",),
+            reference_period=debt_selection.period_end,
+        )
+        noncurrent_debt_selection = _select_first_balance(
+            rows_by_concept,
+            ("LongTermDebt",),
+            reference_period=debt_selection.period_end,
+        )
+        bank_cash_selection = _select_first_balance(
+            rows_by_concept,
+            ("CashAndCashEquivalentsAtCarryingValue",),
+            reference_period=cash_selection.period_end,
+        )
+        restricted_cash_selection = _select_sum_balance(
+            rows_by_concept,
+            RESTRICTED_CASH_CONCEPTS,
+            reference_period=cash_selection.period_end,
+        )
+        short_term_securities_selection = _select_sum_balance(
+            rows_by_concept,
+            ("ShortTermInvestments", "MarketableSecuritiesCurrent"),
+            reference_period=cash_selection.period_end,
+        )
+        long_term_bonds_selection = _select_sum_balance(
+            rows_by_concept,
+            LONG_TERM_SECURITIES_CONCEPTS,
+            reference_period=cash_selection.period_end,
+        )
+        data_frequency = (
+            DATA_FREQUENCY_QUARTERLY
+            if any(is_quarterly_form(point.form) for point in revenue_selection.points + interest_selection.points)
+            else DATA_FREQUENCY_ANNUAL
+        )
+
+    concept_resolution = {
+        FIELD_TOTAL_DEBT: _selection_resolution(
+            debt_selection,
+            aliases_for("total_debt", facts) or DEBT_CONCEPTS,
+            field_name=FIELD_TOTAL_DEBT,
+        ),
+        FIELD_TOTAL_CASH: _selection_resolution(
+            cash_selection,
+            aliases_for("total_cash", facts) or CASH_CONCEPTS,
+            field_name=FIELD_TOTAL_CASH,
+        ),
+        FIELD_ACCOUNTS_RECEIVABLE: _selection_resolution(
+            ar_selection,
+            aliases_for("accounts_receivable", facts) or ACCOUNTS_RECEIVABLE_CONCEPTS,
+            field_name=FIELD_ACCOUNTS_RECEIVABLE,
+        ),
+        FIELD_TOTAL_REVENUE: _selection_resolution(
+            revenue_selection,
+            aliases_for("total_revenue", facts) or TOTAL_REVENUE_CONCEPTS,
+            field_name=FIELD_TOTAL_REVENUE,
+        ),
+        FIELD_INTEREST_INCOME: _selection_resolution(
+            interest_selection,
+            aliases_for("interest_income", facts) or INTEREST_INCOME_CONCEPTS,
+            field_name=FIELD_INTEREST_INCOME,
+        ),
+    }
 
     selected_points = (
         debt_selection.points
@@ -1199,12 +1484,15 @@ async def _fetch_ticker_packet(
 
     all_missing = len(missing_fields) == len(field_values)
     placeholder_reason: str | None = None
-    if not has_10k and has_20f:
-        placeholder_reason = "Foreign filer (20-F) without recent 10-K coverage."
-        audit.record_foreign_filer(symbol, placeholder_reason)
-    elif all_missing:
-        placeholder_reason = "No recent SEC 10-Q/10-K or company-facts concept data."
+    if filer_type == FILER_UNKNOWN and latest_filing is None:
+        placeholder_reason = "No recent supported SEC annual or quarterly filing."
         audit.record_no_xbrl(symbol, placeholder_reason)
+    elif all_missing:
+        placeholder_reason = "No recent supported SEC filing or company-facts concept data."
+        audit.record_no_xbrl(symbol, placeholder_reason)
+
+    if is_fpi_filer_type(filer_type):
+        audit.record_foreign_filer(symbol, f"{filer_type}|taxonomy={taxonomy or 'unknown'}")
 
     balance_sheet_date = max(
         [dt for dt in (debt_selection.period_end, cash_selection.period_end, ar_selection.period_end) if dt],
@@ -1269,8 +1557,13 @@ async def _fetch_ticker_packet(
         points=selected_points,
         missing_fields=missing_fields,
         placeholder_reason=placeholder_reason,
+        filer_type=filer_type,
+        taxonomy=taxonomy,
+        data_frequency=data_frequency,
+        concept_resolution=concept_resolution,
         has_10k=has_10k,
         has_20f=has_20f,
+        has_40f=has_40f,
         sic_code=sic_code,
         sic_description=sic_description,
         component_breakdown=_build_component_breakdown(
@@ -1385,17 +1678,18 @@ class SecRefreshService:
             row = NormalizedFinancial(company_id=company_id, filing_id=filing_id)
             self.session.add(row)
 
-        row.total_revenue = packet.total_revenue
-        row.interest_income = packet.interest_income
-        row.total_debt = packet.total_debt
-        row.cash_and_equivalents = packet.total_cash
+        fx_rate = yfinance_data.fx_rate_to_market_currency
+        row.total_revenue = _scale_optional(packet.total_revenue, fx_rate)
+        row.interest_income = _scale_optional(packet.interest_income, fx_rate)
+        row.total_debt = _scale_optional(packet.total_debt, fx_rate)
+        row.cash_and_equivalents = _scale_optional(packet.total_cash, fx_rate)
         row.total_assets = None
         row.market_cap = yfinance_data.market_cap
         row.operating_income = None
         row.net_income = None
         row.shares_outstanding = yfinance_data.shares_outstanding
 
-        components = dict(packet.component_breakdown or {})
+        components = _scale_financial_components(packet.component_breakdown or {}, fx_rate)
         valuation = dict(components.get("valuation") or {})
         valuation["shares_outstanding"] = yfinance_data.shares_outstanding
         valuation["latest_closing_price"] = yfinance_data.latest_closing_price
@@ -1404,25 +1698,25 @@ class SecRefreshService:
 
         purging = dict(components.get("purging") or {})
         if packet.interest_income_calculation_details:
-            purging["calculation_details"] = packet.interest_income_calculation_details
-        core_prohibited = packet.total_revenue if _is_core_interest_profile(sector, industry) else 0.0
+            purging["calculation_details"] = _scale_calculation_details(packet.interest_income_calculation_details, fx_rate)
+        core_prohibited = _scale_optional(packet.total_revenue, fx_rate) if _is_core_interest_profile(sector, industry) else 0.0
         purging["core_prohibited_operations"] = core_prohibited
         passive_yield = _to_float(purging.get("passive_financial_yield"))
         # When Ratio 3 uses fallback tags, preserve the resolved numerator in the
         # purging breakdown so the UI detail rows match the card-level value.
         if (
             not _is_core_interest_profile(sector, industry)
-            and packet.interest_income is not None
+            and row.interest_income is not None
             and packet.interest_income_fallback_step in {"step2", "step3"}
             and (passive_yield is None or passive_yield == 0.0)
         ):
-            purging["passive_financial_yield"] = packet.interest_income
-            passive_yield = packet.interest_income
+            purging["passive_financial_yield"] = float(row.interest_income)
+            passive_yield = float(row.interest_income)
 
         if _is_core_interest_profile(sector, industry):
-            total_annual = packet.total_revenue
-        elif packet.interest_income is not None:
-            total_annual = packet.interest_income
+            total_annual = _to_float(row.total_revenue)
+        elif row.interest_income is not None:
+            total_annual = _to_float(row.interest_income)
         else:
             total_annual = _sum_optional(core_prohibited, passive_yield)
         purging["total_annual_prohibited_revenue"] = total_annual
@@ -1430,10 +1724,27 @@ class SecRefreshService:
 
         row.source_metadata_json = {
             "data_source": "edgar_xbrl",
+            "filer_type": packet.filer_type,
+            "taxonomy": packet.taxonomy,
+            "market_currency": yfinance_data.market_currency,
+            "financial_currency": yfinance_data.financial_currency,
+            "fx_rate_to_market_currency": fx_rate,
+            "available_taxonomies": sorted(
+                {
+                    point.taxonomy
+                    for point in packet.points
+                    if point.taxonomy
+                }
+            ),
+            "data_frequency": packet.data_frequency,
+            "filing_form": packet.primary_filing_type,
+            "annual_data_only": is_fpi_filer_type(packet.filer_type),
             "balance_sheet_date": packet.balance_sheet_date.isoformat() if packet.balance_sheet_date else None,
             "income_statement_date": packet.income_statement_date.isoformat() if packet.income_statement_date else None,
-            "accounts_receivable": packet.accounts_receivable,
+            "accounts_receivable": _scale_optional(packet.accounts_receivable, fx_rate),
+            "xbrl_accounts_receivable": packet.accounts_receivable,
             "missing_fields": packet.missing_fields,
+            "concept_resolution": packet.concept_resolution,
             "sic_code": packet.sic_code,
             "sic_description": packet.sic_description,
             "components": components,
@@ -1499,7 +1810,7 @@ class SecRefreshService:
                     {
                         "check": "SEC Filing Coverage",
                         "value": "Unavailable",
-                        "threshold": "Recent 10-Q/10-K + company facts",
+                        "threshold": "Recent 10-Q/10-K/20-F/40-F + company facts",
                         "result": "Needs Review",
                         "result_class": "unknown",
                     }
@@ -1533,6 +1844,9 @@ class SecRefreshService:
                 "accession_number": filing.accession_number,
                 "filing_type": filing.filing_type,
                 "filing_date": str(filing.filing_date),
+                "data_frequency": normalized.source_metadata_json.get("data_frequency"),
+                "taxonomy": normalized.source_metadata_json.get("taxonomy"),
+                "filer_type": normalized.source_metadata_json.get("filer_type"),
             },
         }
         self.session.flush()
@@ -1544,11 +1858,17 @@ class SecRefreshService:
         industry: str | None = None
         shares_outstanding: float | None = None
         latest_closing_price: float | None = None
+        market_currency: str | None = None
+        financial_currency: str | None = None
+        fx_rate_to_market_currency: float | None = None
         try:
             info = yf.Ticker(ticker).info or {}
             market_cap = _to_float(info.get("marketCap"))
             sector = str(info.get("sector") or "").strip() or None
             industry = str(info.get("industry") or "").strip() or None
+            market_currency = str(info.get("currency") or "").upper().strip() or None
+            financial_currency = str(info.get("financialCurrency") or market_currency or "").upper().strip() or None
+            fx_rate_to_market_currency = _fetch_fx_rate_to_market_currency(financial_currency, market_currency)
             shares_outstanding = _to_float(info.get("sharesOutstanding"))
             latest_closing_price = _to_float(
                 info.get("regularMarketPrice")
@@ -1567,6 +1887,9 @@ class SecRefreshService:
             industry=industry,
             shares_outstanding=shares_outstanding,
             latest_closing_price=latest_closing_price,
+            market_currency=market_currency,
+            financial_currency=financial_currency,
+            fx_rate_to_market_currency=fx_rate_to_market_currency,
         )
 
     async def _fetch_packets(self, tickers: list[str], audit: RunAudit) -> dict[str, TickerEdgarPacket]:
@@ -1663,7 +1986,21 @@ class SecRefreshService:
         )
         raw_rows = _points_to_raw_rows(packet.points)
         self._store_raw_facts(company.id, filing.id, raw_rows)
-        self._upsert_screen_result(company, filing, normalized, "edgar_xbrl", None)
+        screen_result = self._upsert_screen_result(company, filing, normalized, "edgar_xbrl", None)
+        if is_fpi_filer_type(packet.filer_type):
+            LOGGER.info(
+                "FPI refresh %s CIK=%s filer_type=%s taxonomy=%s resolved_concepts=%s ratios=%s",
+                packet.ticker,
+                packet.cik,
+                packet.filer_type,
+                packet.taxonomy,
+                packet.concept_resolution,
+                {
+                    "debt_ratio": self._safe_ratio_value(screen_result.debt_ratio),
+                    "interest_income_ratio": self._safe_ratio_value(screen_result.interest_income_ratio),
+                    "cash_ratio": self._safe_ratio_value(screen_result.cash_ratio),
+                },
+            )
         company.updated_at = datetime.now(UTC)
         return RefreshSummary(
             ticker=packet.ticker,
