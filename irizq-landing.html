@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Halal Investing Roadmap | iRizq</title>
+  <meta name="description" content="Download the free iRizq Beginner Halal Investing Roadmap. 8 simple steps to building wealth the halal way.">
+  <link rel="icon" href="/static/irizq_favicon.png" type="image/png">
+  <style>
+    :root {
+      --bg: #0A0A0A;
+      --accent: #87C77B;
+      --text: #F2F8F1;
+      --text-muted: #A8B8A4;
+      --card: #141414;
+      --border: #2A3A28;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .hero {
+        flex-direction: row;
+        text-align: left;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5rem;
+      }
+    }
+
+    .book-cover {
+      max-width: 200px;
+      width: 100%;
+      height: auto;
+      transform: rotate(-3deg);
+      filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+      border-radius: 6px;
+    }
+
+    @media (min-width: 768px) {
+      .book-cover {
+        max-width: 300px;
+      }
+    }
+
+    .hero-copy h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .hero-copy h1 span {
+      color: var(--accent);
+    }
+
+    .hero-copy p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 34rem;
+    }
+
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .form-card label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 560px) {
+      .form-row {
+        flex-direction: row;
+      }
+    }
+
+    input[type="email"] {
+      flex: 1;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0F0F0F;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    input[type="email"]:focus {
+      outline: 2px solid rgba(135, 199, 123, 0.45);
+      border-color: var(--accent);
+    }
+
+    button[type="submit"] {
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0A0A0A;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .visitor-counter {
+      display: none;
+      text-align: center;
+      margin: 1rem auto 0;
+      max-width: 520px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      opacity: 0.85;
+    }
+
+    .message {
+      margin-top: 0.9rem;
+      font-size: 0.92rem;
+      min-height: 1.25rem;
+    }
+
+    .message.error {
+      color: #F08080;
+    }
+
+    .message.success {
+      color: var(--accent);
+    }
+
+    .bullets {
+      margin-top: 2.5rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .bullet {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+
+    .bullet strong {
+      color: var(--accent);
+    }
+
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <img
+        class="book-cover"
+        src="/static/irizq-halal-investing-ebook-cover-FINAL.png"
+        alt="iRizq Halal Investing Roadmap ebook cover"
+        width="300"
+        height="400"
+      >
+      <div class="hero-copy">
+        <h1>Your Free <span>Halal Investing Roadmap</span></h1>
+        <p>
+          Download the iRizq beginner guide with 8 simple steps to building wealth
+          the halal way — from financial foundations to long-term discipline.
+        </p>
+      </div>
+    </section>
+
+    <section class="form-card" aria-labelledby="download-heading">
+      <h2 id="download-heading" style="margin-top:0;margin-bottom:1rem;font-size:1.15rem;">Get the free PDF by email</h2>
+      <form id="subscribe-form" novalidate>
+        <label for="email">Email address</label>
+        <div class="form-row">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          >
+          <button type="submit" id="submit-btn">Send Me the Roadmap</button>
+        </div>
+        <div id="form-message" class="message" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <div id="visitor-counter" class="visitor-counter" aria-live="polite"></div>
+
+    <section class="bullets" aria-label="What you will learn">
+      <div class="bullet"><strong>Step 1–2:</strong> Build your financial foundation and understand halal investing basics.</div>
+      <div class="bullet"><strong>Step 3–5:</strong> Screen stocks, diversify wisely, and avoid common haram pitfalls.</div>
+      <div class="bullet"><strong>Step 6–8:</strong> Think long-term, stay disciplined, and grow with barakah in mind.</div>
+    </section>
+
+    <footer>
+      <p>
+        Brought to you by
+        <a href="https://www.irizq.com" target="_blank" rel="noopener noreferrer">iRizq.com</a>
+        ·
+        <a href="https://stocks.irizq.com" target="_blank" rel="noopener noreferrer">Halal Stock Checker</a>
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    const BACKEND_URL = "https://halal-stock-checker.onrender.com";
+
+    const form = document.getElementById("subscribe-form");
+    const emailInput = document.getElementById("email");
+    const submitBtn = document.getElementById("submit-btn");
+    const formMessage = document.getElementById("form-message");
+    const visitorCounter = document.getElementById("visitor-counter");
+
+    function setMessage(text, type) {
+      formMessage.textContent = text || "";
+      formMessage.className = "message" + (type ? " " + type : "");
+    }
+
+    async function loadVisitorCount() {
+      try {
+        const response = await fetch(BACKEND_URL + "/stats/ebook");
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        const visits = Number(data.visits || 0);
+        if (!visits) {
+          return;
+        }
+        visitorCounter.textContent = "👥 " + visits.toLocaleString() + " people have visited this page";
+        visitorCounter.style.display = "block";
+      } catch (error) {
+        // Hide silently on failure.
+      }
+    }
+
+    async function trackVisit() {
+      try {
+        await fetch(BACKEND_URL + "/track-visit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page: "ebook-landing" }),
+        });
+      } catch (error) {
+        // Non-blocking analytics.
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) {
+        setMessage("Please enter your email address.", "error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setMessage("Sending your roadmap...", "");
+
+      try {
+        const response = await fetch(BACKEND_URL + "/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Something went wrong. Please try again.");
+        }
+
+        setMessage("Check your inbox — your Halal Investing Roadmap is on its way!", "success");
+        form.reset();
+      } catch (error) {
+        setMessage(error.message || "Something went wrong. Please try again.", "error");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    form.addEventListener("submit", handleSubmit);
+    document.addEventListener("DOMContentLoaded", () => {
+      trackVisit();
+      loadVisitorCount();
+    });
+  </script>
+</body>
+</html>
