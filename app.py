@@ -250,9 +250,18 @@ def ebook_stats() -> tuple[Any, int]:
     return jsonify({"visits": visits}), 200
 
 
+def _serve_landing_page() -> Any:
+    return send_from_directory(Path(__file__).resolve().parent, "irizq-landing.html")
+
+
+@app.get("/ebook")
+def ebook_landing_page() -> Any:
+    return _serve_landing_page()
+
+
 @app.get("/")
 def landing_page() -> Any:
-    return send_from_directory(Path(__file__).resolve().parent, "irizq-landing.html")
+    return _serve_landing_page()
 
 
 if __name__ == "__main__":
