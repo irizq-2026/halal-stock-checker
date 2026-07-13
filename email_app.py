@@ -15,8 +15,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import psycopg2
-import requests as req_lib
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
 from logging_setup import configure_logging
@@ -249,46 +248,5 @@ def ebook() -> str:
     return render_template("irizq-ebook.html")
 
 
-@app.route("/", defaults={"path": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-@app.route("/<path:path>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-def proxy(path: str) -> Response:
-    """Forward non-ebook requests to the internal Streamlit app."""
-    if path.startswith("static/"):
-        return send_from_directory(app.static_folder, path[len("static/") :])
-
-    query = request.query_string.decode("utf-8", errors="ignore")
-    streamlit_url = f"http://localhost:8501/{path}"
-    if query:
-        streamlit_url = f"{streamlit_url}?{query}"
-
-    headers = {key: value for key, value in request.headers if key.lower() != "host"}
-    try:
-        resp = req_lib.request(
-            method=request.method,
-            url=streamlit_url,
-            headers=headers,
-            data=request.get_data(),
-            cookies=request.cookies,
-            allow_redirects=False,
-            stream=True,
-            timeout=120,
-        )
-    except req_lib.RequestException:
-        LOGGER.exception("Failed to proxy request to Streamlit path=%s", path)
-        return Response("Streamlit app is unavailable.", status=502)
-
-    excluded = {"content-encoding", "content-length", "transfer-encoding", "connection"}
-    response_headers = [
-        (key, value)
-        for key, value in resp.headers.items()
-        if key.lower() not in excluded
-    ]
-    return Response(
-        resp.iter_content(chunk_size=1024),
-        status=resp.status_code,
-        headers=response_headers,
-    )
-
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
