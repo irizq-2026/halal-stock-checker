@@ -3,7 +3,7 @@ services:
     name: halal-stock-checker
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn email_app:app
     envVars:
       - key: DATABASE_URL
         sync: false

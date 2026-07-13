@@ -26,7 +26,7 @@ pip install -r requirements.txt
 python init_db.py
 # optional: pre-load a ticker
 python run_weekly_refresh.py --ticker AAPL
-streamlit run streamlit_app.py
+streamlit run app.py
 ```
 
 ## Environment Variables
