@@ -1,6 +1,6 @@
-# Dependencies for email_app.py (ebook subscribe API) only.
-# Install with: pip install -r requirements-email.txt
+# Dependencies for email_app.py / Caddy supervisor on Render.
 flask>=3.0.0
 flask-cors>=4.0.0
 gunicorn>=22.0.0
 psycopg2-binary>=2.9.10
+supervisor>=4.2.5
