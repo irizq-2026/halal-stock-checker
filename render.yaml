@@ -2,7 +2,7 @@ services:
   - type: web
     name: halal-stock-checker
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-email.txt
     startCommand: gunicorn email_app:app
     envVars:
       - key: DATABASE_URL
