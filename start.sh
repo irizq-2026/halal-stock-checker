@@ -24,6 +24,8 @@ if [[ ! -x "$CADDY_BIN" ]]; then
   download_caddy
 fi
 
+echo "PORT=${PORT}"
+
 echo "Starting Streamlit on 127.0.0.1:8501..."
 streamlit run app.py \
   --server.port 8501 \
@@ -40,14 +42,24 @@ gunicorn email_app:app \
   --workers 1 &
 GUNICORN_PID=$!
 
+CADDY_PID=""
+
 cleanup() {
-  echo "Shutting down..."
-  kill "$STREAMLIT_PID" "$GUNICORN_PID" 2>/dev/null || true
+  echo "Shutting down (streamlit=${STREAMLIT_PID} gunicorn=${GUNICORN_PID} caddy=${CADDY_PID})..."
+  kill "${CADDY_PID}" "${STREAMLIT_PID}" "${GUNICORN_PID}" 2>/dev/null || true
 }
+# Do not `exec caddy` with an EXIT trap that kills backends — bash runs EXIT
+# before exec and previously left Caddy with no upstreams (HTTP 502).
 trap cleanup EXIT INT TERM
 
+# Bind Render's $PORT immediately so the service is reachable while backends warm up.
+# Configure Render health check path to /healthz (handled by Caddy, no upstream needed).
+echo "Starting Caddy on 0.0.0.0:${PORT}..."
+"$CADDY_BIN" run --config "$ROOT/Caddyfile" --adapter caddyfile &
+CADDY_PID=$!
+
 echo "Waiting for Streamlit health check..."
-for _ in $(seq 1 60); do
+for _ in $(seq 1 90); do
   if curl -sf "http://127.0.0.1:8501/_stcore/health" >/dev/null 2>&1; then
     echo "Streamlit is ready."
     break
@@ -56,8 +68,25 @@ for _ in $(seq 1 60); do
     echo "Streamlit process exited unexpectedly." >&2
     exit 1
   fi
+  if ! kill -0 "$CADDY_PID" 2>/dev/null; then
+    echo "Caddy process exited unexpectedly." >&2
+    exit 1
+  fi
   sleep 1
 done
 
-echo "Starting Caddy on 0.0.0.0:${PORT}..."
-exec "$CADDY_BIN" run --config "$ROOT/Caddyfile" --adapter caddyfile
+echo "Waiting for Flask ebook API..."
+for _ in $(seq 1 30); do
+  if curl -sf "http://127.0.0.1:5000/ebook" >/dev/null 2>&1; then
+    echo "Flask is ready."
+    break
+  fi
+  if ! kill -0 "$GUNICORN_PID" 2>/dev/null; then
+    echo "Gunicorn process exited unexpectedly." >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+echo "All processes running. Supervising Caddy (pid=${CADDY_PID})..."
+wait "$CADDY_PID"

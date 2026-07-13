@@ -4,6 +4,11 @@
 }
 
 :{$PORT} {
+	# Liveness for Render health checks (does not depend on upstreams)
+	handle /healthz {
+		respond "ok" 200
+	}
+
 	# Ebook API + landing page (Flask)
 	@ebook_routes path /ebook /subscribe /track-visit /stats/ebook
 	handle @ebook_routes {
