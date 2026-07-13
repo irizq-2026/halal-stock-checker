@@ -8,6 +8,9 @@ font = "sans serif"
 [server]
 maxUploadSize = 5
 enableCORS = false
+enableXsrfProtection = false
+enableWebsocketCompression = false
+headless = true
 
 [browser]
 gatherUsageStats = false

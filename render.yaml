@@ -2,8 +2,8 @@ services:
   - type: web
     name: halal-stock-checker
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app.py --server.port 8501 --server.headless true --server.address localhost & gunicorn email_app:app --bind 0.0.0.0:10000 --timeout 120
+    buildCommand: pip install -r requirements.txt && mkdir -p bin && curl -fsSL https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_linux_amd64.tar.gz | tar -xz -C bin caddy && chmod +x bin/caddy
+    startCommand: bash start.sh
     envVars:
       - key: DATABASE_URL
         sync: false
