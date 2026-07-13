@@ -4,3 +4,4 @@ pip install -r requirements.txt
 echo "Initializing database tables..."
 python init_db.py
 echo "Done! Run with: streamlit run app.py"
+echo "Run ebook API with: gunicorn email_app:app"

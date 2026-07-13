@@ -1,4 +1,18 @@
 services:
+  - type: web
+    name: halal-stock-checker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn email_app:app
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_NAME
+        sync: false
   - type: cron
     name: nightly-price-update
     runtime: python
