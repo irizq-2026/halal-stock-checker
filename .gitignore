@@ -1,1 +1,5 @@
 bin/caddy
+.venv-streamlit/
+.venv-web/
+__pycache__/
+*.pyc
