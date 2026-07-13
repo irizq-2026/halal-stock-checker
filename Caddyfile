@@ -4,24 +4,20 @@
 }
 
 :{$PORT} {
-	# Liveness for Render health checks (does not depend on upstreams)
 	handle /healthz {
 		respond "ok" 200
 	}
 
-	# Ebook API + landing page (Flask)
 	@ebook_routes path /ebook /subscribe /track-visit /stats/ebook
 	handle @ebook_routes {
 		reverse_proxy 127.0.0.1:5000
 	}
 
-	# Ebook static assets served by Flask (do not send these to Streamlit)
 	@ebook_static path /static/irizq* /static/downloads/* /static/logo.png /static/icon.png /static/manifest.json
 	handle @ebook_static {
 		reverse_proxy 127.0.0.1:5000
 	}
 
-	# Everything else → Streamlit (WebSocket-capable)
 	handle {
 		reverse_proxy 127.0.0.1:8501 {
 			flush_interval -1
