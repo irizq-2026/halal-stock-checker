@@ -4,6 +4,7 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt && mkdir -p bin && curl -fsSL https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_linux_amd64.tar.gz | tar -xz -C bin caddy && chmod +x bin/caddy
     startCommand: bash start.sh
+    healthCheckPath: /healthz
     envVars:
       - key: DATABASE_URL
         sync: false
