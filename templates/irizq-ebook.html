@@ -219,7 +219,7 @@
         <h1>Your Free <span>Halal Investing Roadmap</span></h1>
         <p>
           Download the iRizq beginner guide with 8 simple steps to building wealth
-          the halal way — from financial foundations to long-term discipline.
+          the halal way - from financial foundations to long-term discipline.
         </p>
       </div>
     </section>
@@ -243,13 +243,13 @@
       </form>
     </section>
 
-    <div id="visitor-counter" class="visitor-counter" aria-live="polite"></div>
-
     <section class="bullets" aria-label="What you will learn">
       <div class="bullet"><strong>Step 1–2:</strong> Build your financial foundation and understand halal investing basics.</div>
       <div class="bullet"><strong>Step 3–5:</strong> Screen stocks, diversify wisely, and avoid common haram pitfalls.</div>
       <div class="bullet"><strong>Step 6–8:</strong> Think long-term, stay disciplined, and grow with barakah in mind.</div>
     </section>
+
+    <div id="visitor-counter" class="visitor-counter" aria-live="polite"></div>
 
     <footer>
       <p>
@@ -328,7 +328,12 @@
           throw new Error(data.error || "Something went wrong. Please try again.");
         }
 
-        setMessage("Check your inbox — your Halal Investing Roadmap is on its way!", "success");
+        setMessage(
+          "Check your inbox - your Halal Investing Roadmap is on its way! " +
+          "Please check your Spam or Junk folder if you do not see it in your inbox. " +
+          "Sometimes emails are accidentally delivered there.",
+          "success"
+        );
         form.reset();
       } catch (error) {
         setMessage(error.message || "Something went wrong. Please try again.", "error");

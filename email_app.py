@@ -36,7 +36,7 @@ PLAIN_TEXT_BODY = """Bismillah,
 
 JazakAllah Khayran for downloading the iRizq Beginner Halal Investing Roadmap.
 
-Your free guide is attached to this email. Inside you will find 8 simple steps to building wealth the halal way — from getting your financial foundation right all the way to thinking long-term and avoiding emotional mistakes.
+Your free guide is attached to this email. Inside you will find 8 simple steps to building wealth the halal way - from getting your financial foundation right all the way to thinking long-term and avoiding emotional mistakes.
 
 Also check out our free Halal Stock Checker at stocks.irizq.com to screen any US-listed stock for Shariah compliance.
 
@@ -62,7 +62,7 @@ HTML_BODY = """<!DOCTYPE html>
     </p>
     <p style="margin:0 0 16px;">
       Your free guide is attached to this email. Inside you will find
-      8 simple steps to building wealth the halal way — from getting
+      8 simple steps to building wealth the halal way - from getting
       your financial foundation right all the way to thinking long-term
       and avoiding emotional mistakes.
     </p>
@@ -117,6 +117,16 @@ def ensure_ebook_stats_table() -> None:
                 );
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ebook_subscribers (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL,
+                    subscribed_at TIMESTAMP DEFAULT NOW(),
+                    ip_address VARCHAR(45)
+                );
+                """
+            )
         conn.commit()
 
 
@@ -129,6 +139,19 @@ def log_ebook_event(*, event_type: str, page: str, ip_address: str | None) -> No
                 VALUES (%s, %s, %s)
                 """,
                 (event_type, page, ip_address),
+            )
+        conn.commit()
+
+
+def save_ebook_subscriber(*, email: str, ip_address: str | None) -> None:
+    with _get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO ebook_subscribers (email, ip_address)
+                VALUES (%s, %s)
+                """,
+                (email, ip_address),
             )
         conn.commit()
 
@@ -208,6 +231,11 @@ def subscribe() -> tuple[Any, int]:
         log_ebook_event(event_type="download", page=DEFAULT_PAGE, ip_address=ip_address)
     except Exception:
         LOGGER.exception("Failed to log download event for %s", email)
+
+    try:
+        save_ebook_subscriber(email=email, ip_address=ip_address)
+    except Exception:
+        LOGGER.exception("Failed to save ebook subscriber %s", email)
 
     try:
         send_roadmap_email(email)
