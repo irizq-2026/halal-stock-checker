@@ -180,9 +180,7 @@ def send_roadmap_email(recipient_email: str) -> None:
     )
     message.attach(attachment)
 
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as smtp:
-        smtp.ehlo()
-        smtp.starttls()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
         smtp.ehlo()
         smtp.login(sender_email, app_password)
         smtp.sendmail(sender_email, [recipient_email], message.as_string())
