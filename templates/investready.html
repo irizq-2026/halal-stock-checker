@@ -635,6 +635,111 @@
       margin-top: 0.65rem;
     }
 
+    .report-loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(13, 31, 60, 0.92);
+      opacity: 0;
+      transition: opacity 280ms ease;
+    }
+
+    .report-loading-overlay.is-visible {
+      display: flex;
+      opacity: 1;
+    }
+
+    .report-loading-overlay.is-hiding {
+      opacity: 0;
+    }
+
+    .report-loading-card {
+      width: min(100%, 420px);
+      background: var(--navy);
+      border: 1px solid rgba(30, 200, 184, 0.22);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      padding: 2rem 1.35rem 1.4rem;
+      text-align: center;
+    }
+
+    .report-spinner {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.25rem;
+    }
+
+    .report-spinner-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 4px solid rgba(30, 200, 184, 0.18);
+      border-top-color: var(--teal);
+      animation: report-spin 0.9s linear infinite;
+    }
+
+    .report-spinner-core {
+      position: absolute;
+      inset: 14px;
+      border-radius: 50%;
+      background: rgba(30, 200, 184, 0.12);
+      border: 1px solid rgba(30, 200, 184, 0.35);
+      display: grid;
+      place-items: center;
+      color: var(--teal);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    @keyframes report-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .report-loading-status {
+      min-height: 1.5rem;
+      margin: 0 0 1.15rem;
+      color: var(--teal);
+      font-size: 0.98rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .report-loading-progress {
+      width: 100%;
+      height: 6px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+      margin-bottom: 1.15rem;
+    }
+
+    .report-loading-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--teal-dark), var(--teal));
+      transition: width 180ms linear;
+    }
+
+    .report-loading-warning {
+      margin: 0;
+      text-align: left;
+      background: #fff9f0;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      padding: 0.75rem 0.85rem;
+      color: var(--text-mid);
+      font-size: 0.84rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
     .results-card {
       background: var(--white);
       border: 1px solid var(--silver-mid);
@@ -1025,7 +1130,7 @@
           </div>
           <div>
             <span class="lesson-lbl">Instant Results</span>
-            <h2 id="resultsTitle">Your InvestReady score is in.</h2>
+            <h2 id="resultsTitle">Your iRizq InvestReady score is in.</h2>
             <div class="result-badges">
               <span class="result-pill grade" id="gradeBadge">Grade A</span>
               <span class="result-pill" id="profileBadge">Moderate</span>
@@ -1058,6 +1163,22 @@
     </section>
   </main>
 
+  <div class="report-loading-overlay" id="reportLoadingOverlay" hidden aria-live="polite" aria-busy="true">
+    <div class="report-loading-card" role="status">
+      <div class="report-spinner" aria-hidden="true">
+        <div class="report-spinner-ring"></div>
+        <div class="report-spinner-core">iR</div>
+      </div>
+      <p class="report-loading-status" id="reportLoadingStatus">Calculating your scores...</p>
+      <div class="report-loading-progress" aria-hidden="true">
+        <div class="report-loading-progress-fill" id="reportLoadingFill"></div>
+      </div>
+      <p class="report-loading-warning">
+        Please do not close or refresh this page while your report is being prepared. This usually takes 15-30 seconds.
+      </p>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <div class="footer-inner">
       <img class="footer-logo" src="/static/logo.png" alt="iRizq logo" width="90" height="32">
@@ -1065,7 +1186,7 @@
         <a href="https://irizq.com" target="_blank" rel="noopener">irizq.com</a>
         <a href="https://stocks.irizq.com" target="_blank" rel="noopener">stocks.irizq.com</a>
       </div>
-      <p class="disclaimer">Educational only. InvestReady and iRizq do not provide financial, legal, tax, or investment advice. Use this assessment as a learning tool and consult qualified professionals for personal guidance.</p>
+      <p class="disclaimer">Educational only. iRizq does not provide financial, legal, tax, or investment advice. Use this assessment as a learning tool and consult qualified professionals for personal guidance.</p>
     </div>
   </footer>
 
@@ -1739,20 +1860,93 @@
 
       const payload = buildSubmitPayload();
       submitBtn.disabled = true;
-      submitStatus.textContent = "Preparing your results...";
+
+      const loadingMessages = [
+        "Calculating your scores...",
+        "Identifying your investor profile...",
+        "Analyzing your strengths and risks...",
+        "Building your action plan...",
+        "Preparing your PDF report...",
+        "Sending to your inbox..."
+      ];
+      const overlay = document.getElementById("reportLoadingOverlay");
+      const statusEl = document.getElementById("reportLoadingStatus");
+      const fillEl = document.getElementById("reportLoadingFill");
+      let messageIndex = 0;
+      let messageTimer = null;
+      let progressTimer = null;
+      let preparingReport = true;
+
+      const onBeforeUnload = (unloadEvent) => {
+        if (!preparingReport) {
+          return;
+        }
+        unloadEvent.preventDefault();
+        unloadEvent.returnValue = "";
+      };
+
+      const stopLoadingUi = () => {
+        preparingReport = false;
+        window.removeEventListener("beforeunload", onBeforeUnload);
+        if (messageTimer) {
+          clearInterval(messageTimer);
+          messageTimer = null;
+        }
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+      };
+
+      const hideOverlay = () => new Promise((resolve) => {
+        overlay.classList.add("is-hiding");
+        window.setTimeout(() => {
+          overlay.classList.remove("is-visible", "is-hiding");
+          overlay.hidden = true;
+          resolve();
+        }, 280);
+      });
+
+      window.addEventListener("beforeunload", onBeforeUnload);
+      overlay.hidden = false;
+      overlay.classList.add("is-visible");
+      statusEl.textContent = loadingMessages[0];
+      fillEl.style.width = "0%";
+
+      messageTimer = window.setInterval(() => {
+        messageIndex = (messageIndex + 1) % loadingMessages.length;
+        statusEl.textContent = loadingMessages[messageIndex];
+      }, 2000);
+
+      const progressStartedAt = Date.now();
+      progressTimer = window.setInterval(() => {
+        const elapsed = Date.now() - progressStartedAt;
+        const pct = Math.min(90, (elapsed / 15000) * 90);
+        fillEl.style.width = pct.toFixed(1) + "%";
+        if (pct >= 90 && progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+      }, 100);
 
       try {
         await submitResults(payload);
-        submitStatus.textContent = "Results saved.";
+        stopLoadingUi();
+        fillEl.style.width = "100%";
+        statusEl.textContent = "Sending to your inbox...";
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        await hideOverlay();
         renderResults(true);
       } catch (error) {
-        submitStatus.textContent = "Showing your results now.";
+        stopLoadingUi();
+        fillEl.style.width = "100%";
+        await hideOverlay();
         renderResults(false);
       } finally {
+        stopLoadingUi();
         submitBtn.disabled = false;
       }
     });
-
     updateProgress();
   </script>
 </body>
