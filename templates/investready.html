@@ -1223,7 +1223,7 @@
           <p id="summaryText"></p>
         </div>
 
-        <p class="email-note" id="emailNote">A confirmation email is on the way. If you do not see it soon, please check your spam or promotions folder.</p>
+        <p class="email-note" id="emailNote">A detailed PDF report is on the way. If you do not see it soon, please check your spam or promotions folder.</p>
         <a class="btn btn-primary" href="https://stocks.irizq.com" target="_blank" rel="noopener">Explore Halal Stock Research</a>
       </div>
     </section>
@@ -1803,8 +1803,8 @@
       document.getElementById("profileBadge").textContent = scores.investor_profile;
       document.getElementById("greetingText").textContent = `${state.lead.name}, your score reflects your current financial readiness across planning, protection, and investing habits.`;
       document.getElementById("emailNote").textContent = emailSent
-        ? "A confirmation email is on the way. If you do not see it soon, please check your spam or promotions folder."
-        : "Your results are shown here. We could not confirm the email delivery, so please save this page and check your spam or promotions folder if an email arrives later.";
+        ? "A detailed PDF report is on the way. If you do not see it soon, please check your spam or promotions folder."
+        : "Your results are shown here. We could not confirm the PDF email delivery, so please save this page and check your spam or promotions folder if a report arrives later.";
 
       renderCategoryTable(scores.category_scores);
       renderInsights(scores.category_scores);
