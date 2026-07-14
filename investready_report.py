@@ -62,10 +62,12 @@ PAGE_WIDTH, PAGE_HEIGHT = letter
 
 def _register_fonts() -> str:
     global _ARABIC_FONT, _HAS_ARABIC_FONT
+    # Prefer dedicated Arabic fonts only. Generic fonts often box the Allah ligature.
     candidates = [
         "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
         "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/fonts-arabeyes/ae_AlMohanad.ttf",
+        "/usr/share/fonts/truetype/kacst/KacstBook.ttf",
     ]
     for candidate in candidates:
         path = Path(candidate)
@@ -78,6 +80,7 @@ def _register_fonts() -> str:
             except Exception:
                 continue
     _HAS_ARABIC_FONT = False
+    _ARABIC_FONT = "Helvetica"
     return _ARABIC_FONT
 
 
@@ -567,16 +570,27 @@ def _bismillah_flowables(styles: dict[str, ParagraphStyle]) -> list[Any]:
     """Render Arabic Bismillah with shaping, or English-only fallback.
 
     Never raises - any Arabic shaping/rendering failure falls back to transliteration.
+    Allah ligatures are disabled because some PDF fonts render them as empty boxes.
     """
     try:
         if _HAS_ARABIC_FONT and _ARABIC_LIBS_OK and arabic_reshaper and get_display:
-            reshaped = arabic_reshaper.reshape(BISMILLAH_AR)
+            # Prefer Noto Arabic fonts only; DejaVu often boxes the Allah ligature.
+            if _ARABIC_FONT != "InvestReadyArabic":
+                raise RuntimeError("No reliable Arabic PDF font registered")
+            reshaper = arabic_reshaper.ArabicReshaper(
+                configuration={
+                    "delete_harakat": True,
+                    "support_ligatures": False,
+                }
+            )
+            reshaped = reshaper.reshape(BISMILLAH_AR)
             bidi_text = get_display(reshaped)
-            if bidi_text and str(bidi_text).strip():
-                return [
-                    Paragraph(bidi_text, styles["bismillah_ar"]),
-                    Paragraph(BISMILLAH_EN, styles["bismillah_en"]),
-                ]
+            if not bidi_text or not str(bidi_text).strip():
+                raise RuntimeError("Empty Arabic reshape result")
+            return [
+                Paragraph(bidi_text, styles["bismillah_ar"]),
+                Paragraph(BISMILLAH_EN, styles["bismillah_en"]),
+            ]
     except Exception:
         pass
     return [
