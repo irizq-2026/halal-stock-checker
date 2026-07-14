@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>InvestReady - Financial Readiness Assessment | iRizq.com</title>
-  <meta name="description" content="Discover your financial readiness score with InvestReady, a free 5-minute assessment from iRizq.com that evaluates your cash flow, emergency savings, debt, investing readiness, retirement planning, insurance, goals, tax awareness, diversification, and behavioral discipline.">
+  <meta name="description" content="Discover your financial readiness score with InvestReady, a free 5-minute assessment from iRizq.com that delivers a Confidential Financial Summary with your readiness score, priority gaps, and a personalized 7/30/90-day action plan.">
   <link rel="icon" href="/static/irizq_favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1096,15 +1096,15 @@
   <header class="hero-header">
     <div class="hero-inner">
       <div class="brand-row">
-        <img src="/static/logo.png" alt="iRizq logo" width="112" height="40">
+        <img class="brand-logo" src="/static/logo.png" alt="iRizq logo" width="120" height="42">
       </div>
-      <div class="badge"><span class="badge-dot" aria-hidden="true"></span>5-Minute Assessment</div>
+      <div class="badge"><span class="badge-dot" aria-hidden="true"></span>Under 5 Minutes</div>
       <h1 class="hero-title">Invest<span>Ready</span></h1>
-      <p class="hero-subtitle">Measure your financial foundation, uncover your readiness gaps, and get a practical score before you invest.</p>
+      <p class="hero-subtitle">Discover your Financial Readiness Score, uncover your biggest blind spots, and get a clear action plan for the next 7, 30, and 90 days.</p>
       <div class="hero-chips" aria-label="Assessment highlights">
-        <div class="chip">30 Questions</div>
-        <div class="chip">10 Categories</div>
-        <div class="chip">Free Report</div>
+        <div class="chip">20-25 Questions</div>
+        <div class="chip">Smart Branching</div>
+        <div class="chip">Free PDF Report</div>
         <div class="chip">Instant Results</div>
       </div>
     </div>
@@ -1123,19 +1123,21 @@
 
     <section class="screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
       <div class="card welcome-card">
-        <span class="lesson-lbl">Financial Readiness Snapshot</span>
-        <h2 id="welcomeTitle">Know where you stand before your next money move.</h2>
-        <p>InvestReady reviews the habits, protections, and planning blocks that support confident long-term investing.</p>
+        <span class="lesson-lbl">Confidential Financial Summary</span>
+        <h2 id="welcomeTitle">Know your financial readiness before your next money move.</h2>
+        <p>InvestReady is a short assessment that builds a private, personalized financial summary for Muslims building wealth the halal way.</p>
         <ul class="takeaways">
-          <li><span class="checkmark" aria-hidden="true"></span><span>Get a weighted score across cash flow, debt, investing, insurance, taxes, and behavior.</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>See your top strengths and the three risks most worth addressing first.</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>Receive a clear investor profile and next step toward halal investing education.</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>Discover your personal Financial Readiness Score</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>Identify your 3 biggest financial blind spots</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>Get a personalized action plan for the next 7, 30, and 90 days</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>Receive a confidential PDF financial summary report</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>100% free - takes under 5 minutes</span></li>
         </ul>
         <div class="button-row">
           <button class="btn btn-primary" type="button" id="startBtn">Start My Assessment</button>
           <button class="btn btn-ghost" type="button" id="shareBtn">Share This Assessment</button>
         </div>
-        <div class="welcome-note">Takes 5 minutes - 100% Free</div>
+        <div class="welcome-note">Used by Muslims building wealth the halal way</div>
       </div>
     </section>
 
@@ -1144,13 +1146,13 @@
         <article class="card question-card">
           <div class="question-top">
             <div class="question-meta">
-              <span class="category-label" id="categoryLabel">Cash Flow</span>
+              <span class="category-label" id="categoryLabel">About You</span>
               <span class="q-badge" id="questionBadge">Q1</span>
             </div>
             <h2 class="question-text" id="questionText">Question text</h2>
           </div>
           <div class="options-list" id="optionsList"></div>
-          <p class="multi-help" id="multiHelp" hidden>Select every coverage type you currently have, or choose None.</p>
+          <p class="multi-help" id="multiHelp" hidden></p>
           <div class="question-actions">
             <button class="btn btn-ghost" type="button" id="backBtn">Back</button>
             <button class="btn btn-primary" type="button" id="nextBtn" disabled>Next</button>
@@ -1163,8 +1165,8 @@
       <div class="card capture-card">
         <div class="capture-inner">
           <span class="lesson-lbl">Your Report Is Ready</span>
-          <h2 id="captureTitle">Where should we send your InvestReady summary?</h2>
-          <p>Enter your details to view your score now and receive a copy by email.</p>
+          <h2 id="captureTitle">Where should we send your Confidential Financial Summary?</h2>
+          <p>Enter your details to receive your Confidential Financial Summary instantly and a detailed PDF report in your inbox.</p>
           <form id="leadForm" novalidate>
             <div class="form-grid">
               <div class="field">
@@ -1180,7 +1182,7 @@
             <button class="btn btn-primary" type="submit" id="submitBtn">See My Results</button>
             <div class="submit-status" id="submitStatus" aria-live="polite"></div>
           </form>
-          <p class="trust-text">Your information is used to send this assessment summary and related iRizq education. You can unsubscribe anytime.</p>
+          <p class="trust-text">Your information is kept strictly private. No spam. Unsubscribe anytime.</p>
         </div>
       </div>
     </section>
@@ -1191,16 +1193,17 @@
           <div class="score-ring" id="scoreRing" style="--score-angle: 0deg;">
             <div>
               <div class="score-number"><span id="scoreNumber">0</span></div>
-              <div class="score-label">Out of 100</div>
+              <div class="score-label">Financial Readiness Score</div>
             </div>
           </div>
           <div>
-            <span class="lesson-lbl">Instant Results</span>
-            <h2 id="resultsTitle">Your iRizq InvestReady score is in.</h2>
+            <span class="lesson-lbl">Confidential Summary</span>
+            <h2 id="resultsTitle">Here is your Confidential Financial Summary.</h2>
             <div class="result-badges">
               <span class="result-pill grade" id="gradeBadge">Grade A</span>
-              <span class="result-pill" id="profileBadge">Moderate</span>
+              <span class="result-pill" id="profileBadge">Growth Ready</span>
             </div>
+            <p id="verdictText">Your financial foundation is developing.</p>
             <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
           </div>
         </div>
@@ -1213,7 +1216,7 @@
             <ul id="strengthsList"></ul>
           </div>
           <div class="insight-box">
-            <h3 id="risksHeading">Areas needing attention</h3>
+            <h3 id="risksHeading">Your Priority Concerns</h3>
             <ul id="risksList"></ul>
           </div>
         </div>
@@ -1223,7 +1226,7 @@
           <p id="summaryText"></p>
         </div>
 
-        <p class="email-note" id="emailNote">A detailed PDF report is on the way. If you do not see it soon, please check your spam or promotions folder.</p>
+        <p class="email-note" id="emailNote">Your detailed Confidential Financial Summary PDF is being sent. Please check your inbox and spam folder.</p>
         <a class="btn btn-primary" href="https://stocks.irizq.com" target="_blank" rel="noopener">Explore Halal Stock Research</a>
       </div>
     </section>
@@ -1259,218 +1262,390 @@
   <script>
     const BACKEND_URL = window.location.origin;
 
-    const weights = {
-      "Cash Flow": 0.10,
-      "Emergency Preparedness": 0.12,
-      "Debt Management": 0.12,
+    const CATEGORY_WEIGHTS = {
+      "Cash Stability": 0.18,
+      "Debt Position": 0.15,
+      "Savings Behavior": 0.14,
       "Investing Readiness": 0.12,
+      "Financial Behavior": 0.12,
       "Retirement Planning": 0.10,
-      "Insurance and Risk": 0.08,
-      "Goal Clarity": 0.10,
-      "Tax Awareness": 0.08,
-      "Diversification": 0.10,
-      "Behavioral Discipline": 0.08
+      "Risk Alignment": 0.08,
+      "Tax Awareness": 0.06,
+      "Financial Protection": 0.05
+    };
+
+    const CATEGORY_ORDER = Object.keys(CATEGORY_WEIGHTS);
+
+    const CONCERN_CONTEXT = {
+      "Cash Stability": "Limited liquid reserves can turn ordinary setbacks into urgent financial decisions.",
+      "Debt Position": "High-interest obligations can quietly compete with saving and investing progress.",
+      "Savings Behavior": "Inconsistent saving slows momentum and weakens your buffer against shocks.",
+      "Investing Readiness": "Gaps here affect either your start timing or whether investing is premature.",
+      "Financial Behavior": "Budgeting and stress patterns shape whether good intentions become consistent action.",
+      "Retirement Planning": "Long-term compounding needs a clear plan and steady contributions.",
+      "Risk Alignment": "A mismatch between stated risk comfort and real reactions can derail returns.",
+      "Tax Awareness": "Unused tax-advantaged accounts leave easy, reliable gains on the table.",
+      "Financial Protection": "Protection gaps can reverse years of progress after one health or income shock."
+    };
+
+    const STAGE_META = {
+      "Foundation Builder": {
+        range: [0, 25],
+        blurb: "Your priority is building the financial foundation before focusing on growth."
+      },
+      "Stability Seeker": {
+        range: [26, 45],
+        blurb: "You are working toward stability. Consistent habits will accelerate progress."
+      },
+      "Growth Ready": {
+        range: [46, 65],
+        blurb: "Your foundation is developing. You are approaching readiness for focused growth."
+      },
+      "Wealth Builder": {
+        range: [66, 80],
+        blurb: "You have a strong foundation and are positioned to build wealth systematically."
+      },
+      "Optimizer": {
+        range: [81, 100],
+        blurb: "Your fundamentals are strong. Focus on optimizing and scaling what is working."
+      }
     };
 
     const questions = [
       {
         id: "q1",
-        category: "Cash Flow",
-        text: "How consistently do you spend less than you earn each month?",
-        options: ["Rarely - I often run short", "Some months, but not reliably", "Most months with small gaps", "Almost every month with a clear surplus", "Every month with a planned surplus"]
+        section: "About You",
+        purpose: "Helps us personalize your results",
+        category: null,
+        profileKey: "profile_age",
+        text: "What is your age range?",
+        options: [
+          { label: "Under 25", score: 0 },
+          { label: "25 to 34", score: 1 },
+          { label: "35 to 44", score: 2 },
+          { label: "45 to 54", score: 3 },
+          { label: "55 or older", score: 4 }
+        ]
       },
       {
         id: "q2",
-        category: "Cash Flow",
-        text: "How well do you track your income and expenses?",
-        options: ["I do not track them", "I check balances only when needed", "I review expenses occasionally", "I use a budget or app most months", "I track and review every month"]
+        section: "About You",
+        purpose: "Helps us personalize your results",
+        category: null,
+        profileKey: "profile_income",
+        text: "What is your approximate household income per year?",
+        options: [
+          { label: "Under $50,000", score: 0 },
+          { label: "$50,000 to $100,000", score: 1 },
+          { label: "$100,000 to $200,000", score: 2 },
+          { label: "Over $200,000", score: 3 }
+        ]
       },
       {
         id: "q3",
-        category: "Cash Flow",
-        text: "How predictable is your monthly income?",
-        options: ["Very unpredictable with no buffer", "Unpredictable and hard to plan", "Somewhat variable but manageable", "Mostly stable with occasional changes", "Stable or well planned for variability"]
+        section: "About You",
+        purpose: "Helps us personalize your results",
+        category: null,
+        profileKey: "profile_dependents",
+        text: "How many dependents rely on your income?",
+        options: [
+          { label: "None", score: 4 },
+          { label: "1 to 2", score: 2 },
+          { label: "3 or more", score: 0 }
+        ]
       },
       {
         id: "q4",
-        category: "Emergency Preparedness",
-        text: "How many months of essential expenses do you have saved?",
-        options: ["Less than 1 month", "1 month", "2 months", "3 to 5 months", "6 months or more"]
+        section: "Cash Stability",
+        purpose: "Measures your accessible cash buffer",
+        category: "Cash Stability",
+        text: "How many months of expenses do you have saved and accessible right now?",
+        options: [
+          { label: "None at all", score: 0 },
+          { label: "Less than 1 month", score: 1 },
+          { label: "1 to 3 months", score: 2 },
+          { label: "3 to 6 months", score: 3 },
+          { label: "More than 6 months", score: 4 }
+        ]
       },
       {
         id: "q5",
-        category: "Emergency Preparedness",
-        text: "How accessible is your emergency fund?",
-        options: ["I do not have one", "Hard to access or mixed with investments", "Available but mixed with daily spending", "Separate and available within a few days", "Separate, liquid, and clearly reserved"]
+        section: "Cash Stability",
+        purpose: "Measures your accessible cash buffer",
+        category: "Cash Stability",
+        text: "How stable is your income?",
+        options: [
+          { label: "Very stable - salaried job", score: 4 },
+          { label: "Somewhat stable", score: 2 },
+          { label: "Variable - self-employed or freelance", score: 1 }
+        ]
       },
       {
         id: "q6",
-        category: "Emergency Preparedness",
-        text: "How prepared are you for a large unexpected expense?",
-        options: ["I would need high-interest debt", "I would borrow from family or friends", "I could cover part of it with savings", "I could cover most of it with savings", "I could cover it without disrupting goals"]
+        section: "Debt Position",
+        purpose: "Assesses high-interest debt pressure",
+        category: "Debt Position",
+        text: "Do you currently carry high-interest debt such as credit cards or personal loans?",
+        options: [
+          { label: "No debt at all", score: 4 },
+          { label: "Less than $5,000", score: 3 },
+          { label: "$5,000 to $20,000", score: 1 },
+          { label: "More than $20,000", score: 0 }
+        ]
       },
       {
         id: "q7",
-        category: "Debt Management",
-        text: "How much high-interest consumer debt do you currently carry?",
-        options: ["A large balance I cannot reduce", "A balance that is growing", "A balance I am slowly paying down", "A small balance with a payoff plan", "None"]
+        section: "Debt Position",
+        purpose: "Assesses high-interest debt pressure",
+        category: "Debt Position",
+        text: "How does your monthly debt repayment feel?",
+        skipIf: (answers) => answers.q6 === 0,
+        options: [
+          { label: "Comfortable - easily managed", score: 3 },
+          { label: "Manageable but tight", score: 2 },
+          { label: "Stressful most months", score: 1 },
+          { label: "Overwhelming", score: 0 }
+        ]
       },
       {
         id: "q8",
-        category: "Debt Management",
-        text: "How confident are you in your debt payoff strategy?",
-        options: ["I do not have a strategy", "I make minimum payments only", "I pay extra when possible", "I follow a clear payoff plan", "I am debt free or optimizing low-cost debt"]
+        section: "Savings Behavior",
+        purpose: "Looks at consistency and savings rate",
+        category: "Savings Behavior",
+        text: "Do you save money regularly?",
+        options: [
+          { label: "Yes - automated and consistent", score: 4 },
+          { label: "Yes - but irregular", score: 2 },
+          { label: "Sometimes", score: 1 },
+          { label: "Rarely or never", score: 0 }
+        ]
       },
       {
         id: "q9",
-        category: "Debt Management",
-        text: "How often do debt payments strain your monthly cash flow?",
-        options: ["Every month", "Most months", "Sometimes", "Rarely", "Never"]
+        section: "Savings Behavior",
+        purpose: "Looks at consistency and savings rate",
+        category: "Savings Behavior",
+        text: "Roughly what percentage of your income do you save each month?",
+        options: [
+          { label: "Less than 5%", score: 0 },
+          { label: "5 to 10%", score: 1 },
+          { label: "10 to 20%", score: 3 },
+          { label: "More than 20%", score: 4 }
+        ]
       },
       {
         id: "q10",
+        section: "Investing Readiness",
+        purpose: "Assesses investing activity and process",
         category: "Investing Readiness",
-        text: "How much do you understand basic investing concepts?",
-        options: ["Not at all", "A few terms only", "Some basics", "Comfortable with the main concepts", "Confident and continuously learning"]
+        text: "What best describes your current investing activity?",
+        options: [
+          { label: "Not investing yet", score: 0 },
+          { label: "Just started - less than 2 years", score: 1 },
+          { label: "Intermediate - 2 to 5 years", score: 2 },
+          { label: "Advanced - over 5 years", score: 4 }
+        ]
       },
       {
         id: "q11",
+        section: "Investing Readiness",
+        purpose: "Assesses investing activity and process",
         category: "Investing Readiness",
-        text: "How clear are you on your investment risk tolerance?",
-        options: ["Not clear", "Mostly guessing", "Somewhat aware", "Clear for most decisions", "Clear and documented"]
+        text: "How diversified is your investment portfolio?",
+        skipIf: (answers) => answers.q10 === 0,
+        options: [
+          { label: "Mostly cash or not invested", score: 0 },
+          { label: "1 to 2 assets only", score: 1 },
+          { label: "Some diversification across a few assets", score: 2 },
+          { label: "Well diversified across sectors and types", score: 4 }
+        ]
       },
       {
         id: "q12",
+        section: "Investing Readiness",
+        purpose: "Assesses investing activity and process",
         category: "Investing Readiness",
-        text: "How regularly do you invest or set aside money to invest?",
-        options: ["Never", "Only when I remember", "Occasionally", "Monthly most of the time", "Automatically on a schedule"]
+        text: "How would you describe how you make investment decisions?",
+        skipIf: (answers) => answers.q10 === 0,
+        options: [
+          { label: "Mostly based on emotion or tips", score: 0 },
+          { label: "Some planning but inconsistent", score: 1 },
+          { label: "Mostly planned with some emotion", score: 2 },
+          { label: "Fully structured with written rules", score: 4 }
+        ]
       },
       {
         id: "q13",
-        category: "Investing Readiness",
-        text: "How familiar are you with halal investing principles?",
-        options: ["Not familiar", "I know it avoids certain industries", "I know some screening basics", "I can compare halal options", "I apply halal screens before investing"]
+        section: "Retirement Planning",
+        purpose: "Reviews long-term contribution habits",
+        category: "Retirement Planning",
+        text: "Are you contributing to any retirement or long-term savings account?",
+        options: [
+          { label: "No - nothing yet", score: 0 },
+          { label: "Occasionally", score: 1 },
+          { label: "Yes - consistently", score: 3 },
+          { label: "Yes - maximizing contributions", score: 4 }
+        ]
       },
       {
         id: "q14",
+        section: "Retirement Planning",
+        purpose: "Reviews long-term contribution habits",
         category: "Retirement Planning",
-        text: "How actively are you saving for retirement or long-term independence?",
-        options: ["Not saving yet", "Saving rarely", "Saving some but inconsistently", "Saving regularly", "Saving regularly with a target"]
+        text: "How clear is your retirement plan?",
+        options: [
+          { label: "No plan at all", score: 0 },
+          { label: "Rough idea but no specifics", score: 1 },
+          { label: "Some plan in place", score: 2 },
+          { label: "Clear strategy with a target number", score: 4 }
+        ]
       },
       {
         id: "q15",
-        category: "Retirement Planning",
-        text: "How well do you understand your retirement accounts or long-term vehicles?",
-        options: ["I do not understand them", "I know names only", "I know basic rules", "I understand my options", "I optimize contributions and allocation"]
+        section: "Financial Behavior",
+        purpose: "Checks budgeting, stress, and habits",
+        category: "Financial Behavior",
+        text: "How do you manage your monthly budget?",
+        options: [
+          { label: "No budget - spending is untracked", score: 0 },
+          { label: "Rough mental tracking", score: 1 },
+          { label: "Monthly budget I review sometimes", score: 2 },
+          { label: "Strict system I follow consistently", score: 4 }
+        ]
       },
       {
         id: "q16",
-        category: "Retirement Planning",
-        text: "How often do you review your long-term plan?",
-        options: ["Never", "Only when stressed", "Every few years", "At least yearly", "Yearly with adjustments when life changes"]
+        section: "Financial Behavior",
+        purpose: "Checks budgeting, stress, and habits",
+        category: "Financial Behavior",
+        text: "How would you rate your financial stress level right now?",
+        options: [
+          { label: "High stress - finances are a major concern", score: 0 },
+          { label: "Moderate stress", score: 1 },
+          { label: "Low stress", score: 3 },
+          { label: "No significant financial stress", score: 4 }
+        ]
       },
       {
         id: "q17",
-        category: "Insurance and Risk",
-        text: "Which insurance protections do you currently have?",
+        section: "Financial Behavior",
+        purpose: "Checks budgeting, stress, and habits",
+        category: null,
         multi: true,
-        options: ["Health", "Life", "Disability", "Home or Renters", "Umbrella", "None"]
+        noneIndex: 5,
+        text: "Which of these describes your biggest financial behavior challenge?",
+        multiHelp: "Select all that apply. Choosing None of the above clears the other options.",
+        options: [
+          { label: "Overspending on lifestyle", score: 0, flag: "OVERSPEND" },
+          { label: "Lack of savings discipline", score: 0, flag: "LOW_DISCIPLINE" },
+          { label: "Poor financial planning", score: 0, flag: "POOR_PLANNING" },
+          { label: "Emotional investing decisions", score: 0, flag: "EMOTIONAL_INVEST" },
+          { label: "Debt habits", score: 0, flag: "DEBT_HABIT" },
+          { label: "None of the above", score: 0, flag: null }
+        ]
       },
       {
         id: "q18",
-        category: "Insurance and Risk",
-        text: "How confident are you that your coverage amounts fit your family and assets?",
-        options: ["Not confident", "I have not reviewed them", "Somewhat confident", "Mostly confident", "Very confident after a recent review"]
+        section: "Risk and Behavior",
+        purpose: "Compares stated risk comfort with reactions",
+        category: "Risk Alignment",
+        text: "How would you describe your investment risk tolerance?",
+        options: [
+          { label: "Very low - I cannot afford to lose anything", score: 0 },
+          { label: "Moderate - some risk is acceptable", score: 2 },
+          { label: "High - I can handle significant swings", score: 3 },
+          { label: "Very high - I welcome volatility for returns", score: 4 }
+        ]
       },
       {
         id: "q19",
-        category: "Insurance and Risk",
-        text: "How prepared are your documents if someone had to manage your affairs?",
-        options: ["Not prepared", "A few items are scattered", "Basic records exist", "Key documents are organized", "Documents, beneficiaries, and contacts are current"]
+        section: "Risk and Behavior",
+        purpose: "Compares stated risk comfort with reactions",
+        category: "Risk Alignment",
+        text: "If your investment portfolio dropped 20% in value, what would you most likely do?",
+        options: [
+          { label: "Sell everything immediately", score: 0 },
+          { label: "Wait and see before deciding", score: 1 },
+          { label: "Hold and not change anything", score: 2 },
+          { label: "Buy more - I see drops as opportunities", score: 4 }
+        ]
       },
       {
         id: "q20",
-        category: "Goal Clarity",
-        text: "How clearly have you defined your financial goals?",
-        options: ["I have not defined them", "I have vague ideas", "I have a few rough goals", "I have clear written goals", "I have written goals with amounts and dates"]
+        section: "Financial Protection",
+        purpose: "Financial protection helps absorb unexpected shocks. We understand some Muslims have concerns about conventional insurance - answer based on whatever protection arrangements you currently have in place.",
+        category: "Financial Protection",
+        text: "Do you have any form of financial protection for health-related expenses?",
+        options: [
+          { label: "No coverage of any kind", score: 0 },
+          { label: "Partial coverage through employer", score: 2 },
+          { label: "Full coverage - health plan active", score: 3 },
+          { label: "Comprehensive coverage including family", score: 4 }
+        ]
       },
       {
         id: "q21",
-        category: "Goal Clarity",
-        text: "How well do your monthly actions support your goals?",
-        options: ["They do not connect", "They connect rarely", "They connect sometimes", "They connect most months", "They are planned around my goals"]
+        section: "Financial Protection",
+        purpose: "Financial protection helps absorb unexpected shocks. We understand some Muslims have concerns about conventional insurance - answer based on whatever protection arrangements you currently have in place.",
+        category: "Financial Protection",
+        text: "If you were unable to work for 3 months, do you have income protection in place?",
+        options: [
+          { label: "No - I would have no income replacement", score: 0 },
+          { label: "Partially - I have some savings buffer", score: 1 },
+          { label: "Yes - employer covers some of this", score: 2 },
+          { label: "Yes - I have dedicated coverage or savings specifically for this", score: 4 }
+        ]
       },
       {
         id: "q22",
-        category: "Goal Clarity",
-        text: "How often do you review and update your goals?",
-        options: ["Never", "Only after a problem", "Occasionally", "At least yearly", "Quarterly or after major life changes"]
+        section: "Financial Protection",
+        purpose: "Financial protection helps absorb unexpected shocks. We understand some Muslims have concerns about conventional insurance - answer based on whatever protection arrangements you currently have in place.",
+        category: "Financial Protection",
+        text: "Do you have dependents who would face financial hardship if you passed away?",
+        skipIf: (answers) => answers.q3 === 0,
+        options: [
+          { label: "No protection in place", score: 0 },
+          { label: "Some savings but no formal coverage", score: 1 },
+          { label: "Basic life coverage through employer", score: 2 },
+          { label: "Dedicated life coverage or family fund", score: 4 }
+        ]
       },
       {
         id: "q23",
+        section: "Tax Awareness",
+        purpose: "Checks use of tax-advantaged accounts",
         category: "Tax Awareness",
-        text: "How well do you understand how taxes affect your investments?",
-        options: ["Not at all", "A little", "I know basic account differences", "I consider taxes before major moves", "I plan investments with tax impact in mind"]
+        text: "Do you use any tax-advantaged accounts such as 401k, IRA, or HSA?",
+        options: [
+          { label: "No - not using any", score: 0 },
+          { label: "Aware but not using them", score: 1 },
+          { label: "Using at least one account", score: 2 },
+          { label: "Actively maximizing multiple accounts", score: 4 }
+        ]
       },
       {
         id: "q24",
+        section: "Tax Awareness",
+        purpose: "Checks use of tax-advantaged accounts",
         category: "Tax Awareness",
-        text: "How organized are your records for tax season?",
-        options: ["Disorganized", "Mostly gathered at the last minute", "Somewhat organized", "Organized in one place", "Organized and updated throughout the year"]
-      },
-      {
-        id: "q25",
-        category: "Tax Awareness",
-        text: "How often do you seek tax guidance for major financial decisions?",
-        options: ["Never", "Only after filing problems", "Sometimes for complex questions", "Usually before major decisions", "Proactively with a qualified professional"]
-      },
-      {
-        id: "q26",
-        category: "Diversification",
-        text: "How diversified are your savings and investments?",
-        options: ["Mostly in one asset or account", "Concentrated in a few holdings", "Some diversification", "Diversified across several areas", "Diversified and aligned to my plan"]
-      },
-      {
-        id: "q27",
-        category: "Diversification",
-        text: "How much of your future depends on one income source?",
-        options: ["All of it", "Most of it", "Some secondary income or support", "Multiple meaningful sources", "Multiple sources with a clear backup plan"]
-      },
-      {
-        id: "q28",
-        category: "Diversification",
-        text: "How often do you rebalance or review concentration risk?",
-        options: ["Never", "Only after losses", "Occasionally", "At least yearly", "Yearly with clear allocation targets"]
-      },
-      {
-        id: "q29",
-        category: "Behavioral Discipline",
-        text: "How do you usually react to market declines?",
-        options: ["I panic sell or stop investing", "I often make emotional changes", "I feel stressed but usually wait", "I follow my plan most of the time", "I stay disciplined and review calmly"]
-      },
-      {
-        id: "q30",
-        category: "Behavioral Discipline",
-        text: "How often do you make financial decisions based on hype or fear?",
-        options: ["Very often", "Often", "Sometimes", "Rarely", "Almost never"]
-      },
-      {
-        id: "q31",
-        category: "Behavioral Discipline",
-        text: "How strong is your habit of learning before acting financially?",
-        options: ["I act without researching", "I do minimal research", "I research for major decisions", "I research and compare options", "I research, compare, and document my reasoning"]
+        text: "How would you describe your approach to managing taxes?",
+        options: [
+          { label: "I just file my taxes each year", score: 0 },
+          { label: "I think about it occasionally", score: 1 },
+          { label: "I do basic planning before year end", score: 2 },
+          { label: "I plan quarterly and optimize actively", score: 4 }
+        ]
       }
     ];
+
+    const questionById = Object.fromEntries(questions.map((q) => [q.id, q]));
 
     const state = {
       currentIndex: 0,
       answers: {},
       selectedMulti: [],
       scores: null,
-      lead: {
-        name: "",
-        email: ""
-      }
+      lead: { name: "", email: "" }
     };
 
     const screens = {
@@ -1500,6 +1675,15 @@
     const submitBtn = document.getElementById("submitBtn");
     const submitStatus = document.getElementById("submitStatus");
 
+    function getActiveQuestions() {
+      return questions.filter((q) => !(typeof q.skipIf === "function" && q.skipIf(state.answers)));
+    }
+
+    function currentQuestion() {
+      const active = getActiveQuestions();
+      return active[Math.min(state.currentIndex, active.length - 1)] || null;
+    }
+
     function showScreen(name) {
       const lockQuestions = name === "question";
       if (!lockQuestions) {
@@ -1521,10 +1705,12 @@
     function updateProgress() {
       let percent = 0;
       let label = "Ready to begin";
+      const active = getActiveQuestions();
 
       if (screens.question.classList.contains("active")) {
-        percent = Math.round((state.currentIndex / questions.length) * 100);
-        label = `Question ${state.currentIndex + 1} of ${questions.length}`;
+        const idx = Math.min(state.currentIndex, Math.max(active.length - 1, 0));
+        percent = active.length ? Math.round((idx / active.length) * 100) : 0;
+        label = `Question ${idx + 1} of ${active.length}`;
       } else if (screens.capture.classList.contains("active")) {
         percent = 100;
         label = "Assessment complete";
@@ -1538,20 +1724,48 @@
       progressFill.style.width = `${percent}%`;
     }
 
+    function optionLabel(option) {
+      return typeof option === "string" ? option : option.label;
+    }
+
+    function optionScore(option) {
+      return typeof option === "string" ? null : option.score;
+    }
+
     function renderQuestion(direction = "left") {
-      const question = questions[state.currentIndex];
+      const active = getActiveQuestions();
+      if (!active.length) {
+        showScreen("capture");
+        return;
+      }
+      if (state.currentIndex >= active.length) {
+        state.currentIndex = active.length - 1;
+      }
+      const question = active[state.currentIndex];
       const slideClass = direction === "right" ? "slide-right" : "slide-left";
 
       questionFrame.classList.add(slideClass);
       window.setTimeout(() => {
-        categoryLabel.textContent = question.category;
+        categoryLabel.textContent = question.section;
         questionBadge.textContent = `Q${state.currentIndex + 1}`;
         questionText.textContent = question.text;
         optionsList.innerHTML = "";
-        multiHelp.hidden = !question.multi;
+
+        const helpText = question.multi
+          ? (question.multiHelp || "Select all that apply.")
+          : (question.purpose || "");
+        if (helpText) {
+          multiHelp.hidden = false;
+          multiHelp.textContent = helpText;
+        } else {
+          multiHelp.hidden = true;
+          multiHelp.textContent = "";
+        }
 
         if (question.multi) {
-          state.selectedMulti = Array.isArray(state.answers[question.id]) ? [...state.answers[question.id]] : [];
+          state.selectedMulti = Array.isArray(state.answers[question.id])
+            ? [...state.answers[question.id]]
+            : [];
         }
 
         question.options.forEach((option, index) => {
@@ -1568,7 +1782,7 @@
             button.setAttribute("role", "radio");
             button.innerHTML = `<span class="select-dot" aria-hidden="true"></span><span class="option-text"></span>`;
           }
-          button.querySelector(".option-text").textContent = option;
+          button.querySelector(".option-text").textContent = optionLabel(option);
 
           const isSelected = question.multi
             ? state.selectedMulti.includes(index)
@@ -1587,29 +1801,30 @@
         });
 
         backBtn.disabled = state.currentIndex === 0;
-        nextBtn.textContent = state.currentIndex === questions.length - 1 ? "Finish" : "Next";
+        nextBtn.textContent = state.currentIndex === active.length - 1 ? "Finish" : "Next";
         nextBtn.disabled = !hasAnswer(question);
         updateProgress();
-
         questionFrame.classList.remove(slideClass);
       }, 125);
     }
 
     function hasAnswer(question) {
       if (question.multi) {
-        return Array.isArray(state.answers[question.id]);
+        return Array.isArray(state.answers[question.id]) && state.answers[question.id].length > 0;
       }
       return Number.isInteger(state.answers[question.id]);
     }
 
     function handleOptionSelect(index) {
-      const question = questions[state.currentIndex];
+      const question = currentQuestion();
+      if (!question) return;
 
       if (question.multi) {
-        if (index === 5) {
-          state.selectedMulti = [5];
+        const noneIndex = Number.isInteger(question.noneIndex) ? question.noneIndex : question.options.length - 1;
+        if (index === noneIndex) {
+          state.selectedMulti = [noneIndex];
         } else {
-          state.selectedMulti = state.selectedMulti.filter((selected) => selected !== 5);
+          state.selectedMulti = state.selectedMulti.filter((selected) => selected !== noneIndex);
           if (state.selectedMulti.includes(index)) {
             state.selectedMulti = state.selectedMulti.filter((selected) => selected !== index);
           } else {
@@ -1629,13 +1844,20 @@
       }
 
       state.answers[question.id] = index;
+      // Clear answers for questions that become skipped after this choice.
+      questions.forEach((q) => {
+        if (typeof q.skipIf === "function" && q.skipIf(state.answers)) {
+          delete state.answers[q.id];
+        }
+      });
       renderOptionSelection();
       nextBtn.disabled = false;
       window.setTimeout(() => goNext(), 400);
     }
 
     function renderOptionSelection() {
-      const question = questions[state.currentIndex];
+      const question = currentQuestion();
+      if (!question) return;
       const selected = question.multi ? state.selectedMulti : [state.answers[question.id]];
 
       optionsList.querySelectorAll(".option-card").forEach((button) => {
@@ -1650,13 +1872,19 @@
     }
 
     function goNext() {
-      const question = questions[state.currentIndex];
-      if (!hasAnswer(question)) {
+      const active = getActiveQuestions();
+      const question = active[state.currentIndex];
+      if (!question || !hasAnswer(question)) {
         return;
       }
 
-      if (state.currentIndex < questions.length - 1) {
-        state.currentIndex += 1;
+      // Recompute active list after answer; clamp index.
+      const nextActive = getActiveQuestions();
+      const currentId = question.id;
+      const nextPos = nextActive.findIndex((q) => q.id === currentId);
+
+      if (nextPos >= 0 && nextPos < nextActive.length - 1) {
+        state.currentIndex = nextPos + 1;
         renderQuestion("left");
         return;
       }
@@ -1666,78 +1894,155 @@
     }
 
     function goBack() {
+      const active = getActiveQuestions();
       if (state.currentIndex > 0) {
         state.currentIndex -= 1;
+        // Ensure index still valid for active list
+        if (state.currentIndex >= active.length) {
+          state.currentIndex = Math.max(0, active.length - 1);
+        }
         renderQuestion("right");
       }
     }
 
     function scoreForQuestion(question) {
       const answer = state.answers[question.id];
-      if (question.multi) {
-        if (!Array.isArray(answer) || answer.includes(5)) {
-          return 0;
-        }
-        return Math.min(4, answer.length);
+      if (question.multi || !question.category) {
+        return null;
       }
-      return Number.isInteger(answer) ? answer : 0;
+      if (!Number.isInteger(answer)) {
+        return null;
+      }
+      const option = question.options[answer];
+      if (!option) return null;
+      const scored = optionScore(option);
+      return Number.isFinite(scored) ? scored : answer;
+    }
+
+    function buildFlags() {
+      const flags = {
+        CRITICAL_STABILITY: state.answers.q4 === 0 || state.answers.q4 === 1,
+        LOW_SAVER: state.answers.q8 === 3,
+        EMOTIONAL_INVEST: false,
+        POOR_PLANNING: false,
+        DEBT_HABIT: false,
+        OVERSPEND: false,
+        LOW_DISCIPLINE: false,
+        RISK_MISMATCH: state.answers.q18 === 3 && state.answers.q19 === 0
+      };
+
+      const q17 = Array.isArray(state.answers.q17) ? state.answers.q17 : [];
+      const q17Question = questionById.q17;
+      const noneIndex = q17Question.noneIndex;
+      if (!q17.includes(noneIndex)) {
+        q17.forEach((idx) => {
+          const flag = q17Question.options[idx] && q17Question.options[idx].flag;
+          if (flag) {
+            flags[flag] = true;
+          }
+        });
+      }
+      return flags;
+    }
+
+    function behaviorFlagLabels(flags) {
+      const labels = [];
+      if (flags.OVERSPEND) labels.push("Overspending on lifestyle");
+      if (flags.LOW_DISCIPLINE) labels.push("Lack of savings discipline");
+      if (flags.POOR_PLANNING) labels.push("Poor financial planning");
+      if (flags.EMOTIONAL_INVEST) labels.push("Emotional investing decisions");
+      if (flags.DEBT_HABIT) labels.push("Debt habits");
+      return labels;
+    }
+
+    function profileLabels() {
+      const ageQ = questionById.q1;
+      const incomeQ = questionById.q2;
+      const depQ = questionById.q3;
+      return {
+        profile_age: Number.isInteger(state.answers.q1) ? optionLabel(ageQ.options[state.answers.q1]) : "",
+        profile_income: Number.isInteger(state.answers.q2) ? optionLabel(incomeQ.options[state.answers.q2]) : "",
+        profile_dependents: Number.isInteger(state.answers.q3) ? optionLabel(depQ.options[state.answers.q3]) : ""
+      };
     }
 
     function calculateScores() {
-      const categoryTotals = {};
-      const categoryMax = {};
+      const totals = {};
+      const maxes = {};
 
       questions.forEach((question) => {
-        categoryTotals[question.category] = (categoryTotals[question.category] || 0) + scoreForQuestion(question);
-        categoryMax[question.category] = (categoryMax[question.category] || 0) + 4;
+        if (!question.category) return;
+        if (typeof question.skipIf === "function" && question.skipIf(state.answers)) {
+          return;
+        }
+        const score = scoreForQuestion(question);
+        if (score === null) return;
+        const optionMax = Math.max(
+          0,
+          ...question.options.map((option) => {
+            const value = optionScore(option);
+            return Number.isFinite(value) ? value : 0;
+          })
+        );
+        totals[question.category] = (totals[question.category] || 0) + score;
+        maxes[question.category] = (maxes[question.category] || 0) + (optionMax || 4);
       });
 
+      // If not investing, investing score is 0 from q10 only (already answered).
       const categoryScores = {};
-      Object.keys(weights).forEach((category) => {
-        const raw = categoryMax[category] ? (categoryTotals[category] / categoryMax[category]) * 100 : 0;
-        categoryScores[category] = Math.round(raw);
+      CATEGORY_ORDER.forEach((category) => {
+        if (!maxes[category]) {
+          categoryScores[category] = 0;
+          return;
+        }
+        categoryScores[category] = Math.round((totals[category] / maxes[category]) * 100);
       });
 
-      const overallRaw = Object.entries(weights).reduce((total, [category, weight]) => {
-        return total + ((categoryScores[category] || 0) * weight);
-      }, 0);
+      // Dependents increase urgency weighting on insurance/stability presentation only -
+      // slight downshift of protection score when dependents are high and protection is weak.
+      if (state.answers.q3 === 2 && categoryScores["Financial Protection"] < 70) {
+        categoryScores["Financial Protection"] = Math.max(
+          0,
+          categoryScores["Financial Protection"] - 5
+        );
+      }
 
+      const overallRaw = CATEGORY_ORDER.reduce((total, category) => {
+        return total + ((categoryScores[category] || 0) * CATEGORY_WEIGHTS[category]);
+      }, 0);
       const overall = Math.round(overallRaw);
+      const financialStage = getFinancialStage(categoryScores);
+      const flags = buildFlags();
 
       return {
         category_scores: categoryScores,
         overall_score: overall,
         letter_grade: getGrade(overall),
-        investor_profile: getInvestorProfile()
+        financial_stage: financialStage,
+        investor_profile: financialStage,
+        flags,
+        behavior_flags: behaviorFlagLabels(flags),
+        ...profileLabels()
       };
     }
 
-    function answerValue(questionId) {
-      const value = state.answers[questionId];
-      return Number.isInteger(value) ? value : 0;
-    }
-
-    function getInvestorProfile() {
-      const behavioral = (answerValue("q29") + answerValue("q30") + answerValue("q31")) / 3;
-      const timeHorizon = answerValue("q22");
-      const experience = answerValue("q10");
-      const emergency = answerValue("q4");
-      const debt = answerValue("q7");
-
-      const weighted = (
-        (behavioral * 0.30) +
-        (timeHorizon * 0.25) +
-        (experience * 0.20) +
-        (emergency * 0.15) +
-        (debt * 0.10)
+    function getFinancialStage(categoryScores) {
+      const stability = categoryScores["Cash Stability"] || 0;
+      const savings = categoryScores["Savings Behavior"] || 0;
+      const behavior = categoryScores["Financial Behavior"] || 0;
+      const risk = categoryScores["Risk Alignment"] || 0;
+      const stageScore = Math.round(
+        (stability * 0.30) +
+        (savings * 0.25) +
+        (behavior * 0.25) +
+        (risk * 0.20)
       );
-      const profileScore = Math.round((weighted / 4) * 100);
 
-      if (profileScore <= 25) return "Conservative";
-      if (profileScore <= 40) return "Moderately Conservative";
-      if (profileScore <= 60) return "Moderate";
-      if (profileScore <= 78) return "Moderately Aggressive";
-      return "Aggressive";
+      if (stageScore <= 25) return "Foundation Builder";
+      if (stageScore <= 45) return "Stability Seeker";
+      if (stageScore <= 65) return "Growth Ready";
+      if (stageScore <= 80) return "Wealth Builder";
+      return "Optimizer";
     }
 
     function getGrade(score) {
@@ -1748,24 +2053,40 @@
       return "F";
     }
 
+    function getVerdictLine(score) {
+      if (score >= 90) return "Excellent - Your financial foundation is strong across all key areas.";
+      if (score >= 80) return "Strong - A solid foundation with a few high-impact gaps to address.";
+      if (score >= 70) return "Developing - Good progress with clear opportunities for improvement.";
+      if (score >= 60) return "Moderate - Key gaps present that need attention before scaling up.";
+      return "Early Stage - Important foundations need to be built before growth focus.";
+    }
+
     function validateEmail(email) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
     function buildAnswersPayload() {
-      return questions.reduce((payload, question) => {
-        const answer = state.answers[question.id];
-        payload[question.id] = Array.isArray(answer) ? [...answer] : answer;
-        return payload;
-      }, {});
+      const payload = {};
+      questions.forEach((question) => {
+        if (Object.prototype.hasOwnProperty.call(state.answers, question.id)) {
+          const answer = state.answers[question.id];
+          payload[question.id] = Array.isArray(answer) ? [...answer] : answer;
+        }
+      });
+      return payload;
     }
 
     function buildSubmitPayload() {
       const scores = state.scores || calculateScores();
-      const answerScores = questions.reduce((payload, question) => {
-        payload[question.id] = scoreForQuestion(question);
-        return payload;
-      }, {});
+      const answerScores = {};
+      questions.forEach((question) => {
+        const scored = scoreForQuestion(question);
+        if (scored !== null) {
+          answerScores[question.id] = scored;
+        }
+      });
+
+      const flags = scores.flags || buildFlags();
 
       return {
         name: state.lead.name,
@@ -1774,24 +2095,38 @@
         scores: answerScores,
         overall_score: scores.overall_score,
         letter_grade: scores.letter_grade,
-        investor_profile: scores.investor_profile,
-        category_scores: scores.category_scores
+        financial_stage: scores.financial_stage,
+        investor_profile: scores.financial_stage,
+        category_scores: scores.category_scores,
+        profile_age: scores.profile_age,
+        profile_income: scores.profile_income,
+        profile_dependents: scores.profile_dependents,
+        CRITICAL_STABILITY: !!flags.CRITICAL_STABILITY,
+        LOW_SAVER: !!flags.LOW_SAVER,
+        EMOTIONAL_INVEST: !!flags.EMOTIONAL_INVEST,
+        POOR_PLANNING: !!flags.POOR_PLANNING,
+        DEBT_HABIT: !!flags.DEBT_HABIT,
+        OVERSPEND: !!flags.OVERSPEND,
+        LOW_DISCIPLINE: !!flags.LOW_DISCIPLINE,
+        RISK_MISMATCH: !!flags.RISK_MISMATCH,
+        behavior_flags: scores.behavior_flags || behaviorFlagLabels(flags),
+        risk_flags: {
+          CRITICAL_STABILITY: !!flags.CRITICAL_STABILITY,
+          LOW_SAVER: !!flags.LOW_SAVER,
+          RISK_MISMATCH: !!flags.RISK_MISMATCH
+        }
       };
     }
 
     async function submitResults(payload) {
       const response = await fetch(`${BACKEND_URL}/investready/submit`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-
       if (!response.ok) {
         throw new Error("Submission failed");
       }
-
       return response;
     }
 
@@ -1799,12 +2134,16 @@
       const scores = state.scores || calculateScores();
       state.scores = scores;
 
+      document.getElementById("resultsTitle").textContent =
+        `Here is your Confidential Financial Summary, ${state.lead.name}.`;
       document.getElementById("gradeBadge").textContent = `Grade ${scores.letter_grade}`;
-      document.getElementById("profileBadge").textContent = scores.investor_profile;
-      document.getElementById("greetingText").textContent = `${state.lead.name}, your score reflects your current financial readiness across planning, protection, and investing habits.`;
+      document.getElementById("profileBadge").textContent = scores.financial_stage;
+      document.getElementById("verdictText").textContent = getVerdictLine(scores.overall_score);
+      const stageBlurb = (STAGE_META[scores.financial_stage] || {}).blurb || "";
+      document.getElementById("greetingText").textContent = stageBlurb;
       document.getElementById("emailNote").textContent = emailSent
-        ? "A detailed PDF report is on the way. If you do not see it soon, please check your spam or promotions folder."
-        : "Your results are shown here. We could not confirm the PDF email delivery, so please save this page and check your spam or promotions folder if a report arrives later.";
+        ? `Your detailed Confidential Financial Summary PDF is being sent to ${state.lead.email}. Please check your inbox and spam folder.`
+        : `Your results are shown here. If a PDF arrives later at ${state.lead.email}, please also check your spam or promotions folder.`;
 
       renderCategoryTable(scores.category_scores);
       renderInsights(scores.category_scores);
@@ -1816,8 +2155,8 @@
     function renderCategoryTable(categoryScores) {
       const table = document.getElementById("categoryTable");
       table.innerHTML = "";
-
-      Object.entries(categoryScores).forEach(([category, score]) => {
+      CATEGORY_ORDER.forEach((category) => {
+        const score = categoryScores[category] || 0;
         const color = score >= 75 ? "var(--green-lt)" : score >= 55 ? "var(--teal)" : "#e07a5f";
         const row = document.createElement("div");
         row.className = "category-row";
@@ -1833,32 +2172,48 @@
 
     function renderInsights(categoryScores) {
       const rankedHigh = Object.entries(categoryScores).sort((a, b) => b[1] - a[1]);
-      const trueStrengths = rankedHigh.filter(([, score]) => score >= 70);
-      const useRelativeLabel = trueStrengths.length < 3;
-      const strengths = useRelativeLabel
-        ? rankedHigh.slice(0, Math.min(3, rankedHigh.length))
-        : trueStrengths.slice(0, 3);
-      const strengthLabel = useRelativeLabel ? "Relatively Stronger Area" : "Strength";
+      const scores = rankedHigh.map(([, score]) => score);
+      const highest = scores.length ? Math.max(...scores) : 0;
+      const allTied = scores.length > 0 && scores.every((s) => s === scores[0]);
+
+      let strengths = [];
+      if (!(highest < 50 || allTied)) {
+        strengths = rankedHigh.filter(([, score]) => score >= 70).slice(0, 3);
+        if (!strengths.length) {
+          strengths = rankedHigh.filter(([, score]) => score >= 60 && score < 70).slice(0, 3);
+        }
+      }
 
       const risks = Object.entries(categoryScores)
-        .filter(([, score]) => score < 60)
         .sort((a, b) => a[1] - b[1])
         .slice(0, 3);
 
-      document.getElementById("strengthsHeading").textContent = useRelativeLabel
-        ? "Relatively stronger areas"
-        : "Your top strengths";
-      document.getElementById("risksHeading").textContent = "Areas needing attention";
+      document.getElementById("strengthsHeading").textContent = strengths.length && strengths[0][1] >= 70
+        ? "Your top strengths"
+        : strengths.length
+          ? "Relatively stronger areas"
+          : "Strengths";
+      document.getElementById("risksHeading").textContent = "Your Priority Concerns";
 
-      fillList(
-        document.getElementById("strengthsList"),
-        strengths,
-        (category, score) => `${strengthLabel}: ${category} at ${score}%`
-      );
+      const strengthsList = document.getElementById("strengthsList");
+      strengthsList.innerHTML = "";
+      if (!strengths.length) {
+        const item = document.createElement("li");
+        item.textContent = "Focus on building your financial foundation across all categories before identifying specific strengths.";
+        strengthsList.appendChild(item);
+      } else {
+        strengths.forEach(([category, score]) => {
+          const item = document.createElement("li");
+          const label = score >= 70 ? "Strength" : "Relatively Stronger Area";
+          item.textContent = `${label}: ${category} at ${score}%`;
+          strengthsList.appendChild(item);
+        });
+      }
+
       fillList(
         document.getElementById("risksList"),
         risks,
-        (category, score) => `Needs attention: ${category} at ${score}%`
+        (category, score) => `${category} (${score}%) - ${CONCERN_CONTEXT[category] || "This area needs focused attention next."}`
       );
     }
 
@@ -1872,18 +2227,16 @@
       }
       entries.forEach(([category, score]) => {
         const item = document.createElement("li");
-        item.textContent = typeof formatter === "function"
-          ? formatter(category, score)
-          : `${category} at ${score}%`;
+        item.textContent = formatter(category, score);
         list.appendChild(item);
       });
     }
 
     function renderSummary(scores) {
       const summary = document.getElementById("summaryText");
-      const profile = scores.investor_profile.toLowerCase();
-      const grade = scores.letter_grade;
-      summary.textContent = `With an overall score of ${scores.overall_score}/100 and a grade of ${grade}, your current profile is ${profile}. Focus first on the lowest scoring areas, keep protecting your cash flow, and use education before making new investment decisions.`;
+      const stage = scores.financial_stage;
+      const blurb = (STAGE_META[stage] || {}).blurb || "";
+      summary.textContent = `With a Financial Readiness Score of ${scores.overall_score}/100 and grade ${scores.letter_grade}, your Financial Stage is ${stage}. ${blurb}`;
     }
 
     function animateScore(target) {
@@ -1898,7 +2251,6 @@
         const value = Math.round(target * eased);
         scoreEl.textContent = String(value);
         ring.style.setProperty("--score-angle", `${value * 3.6}deg`);
-
         if (progress < 1) {
           requestAnimationFrame(tick);
         }
@@ -1916,10 +2268,9 @@
     shareBtn.addEventListener("click", async () => {
       const shareData = {
         title: "InvestReady - Financial Readiness Assessment",
-        text: "Discover your financial readiness score with this free iRizq assessment.",
+        text: "Discover your Financial Readiness Score with this free iRizq assessment.",
         url: window.location.href
       };
-
       try {
         if (navigator.share) {
           await navigator.share(shareData);
@@ -1951,11 +2302,9 @@
       const touch = event.changedTouches[0];
       const deltaX = touch.clientX - touchStartX;
       const deltaY = touch.clientY - touchStartY;
-
       if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY)) {
         return;
       }
-
       if (deltaX < 0) {
         goNext();
       } else {
@@ -1976,7 +2325,6 @@
         nameInput.focus();
         return;
       }
-
       if (!validateEmail(email)) {
         formError.textContent = "Please enter a valid email address.";
         emailInput.focus();
@@ -1992,8 +2340,8 @@
 
       const loadingMessages = [
         "Calculating your scores...",
-        "Identifying your investor profile...",
-        "Analyzing your strengths and risks...",
+        "Identifying your financial stage...",
+        "Analyzing your priority concerns...",
         "Building your action plan...",
         "Preparing your PDF report...",
         "Sending to your inbox..."
@@ -2007,9 +2355,7 @@
       let preparingReport = true;
 
       const onBeforeUnload = (unloadEvent) => {
-        if (!preparingReport) {
-          return;
-        }
+        if (!preparingReport) return;
         unloadEvent.preventDefault();
         unloadEvent.returnValue = "";
       };
@@ -2076,6 +2422,7 @@
         submitBtn.disabled = false;
       }
     });
+
     updateProgress();
   </script>
 </body>
