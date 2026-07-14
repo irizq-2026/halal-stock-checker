@@ -8,7 +8,7 @@
 		respond "ok" 200
 	}
 
-	@ebook_routes path /ebook /subscribe /track-visit /stats/ebook
+	@ebook_routes path /ebook /subscribe /track-visit /stats/ebook /investready /investready/*
 	handle @ebook_routes {
 		reverse_proxy 127.0.0.1:5000
 	}

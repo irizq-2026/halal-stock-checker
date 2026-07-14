@@ -17,7 +17,9 @@ from urllib.parse import urlparse
 import psycopg2
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
+from psycopg2.extras import Json
 
+from investready_report import generate_investready_pdf
 from logging_setup import configure_logging
 
 configure_logging()
@@ -127,6 +129,22 @@ def ensure_ebook_stats_table() -> None:
                 );
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS investready_submissions (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255),
+                    email VARCHAR(255) NOT NULL,
+                    overall_score INTEGER,
+                    letter_grade VARCHAR(5),
+                    investor_profile VARCHAR(50),
+                    answers JSONB,
+                    category_scores JSONB,
+                    ip_address VARCHAR(45),
+                    submitted_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
         conn.commit()
 
 
@@ -154,6 +172,130 @@ def save_ebook_subscriber(*, email: str, ip_address: str | None) -> None:
                 (email, ip_address),
             )
         conn.commit()
+
+
+def save_investready_submission(payload: dict[str, Any], *, ip_address: str | None) -> None:
+    with _get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO investready_submissions (
+                    name, email, overall_score, letter_grade, investor_profile,
+                    answers, category_scores, ip_address
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    str(payload.get("name") or "").strip() or None,
+                    str(payload.get("email") or "").strip().lower(),
+                    int(round(float(payload.get("overall_score") or 0))),
+                    str(payload.get("letter_grade") or "")[:5] or None,
+                    str(payload.get("investor_profile") or "")[:50] or None,
+                    Json(payload.get("answers") or {}),
+                    Json(payload.get("category_scores") or {}),
+                    ip_address,
+                ),
+            )
+        conn.commit()
+
+
+def send_investready_email(*, recipient_email: str, name: str, overall_score: int, letter_grade: str, investor_profile: str, pdf_bytes: bytes) -> None:
+    sender_email = (os.environ.get("SENDER_EMAIL") or "").strip()
+    sender_name = (os.environ.get("SENDER_NAME") or "iRizq").strip()
+    app_password = (os.environ.get("GMAIL_APP_PASSWORD") or "").strip()
+
+    if not sender_email or not app_password:
+        raise RuntimeError("SENDER_EMAIL and GMAIL_APP_PASSWORD must be configured.")
+
+    safe_name = (name or "there").strip() or "there"
+    subject = "Your InvestReady Financial Readiness Report"
+    plain = f"""Bismillah {safe_name},
+
+Your personalized InvestReady Financial Readiness Report is attached to this email.
+
+Your Overall Score: {overall_score}/100 - {letter_grade}
+Your Investor Profile: {investor_profile}
+
+Your premium report includes:
+- Detailed scores across 10 financial categories
+- Costly mistakes you may be making right now
+- Your personalized priority action plan
+- Educational guidance for your weakest areas
+- Your investor profile and what it means for you
+
+Please review your report and take action on the priority items - small improvements now can make a significant difference over time.
+
+If you have any questions, reply to this email.
+
+Barak Allahu feekum,
+Sarfaraz
+iRizq.com | stocks.irizq.com
+
+Please check your Spam or Junk folder if you do not see it in your inbox. Sometimes emails are accidentally delivered there.
+"""
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f1f2f4;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:#0d1f3c;padding:24px;text-align:center;">
+      <div style="color:#1ec8b8;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">InvestReady</div>
+      <div style="color:#ffffff;font-size:20px;font-weight:800;margin-top:8px;">Financial Readiness Report</div>
+    </div>
+    <div style="height:4px;background:#1ec8b8;"></div>
+    <div style="padding:28px 24px;color:#374151;line-height:1.65;font-size:15px;">
+      <p style="margin:0 0 16px;">Bismillah {safe_name},</p>
+      <p style="margin:0 0 16px;">Your personalized InvestReady Financial Readiness Report is attached to this email.</p>
+      <p style="margin:0 0 8px;"><strong>Your Overall Score:</strong> {overall_score}/100 - {letter_grade}</p>
+      <p style="margin:0 0 16px;"><strong>Your Investor Profile:</strong> {investor_profile}</p>
+      <p style="margin:0 0 8px;">Your premium report includes:</p>
+      <ul style="margin:0 0 16px;padding-left:20px;">
+        <li>Detailed scores across 10 financial categories</li>
+        <li>Costly mistakes you may be making right now</li>
+        <li>Your personalized priority action plan</li>
+        <li>Educational guidance for your weakest areas</li>
+        <li>Your investor profile and what it means for you</li>
+      </ul>
+      <p style="margin:0 0 16px;">Please review your report and take action on the priority items - small improvements now can make a significant difference over time.</p>
+      <p style="margin:0 0 16px;">If you have any questions, reply to this email.</p>
+      <p style="margin:0 0 8px;">Barak Allahu feekum,<br>Sarfaraz</p>
+      <p style="margin:0;color:#1ec8b8;">
+        <a href="https://www.irizq.com" style="color:#1ec8b8;text-decoration:none;">iRizq.com</a>
+        |
+        <a href="https://stocks.irizq.com" style="color:#1ec8b8;text-decoration:none;">stocks.irizq.com</a>
+      </p>
+      <p style="margin:20px 0 0;font-size:12px;color:#6b7280;">
+        Please check your Spam or Junk folder if you do not see it in your inbox. Sometimes emails are accidentally delivered there.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+    message = MIMEMultipart("mixed")
+    message["Subject"] = subject
+    message["From"] = f"{sender_name} <{sender_email}>"
+    message["To"] = recipient_email
+
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText(plain, "plain", "utf-8"))
+    alternative.attach(MIMEText(html, "html", "utf-8"))
+    message.attach(alternative)
+
+    attachment = MIMEBase("application", "pdf")
+    attachment.set_payload(pdf_bytes)
+    encoders.encode_base64(attachment)
+    attachment.add_header(
+        "Content-Disposition",
+        'attachment; filename="InvestReady-Financial-Report.pdf"',
+    )
+    message.attach(attachment)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=60) as smtp:
+        smtp.ehlo()
+        smtp.login(sender_email, app_password)
+        smtp.sendmail(sender_email, [recipient_email], message.as_string())
 
 
 def count_ebook_visits(page: str = DEFAULT_PAGE) -> int:
@@ -274,6 +416,47 @@ def ebook_stats() -> tuple[Any, int]:
 @app.route("/ebook")
 def ebook() -> str:
     return render_template("irizq-ebook.html")
+
+
+@app.route("/investready")
+def investready() -> str:
+    return render_template("investready.html")
+
+
+@app.post("/investready/submit")
+def investready_submit() -> tuple[Any, int]:
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    email = str(payload.get("email") or "").strip().lower()
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({"ok": False, "error": "Invalid email address."}), 400
+    if not name:
+        return jsonify({"ok": False, "error": "Name is required."}), 400
+
+    overall_score = int(round(float(payload.get("overall_score") or 0)))
+    letter_grade = str(payload.get("letter_grade") or "").strip() or "C"
+    investor_profile = str(payload.get("investor_profile") or "").strip() or "Moderate"
+    ip_address = request.remote_addr
+
+    try:
+        save_investready_submission(payload, ip_address=ip_address)
+    except Exception:
+        LOGGER.exception("Failed to store InvestReady submission for %s", email)
+
+    try:
+        pdf_bytes = generate_investready_pdf(payload)
+        send_investready_email(
+            recipient_email=email,
+            name=name,
+            overall_score=overall_score,
+            letter_grade=letter_grade,
+            investor_profile=investor_profile,
+            pdf_bytes=pdf_bytes,
+        )
+    except Exception:
+        LOGGER.exception("Failed to generate/send InvestReady report for %s", email)
+
+    return jsonify({"ok": True}), 200
 
 
 if __name__ == "__main__":
