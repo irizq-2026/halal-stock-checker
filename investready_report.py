@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import io
+import random
+import string
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.platypus import (
+    Flowable,
     HRFlowable,
     Image,
     KeepTogether,
@@ -26,11 +30,24 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+try:
+    import arabic_reshaper
+    from bidi.algorithm import get_display
+
+    _ARABIC_LIBS_OK = True
+except Exception:
+    arabic_reshaper = None  # type: ignore
+    get_display = None  # type: ignore
+    _ARABIC_LIBS_OK = False
+
 # iRizq brand colors
 NAVY = colors.HexColor("#0d1f3c")
+NAVY_MID = colors.HexColor("#14294f")
 TEAL = colors.HexColor("#1ec8b8")
+TEAL_PALE = colors.HexColor("#e4f9f7")
 GREEN = colors.HexColor("#3d7a45")
 SILVER = colors.HexColor("#f1f2f4")
+BAR_BG = colors.HexColor("#e2e5e9")
 WHITE = colors.HexColor("#ffffff")
 TEXT = colors.HexColor("#374151")
 AMBER = colors.HexColor("#f59e0b")
@@ -38,10 +55,13 @@ RED = colors.HexColor("#ef4444")
 MUTED = colors.HexColor("#6b7280")
 
 _ARABIC_FONT = "Helvetica"
+_HAS_ARABIC_FONT = False
+
+PAGE_WIDTH, PAGE_HEIGHT = letter
 
 
 def _register_fonts() -> str:
-    global _ARABIC_FONT
+    global _ARABIC_FONT, _HAS_ARABIC_FONT
     candidates = [
         "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
         "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
@@ -53,9 +73,11 @@ def _register_fonts() -> str:
             try:
                 pdfmetrics.registerFont(TTFont("InvestReadyArabic", str(path)))
                 _ARABIC_FONT = "InvestReadyArabic"
+                _HAS_ARABIC_FONT = True
                 return _ARABIC_FONT
             except Exception:
                 continue
+    _HAS_ARABIC_FONT = False
     return _ARABIC_FONT
 
 
@@ -66,6 +88,10 @@ DISCLAIMER = (
     "Educational only. iRizq does not provide financial, legal, tax, or investment advice. "
     "Use this assessment as a learning tool and consult qualified professionals for personal guidance."
 )
+
+BISMILLAH_AR = "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ"
+BISMILLAH_EN = "In the name of Allah, the Most Gracious, the Most Merciful"
+BISMILLAH_EN_FALLBACK = "Bismillah ir-Rahman ir-Raheem"
 
 
 def _styles() -> dict[str, ParagraphStyle]:
@@ -136,6 +162,16 @@ def _styles() -> dict[str, ParagraphStyle]:
             alignment=TA_CENTER,
             spaceBefore=10,
         ),
+        "report_id": ParagraphStyle(
+            "IRReportId",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=8,
+            textColor=MUTED,
+            alignment=TA_CENTER,
+            spaceBefore=2,
+            spaceAfter=6,
+        ),
         "center": ParagraphStyle(
             "IRCenter",
             parent=base["BodyText"],
@@ -159,23 +195,23 @@ def _styles() -> dict[str, ParagraphStyle]:
             "IRScore",
             parent=base["Title"],
             fontName="Helvetica-Bold",
-            fontSize=36,
+            fontSize=22,
             textColor=TEAL,
             alignment=TA_CENTER,
             spaceBefore=0,
             spaceAfter=4,
-            leading=40,
+            leading=26,
         ),
         "grade": ParagraphStyle(
             "IRGrade",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=24,
+            fontSize=18,
             textColor=NAVY,
             alignment=TA_CENTER,
             spaceBefore=0,
             spaceAfter=6,
-            leading=28,
+            leading=22,
         ),
         "profile_label": ParagraphStyle(
             "IRProfileLabel",
@@ -191,12 +227,56 @@ def _styles() -> dict[str, ParagraphStyle]:
             "IRProfile",
             parent=base["BodyText"],
             fontName="Helvetica-Bold",
-            fontSize=18,
+            fontSize=16,
             textColor=NAVY,
             alignment=TA_CENTER,
             spaceBefore=0,
             spaceAfter=0,
-            leading=22,
+            leading=20,
+        ),
+        "band_label": ParagraphStyle(
+            "IRBandLabel",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=7,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceAfter=4,
+        ),
+        "band_value": ParagraphStyle(
+            "IRBandValue",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=22,
+            textColor=WHITE,
+            alignment=TA_CENTER,
+            leading=26,
+        ),
+        "band_profile": ParagraphStyle(
+            "IRBandProfile",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=14,
+            textColor=WHITE,
+            alignment=TA_CENTER,
+            leading=18,
+        ),
+        "toc_name": ParagraphStyle(
+            "IRTocName",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=11,
+            textColor=NAVY,
+            leading=16,
+        ),
+        "toc_page": ParagraphStyle(
+            "IRTocPage",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=11,
+            textColor=TEAL,
+            alignment=TA_RIGHT,
+            leading=16,
         ),
         "white_center": ParagraphStyle(
             "IRWhiteCenter",
@@ -211,20 +291,20 @@ def _styles() -> dict[str, ParagraphStyle]:
             "IRWhiteTitle",
             parent=base["Title"],
             fontName="Helvetica-Bold",
-            fontSize=22,
+            fontSize=20,
             textColor=WHITE,
             alignment=TA_CENTER,
-            spaceAfter=10,
+            spaceAfter=8,
         ),
         "bismillah_ar": ParagraphStyle(
             "IRBismillahAr",
             parent=base["BodyText"],
             fontName=_ARABIC_FONT,
-            fontSize=11,
+            fontSize=14,
             textColor=TEAL,
             alignment=TA_CENTER,
             spaceAfter=2,
-            leading=16,
+            leading=20,
         ),
         "bismillah_en": ParagraphStyle(
             "IRBismillahEn",
@@ -268,6 +348,74 @@ def _styles() -> dict[str, ParagraphStyle]:
             spaceAfter=8,
             leading=16,
         ),
+        "scenario_sub": ParagraphStyle(
+            "IRScenarioSub",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=8,
+            textColor=MUTED,
+            spaceAfter=6,
+        ),
+        "checklist_text": ParagraphStyle(
+            "IRChecklistText",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=10,
+            textColor=NAVY,
+            leading=13,
+        ),
+        "cover_feature": ParagraphStyle(
+            "IRCoverFeature",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            textColor=WHITE,
+            alignment=TA_CENTER,
+            leading=12,
+        ),
+        "cover_subfeature": ParagraphStyle(
+            "IRCoverSubFeature",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=8,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            leading=11,
+        ),
+        "cover_disclaimer": ParagraphStyle(
+            "IRCoverDisclaimer",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=7,
+            textColor=colors.Color(1, 1, 1, alpha=0.45),
+            alignment=TA_CENTER,
+            leading=10,
+        ),
+        "cover_copy": ParagraphStyle(
+            "IRCoverCopy",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=7,
+            textColor=colors.Color(1, 1, 1, alpha=0.35),
+            alignment=TA_CENTER,
+            leading=10,
+        ),
+        "shariah_label": ParagraphStyle(
+            "IRShariahLabel",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=7,
+            textColor=TEAL,
+            spaceAfter=3,
+        ),
+        "shariah_body": ParagraphStyle(
+            "IRShariahBody",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=NAVY,
+            leading=12,
+        ),
     }
 
 
@@ -277,6 +425,14 @@ def _score_color(score: float) -> colors.Color:
     if score >= 60:
         return GREEN
     return RED
+
+
+def _score_status(score: float) -> str:
+    if score >= 80:
+        return "Strong"
+    if score >= 60:
+        return "Developing"
+    return "Needs Attention"
 
 
 def _color_hex(color: colors.Color) -> str:
@@ -335,6 +491,284 @@ def _callout(title: str, body: str, border_color: colors.Color = AMBER) -> KeepT
     return KeepTogether([table, Spacer(1, 8)])
 
 
+def _shariah_callout() -> KeepTogether:
+    styles = _styles()
+    inner = [
+        Paragraph("SHARIAH COMPLIANCE NOTE", styles["shariah_label"]),
+        Paragraph(
+            "Investment suggestions in this report reference Shariah-compliant instruments "
+            "screened under AAOIFI (Accounting and Auditing Organization for Islamic "
+            "Financial Institutions) standards. Use the iRizq Halal Stock Checker at "
+            "stocks.irizq.com to verify any specific investment before purchasing.",
+            styles["shariah_body"],
+        ),
+    ]
+    table = Table([[inner]], colWidths=[6.8 * inch])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), TEAL_PALE),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, TEAL),
+            ]
+        )
+    )
+    return KeepTogether([table, Spacer(1, 10)])
+
+
+def _bismillah_flowables(styles: dict[str, ParagraphStyle]) -> list[Any]:
+    """Render Arabic Bismillah with shaping, or English-only fallback."""
+    items: list[Any] = []
+    if _HAS_ARABIC_FONT and _ARABIC_LIBS_OK and arabic_reshaper and get_display:
+        try:
+            reshaped = arabic_reshaper.reshape(BISMILLAH_AR)
+            bidi_text = get_display(reshaped)
+            items.append(Paragraph(bidi_text, styles["bismillah_ar"]))
+            items.append(Paragraph(BISMILLAH_EN, styles["bismillah_en"]))
+            return items
+        except Exception:
+            pass
+    items.append(Paragraph(BISMILLAH_EN_FALLBACK, styles["bismillah_en"]))
+    items.append(Paragraph(BISMILLAH_EN, styles["bismillah_en"]))
+    return items
+
+
+def _make_report_id() -> str:
+    suffix = "".join(random.choices(string.ascii_uppercase, k=4))
+    return f"IR-{datetime.utcnow().strftime('%Y%m%d')}-{suffix}"
+
+
+def _score_info_band(overall: int, grade: str, profile: str) -> list[Any]:
+    styles = _styles()
+    left = [
+        Paragraph("OVERALL SCORE", styles["band_label"]),
+        Paragraph(f"{overall} / 100", styles["band_value"]),
+    ]
+    middle = [
+        Paragraph("GRADE", styles["band_label"]),
+        Paragraph(grade, styles["band_value"]),
+    ]
+    right = [
+        Paragraph("INVESTOR PROFILE", styles["band_label"]),
+        Paragraph(profile, styles["band_profile"]),
+    ]
+    table = Table([[left, middle, right]], colWidths=[2.33 * inch, 2.34 * inch, 2.33 * inch], rowHeights=[80])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+    return [
+        table,
+        HRFlowable(width="100%", thickness=2, color=TEAL, spaceBefore=0, spaceAfter=0),
+        Spacer(1, 16),
+    ]
+
+
+class ScoreBarRow(Flowable):
+    """One visual score row: category | bar | number | status."""
+
+    def __init__(self, category: str, score: float, *, overall: bool = False, width: float = 7.0 * inch):
+        super().__init__()
+        self.category = category
+        self.score = max(0.0, min(100.0, float(score)))
+        self.overall = overall
+        self.width = width
+        self.height = 18
+
+    def draw(self) -> None:
+        c = self.canv
+        name_w = 140
+        bar_w = 200
+        bar_h = 10
+        bar_x = name_w + 8
+        bar_y = 4
+        fill_color = NAVY if self.overall else _score_color(self.score)
+        status = "Overall" if self.overall else _score_status(self.score)
+
+        c.setFillColor(NAVY)
+        c.setFont("Helvetica", 10)
+        c.drawString(0, 5, self.category[:28])
+
+        c.setFillColor(BAR_BG)
+        c.rect(bar_x, bar_y, bar_w, bar_h, fill=1, stroke=0)
+
+        fill_w = (self.score / 100.0) * bar_w
+        if fill_w > 0:
+            c.setFillColor(fill_color)
+            c.rect(bar_x, bar_y, fill_w, bar_h, fill=1, stroke=0)
+
+        score_x = bar_x + bar_w + 10
+        c.setFillColor(fill_color)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(score_x, 5, f"{int(round(self.score))}")
+
+        status_x = score_x + 36
+        c.setFont("Helvetica", 9)
+        c.setFillColor(fill_color)
+        c.drawString(status_x, 5, status)
+
+
+class ChecklistItem(Flowable):
+    """Teal bordered checkbox with checkmark + navy item text."""
+
+    def __init__(self, text: str, width: float = 7.0 * inch):
+        super().__init__()
+        self.text = text
+        self.width = width
+        self.height = 14
+
+    def wrap(self, availWidth: float, availHeight: float):  # noqa: N803
+        self.width = min(self.width, availWidth)
+        return self.width, self.height
+
+    def draw(self) -> None:
+        c = self.canv
+        box = 10
+        y = 2
+        c.setStrokeColor(TEAL)
+        c.setFillColor(TEAL_PALE)
+        c.setLineWidth(1)
+        c.rect(0, y, box, box, fill=1, stroke=1)
+        c.setStrokeColor(TEAL)
+        c.setLineWidth(1.3)
+        c.line(2, y + 4.5, 4.2, y + 2.2)
+        c.line(4.2, y + 2.2, 8.2, y + 8)
+        c.setFillColor(NAVY)
+        c.setFont("Helvetica", 10)
+        c.drawString(16, y + 1, self.text)
+
+
+class FeatureIconBox(Flowable):
+    """Back-cover feature box with a simple canvas icon."""
+
+    def __init__(self, kind: str, title: str, subtitle: str, width: float = 1.9 * inch, height: float = 70):
+        super().__init__()
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.width = width
+        self.height = height
+
+    def draw(self) -> None:
+        c = self.canv
+        c.setStrokeColor(WHITE)
+        c.setLineWidth(0.5)
+        c.setFillColor(NAVY_MID)
+        c.roundRect(0, 0, self.width, self.height, 6, fill=1, stroke=1)
+
+        cx = self.width / 2
+        icon_y = self.height - 22
+        c.setStrokeColor(TEAL)
+        c.setFillColor(TEAL)
+        c.setLineWidth(1.2)
+        if self.kind == "check":
+            c.circle(cx, icon_y, 8, fill=0, stroke=1)
+            c.line(cx - 3.5, icon_y - 0.5, cx - 1, icon_y - 3)
+            c.line(cx - 1, icon_y - 3, cx + 4, icon_y + 3.5)
+        elif self.kind == "chart":
+            c.line(cx - 8, icon_y - 6, cx - 8, icon_y + 6)
+            c.line(cx - 8, icon_y - 6, cx + 8, icon_y - 6)
+            c.rect(cx - 5, icon_y - 6, 3, 6, fill=1, stroke=0)
+            c.rect(cx - 1, icon_y - 6, 3, 10, fill=1, stroke=0)
+            c.rect(cx + 3, icon_y - 6, 3, 4, fill=1, stroke=0)
+        else:
+            c.rect(cx - 6, icon_y - 7, 12, 14, fill=0, stroke=1)
+            c.line(cx - 3, icon_y + 2, cx + 3, icon_y + 2)
+            c.line(cx - 3, icon_y - 1, cx + 3, icon_y - 1)
+            c.line(cx - 3, icon_y - 4, cx + 1, icon_y - 4)
+
+        c.setFillColor(WHITE)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawCentredString(cx, 22, self.title)
+        c.setFillColor(TEAL)
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(cx, 10, self.subtitle)
+
+
+class InvestReadyCanvas(pdfcanvas.Canvas):
+    """Canvas that draws interior headers/footers and correct Page X of Y."""
+
+    def __init__(self, *args: Any, prepared_for: str = "Investor", **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states: list[dict[str, Any]] = []
+        self.prepared_for = prepared_for
+
+    def showPage(self) -> None:  # noqa: N802
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self) -> None:
+        page_count = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self._draw_page_chrome(page_count)
+            pdfcanvas.Canvas.showPage(self)
+        pdfcanvas.Canvas.save(self)
+
+    def _draw_page_chrome(self, page_count: int) -> None:
+        page = self._pageNumber
+        # Skip PAGE 1 and the last page (back cover).
+        if page <= 1 or page >= page_count:
+            return
+
+        left = 0.65 * inch
+        right = PAGE_WIDTH - 0.65 * inch
+
+        # Header
+        header_y = PAGE_HEIGHT - 0.42 * inch
+        if LOGO_PATH.is_file():
+            try:
+                self.drawImage(
+                    str(LOGO_PATH),
+                    left,
+                    header_y - 4,
+                    width=20,
+                    height=20,
+                    mask="auto",
+                    preserveAspectRatio=True,
+                )
+            except Exception:
+                self.setFillColor(NAVY)
+                self.setFont("Helvetica-Bold", 8)
+                self.drawString(left, header_y, "iRizq")
+        else:
+            self.setFillColor(NAVY)
+            self.setFont("Helvetica-Bold", 8)
+            self.drawString(left, header_y, "iRizq")
+
+        self.setFillColor(MUTED)
+        self.setFont("Helvetica-Oblique", 8)
+        self.drawRightString(right, header_y + 4, f"Prepared for {self.prepared_for}")
+        self.setStrokeColor(NAVY)
+        self.setLineWidth(0.5)
+        self.line(left, header_y - 8, right, header_y - 8)
+
+        # Footer
+        footer_y = 0.40 * inch
+        self.setStrokeColor(TEAL)
+        self.setLineWidth(0.5)
+        self.line(left, footer_y + 12, right, footer_y + 12)
+
+        self.setFillColor(MUTED)
+        self.setFont("Helvetica", 7)
+        self.drawString(left, footer_y, "InvestReady Financial Readiness Report")
+        self.drawCentredString(PAGE_WIDTH / 2, footer_y, f"Page {page} of {page_count}")
+        self.setFillColor(TEAL)
+        self.drawRightString(right, footer_y, "iRizq.com")
+
+
 def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], list[str], str]:
     ranked = sorted(
         ((str(k), float(v)) for k, v in category_scores.items()),
@@ -357,100 +791,348 @@ def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], li
     return strengths, risks, strength_label
 
 
+CATEGORY_GAP_COPY: dict[str, tuple[str, str]] = {
+    "Insurance and Risk": (
+        "Insurance and Risk Gap",
+        "Your insurance and risk score of {score}/100 suggests your coverage may have gaps. "
+        "Without adequate protection, a single unexpected event such as illness, disability, or "
+        "property loss can undo years of careful saving and investing. Review each coverage type "
+        "you currently hold and identify what is missing.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. List every insurance policy you hold and its coverage limit<br/>"
+        "2. Compare against your current income, dependents, and assets<br/>"
+        "3. Get quotes for any missing coverage within the next 30 days",
+    ),
+    "Diversification": (
+        "Diversification Gap",
+        "A diversification score of {score}/100 suggests your halal portfolio may be concentrated "
+        "in too few areas. Concentration amplifies both gains and losses - and for most investors "
+        "the losses feel far worse than the gains feel good. Spreading across sectors and "
+        "geographies reduces this risk.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. List your current holdings and calculate what percentage each represents<br/>"
+        "2. Identify any single position above 20% and create a plan to reduce it gradually<br/>"
+        "3. Research one Shariah-compliant ETF or fund that adds diversification to your current mix",
+    ),
+    "Goal Clarity": (
+        "Goal Clarity Gap",
+        "A goal clarity score of {score}/100 suggests your financial targets may be vague or "
+        "unwritten. Research consistently shows that written goals with specific dates and dollar "
+        "amounts are dramatically more likely to be achieved than mental intentions alone.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Write down your top 3 financial goals with a target date and target amount for each<br/>"
+        "2. Break each goal into monthly milestones so progress is visible<br/>"
+        "3. Review your written goals every Monday for the next 90 days",
+    ),
+    "Tax Awareness": (
+        "Tax Awareness Gap",
+        "Your tax awareness score of {score}/100 suggests you may not be fully using "
+        "tax-advantaged accounts available to you. Every dollar of tax saved is a guaranteed "
+        "return that does not depend on market performance.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Confirm which tax-advantaged accounts you are eligible for (401k, IRA, HSA)<br/>"
+        "2. If not maxing contributions, increase by at least 1% this month<br/>"
+        "3. Schedule a 30-minute session to review your tax situation before year end",
+    ),
+    "Cash Flow": (
+        "Cash Flow Gap",
+        "A cash flow score of {score}/100 suggests income and expenses may not be fully under "
+        "control. Without knowing your monthly surplus, it is very difficult to consistently "
+        "invest, save, or plan for the future.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Track every expense for the next 30 days using any app or notebook<br/>"
+        "2. Identify the single largest non-essential expense and reduce it this month<br/>"
+        "3. Set up an automatic savings transfer on the day your income arrives",
+    ),
+    "Emergency Preparedness": (
+        "Emergency Preparedness Gap",
+        "An emergency preparedness score of {score}/100 means a financial shock could force you "
+        "to sell halal investments at the wrong time or take on expensive debt. Building a buffer "
+        "is the single highest-priority foundation for every financial plan.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Open a separate savings account dedicated only to emergencies<br/>"
+        "2. Set a minimum target of one month of expenses as your first milestone<br/>"
+        "3. Automate a fixed transfer to this account every payday",
+    ),
+    "Debt Management": (
+        "Debt Management Gap",
+        "Your debt management score of {score}/100 suggests high-interest obligations may be "
+        "quietly eroding your progress. In most cases, paying down debt above 10% interest offers "
+        "a better guaranteed return than investing in the market.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. List all debts with their interest rates<br/>"
+        "2. Direct all extra monthly cash toward the highest rate debt first<br/>"
+        "3. Stop adding new high-interest debt immediately while paying down existing",
+    ),
+    "Retirement Planning": (
+        "Retirement Planning Gap",
+        "A retirement planning score of {score}/100 suggests this long-term priority may not be "
+        "receiving enough attention. The earlier contributions begin, the more compounding works "
+        "in your favor - even small consistent amounts matter enormously over decades.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. If eligible, open or contribute to a retirement account this month<br/>"
+        "2. Calculate your retirement number (monthly expenses multiplied by 300)<br/>"
+        "3. Increase contributions by 1% with your next pay review",
+    ),
+    "Investing Readiness": (
+        "Investing Readiness Gap",
+        "Your investing readiness score of {score}/100 suggests foundational investing habits "
+        "still need reinforcement. Consistent monthly contributions and clear rules protect "
+        "long-term progress more than perfect timing.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Set a fixed monthly amount you can invest without stress<br/>"
+        "2. Screen candidates with the iRizq Halal Stock Checker at stocks.irizq.com<br/>"
+        "3. Write a simple buy-and-hold rule set before your next purchase",
+    ),
+    "Behavioral Discipline": (
+        "Behavioral Discipline Gap",
+        "A behavioral discipline score of {score}/100 flags emotional decision-making as a risk. "
+        "Buying on excitement and selling on fear can erase years of compounding in a halal "
+        "portfolio.<br/><br/>"
+        "<b>Steps:</b><br/>"
+        "1. Write a one-page investing plan and keep it visible<br/>"
+        "2. Wait 48 hours before any unplanned trade<br/>"
+        "3. Mute speculative tip channels for the next 30 days",
+    ),
+}
+
+
+FOCUS_ACTIONS: dict[str, str] = {
+    "Cash Flow": "Track every expense for 30 days and automate a payday savings transfer.",
+    "Emergency Preparedness": "Open a dedicated emergency account and automate a fixed transfer every payday.",
+    "Debt Management": "List all debts by rate and send every extra dollar to the highest-rate balance first.",
+    "Investing Readiness": "Set a fixed monthly halal investment amount and keep it automated.",
+    "Retirement Planning": "Increase retirement contributions by 1% and write down your retirement number.",
+    "Insurance and Risk": "List every policy you hold and get quotes for any missing coverage this month.",
+    "Goal Clarity": "Write your top 3 goals with dates and dollar targets, then review them each Monday.",
+    "Tax Awareness": "Confirm eligible tax-advantaged accounts and raise contributions by at least 1%.",
+    "Diversification": "Cap any single holding near 20% and add one diversifying Shariah-compliant fund.",
+    "Behavioral Discipline": "Write your investment rules and wait 48 hours before any unplanned trade.",
+}
+
+
 def _mistakes(answers: dict[str, Any], category_scores: dict[str, Any]) -> list[tuple[str, str]]:
     mistakes: list[tuple[str, str]] = []
     a = {str(k): v for k, v in (answers or {}).items()}
 
-    # Q4 emergency months - score index 0/1 => under 3 months
     if int(a.get("q4", 4) or 0) <= 1:
-        mistakes.append(
-            (
-                "Limited Emergency Buffer",
-                "Your emergency savings appear below recommended levels. "
-                "Why it matters: Without a cash buffer, unexpected expenses can force "
-                "debt or selling investments at the wrong time. "
-                "Potential consequences: Higher stress, expensive borrowing, and disrupted "
-                "long-term plans. "
-                "Steps: 1) Open a dedicated high-yield savings account. "
-                "2) Automate a small weekly transfer. "
-                "3) Target at least 3 months of essential expenses.",
-            )
-        )
+        score = int(float(category_scores.get("Emergency Preparedness", 50)))
+        title, body = CATEGORY_GAP_COPY["Emergency Preparedness"]
+        mistakes.append((title, body.format(score=score)))
 
-    # Q7 high-interest debt (0-2) and Q10 investing experience (>0)
     if int(a.get("q7", 4) or 0) <= 2 and int(a.get("q10", 0) or 0) >= 1:
-        mistakes.append(
-            (
-                "Investing While Carrying Expensive Debt",
-                "Paying down high-interest debt typically offers a guaranteed "
-                "return that is difficult to beat through investing. "
-                "Why it matters: Interest compounds against you while markets are uncertain. "
-                "Potential consequences: Slower net worth growth and ongoing financial stress. "
-                "Steps: 1) List debts by interest rate. "
-                "2) Prioritize balances above 10% APR. "
-                "3) Keep investing only after a clear paydown plan is in place.",
-            )
-        )
+        score = int(float(category_scores.get("Debt Management", 50)))
+        title, body = CATEGORY_GAP_COPY["Debt Management"]
+        mistakes.append((title, body.format(score=score)))
 
-    # Q13 concentration
     if int(a.get("q13", 4) or 0) <= 1:
-        mistakes.append(
-            (
-                "Concentration Risk",
-                "A large portion of your portfolio appears concentrated in one area. "
-                "Why it matters: Single-stock or single-sector shocks can wipe out years of gains. "
-                "Potential consequences: Higher volatility and larger drawdowns. "
-                "Steps: 1) Measure your largest holding as a percent of net worth. "
-                "2) Set a soft cap (for example under 25%). "
-                "3) Diversify gradually into broad funds or additional sectors.",
-            )
-        )
+        score = int(float(category_scores.get("Diversification", 50)))
+        title, body = CATEGORY_GAP_COPY["Diversification"]
+        mistakes.append((title, body.format(score=score)))
 
-    # Q18 insurance review
     if int(a.get("q18", 4) or 0) <= 1:
-        mistakes.append(
-            (
-                "Outdated Insurance Coverage",
-                "Life circumstances change. Coverage that fit years ago may leave gaps today. "
-                "Why it matters: Insurance is a core risk-transfer tool for dependents and assets. "
-                "Potential consequences: Under-insurance during illness, disability, or loss. "
-                "Steps: 1) Schedule a coverage review this month. "
-                "2) Confirm beneficiaries and deductibles. "
-                "3) Align policies with current income and dependents.",
-            )
-        )
+        score = int(float(category_scores.get("Insurance and Risk", 50)))
+        title, body = CATEGORY_GAP_COPY["Insurance and Risk"]
+        mistakes.append((title, body.format(score=score)))
 
-    # Q20 goals
     if int(a.get("q20", 4) or 0) <= 1:
-        mistakes.append(
-            (
-                "Investing Without Defined Goals",
-                "Without clear targets and timelines, it is difficult to choose appropriate "
-                "investments. "
-                "Why it matters: Goals drive asset allocation, risk level, and contribution size. "
-                "Potential consequences: Random investing, panic selling, and missed milestones. "
-                "Steps: 1) Write 1 near-term and 1 long-term goal. "
-                "2) Add a dollar target and date. "
-                "3) Match each goal to a suitable account and allocation.",
-            )
-        )
+        score = int(float(category_scores.get("Goal Clarity", 50)))
+        title, body = CATEGORY_GAP_COPY["Goal Clarity"]
+        mistakes.append((title, body.format(score=score)))
+
+    seen = {title for title, _ in mistakes}
+    ranked = sorted(category_scores.items(), key=lambda item: float(item[1]))
+    for name, score in ranked:
+        if len(mistakes) >= 5:
+            break
+        pack = CATEGORY_GAP_COPY.get(str(name))
+        if not pack:
+            continue
+        title, body = pack
+        if title in seen:
+            continue
+        if float(score) >= 70 and mistakes:
+            continue
+        mistakes.append((title, body.format(score=int(float(score)))))
+        seen.add(title)
 
     if not mistakes:
-        # Fallback using weakest categories
-        ranked = sorted(category_scores.items(), key=lambda item: float(item[1]))
         for name, score in ranked[:3]:
-            mistakes.append(
-                (
-                    f"Priority Gap: {name}",
-                    f"Your {name} score is {int(float(score))}/100. "
-                    "Why it matters: This area is currently limiting your overall readiness. "
-                    "Potential consequences: Slower progress and higher avoidable risk. "
-                    "Steps: 1) Review this category in your action plan. "
-                    "2) Pick one habit to improve this week. "
-                    "3) Reassess in 30 days.",
+            pack = CATEGORY_GAP_COPY.get(str(name))
+            if pack:
+                title, body = pack
+                mistakes.append((title, body.format(score=int(float(score)))))
+            else:
+                mistakes.append(
+                    (
+                        f"Priority Gap: {name}",
+                        f"Your {name} score is {int(float(score))}/100. Focus on one concrete "
+                        "habit this week, automate one improvement this month, and reassess in 30 days.",
+                    )
                 )
-            )
     return mistakes[:5]
+
+
+def _personalized_insights(category_scores: dict[str, Any], overall: int, profile: str) -> list[str]:
+    scores = {str(k): float(v) for k, v in category_scores.items()}
+
+    def band(score: float) -> str:
+        if score >= 80:
+            return "high"
+        if score >= 60:
+            return "mid"
+        return "low"
+
+    templates: dict[str, dict[str, str]] = {
+        "Cash Flow": {
+            "high": (
+                "Your cash flow management is a clear strength. With a score of {score}/100, "
+                "you demonstrate the kind of income discipline that forms the base of long-term wealth building."
+            ),
+            "mid": (
+                "Your cash flow score of {score}/100 suggests room to tighten your budgeting habits. "
+                "Even small improvements in tracking and automating savings can compound meaningfully over time."
+            ),
+            "low": (
+                "Cash flow is the foundation everything else rests on. Your score of {score}/100 "
+                "suggests this deserves immediate attention before focusing on investing or other goals."
+            ),
+        },
+        "Emergency Preparedness": {
+            "high": (
+                "With an emergency preparedness score of {score}/100, you have built a genuine financial buffer. "
+                "This gives you the freedom to take calculated investment risks without being forced to sell "
+                "at the wrong time."
+            ),
+            "mid": (
+                "Your emergency fund score of {score}/100 suggests your buffer may not fully cover an unexpected "
+                "setback. Aim for 3-6 months of expenses in a separate account."
+            ),
+            "low": (
+                "An emergency fund score of {score}/100 signals a significant vulnerability. Before investing, "
+                "prioritize building at least one month of expenses as a starting buffer."
+            ),
+        },
+        "Debt Management": {
+            "high": (
+                "Your debt management score of {score}/100 reflects strong discipline. Keeping high-interest debt "
+                "low means more of your income can flow toward halal investments rather than interest payments."
+            ),
+            "mid": (
+                "Your debt score of {score}/100 suggests some high-interest obligations may be quietly eroding "
+                "your investing gains. A clear paydown strategy could free up significant monthly cash flow."
+            ),
+            "low": (
+                "With a debt score of {score}/100, addressing high-interest debt is likely your highest "
+                "guaranteed return right now. Every dollar paid toward expensive debt is a risk-free halal gain."
+            ),
+        },
+        "Investing Readiness": {
+            "high": (
+                "Your investing readiness score of {score}/100 reflects consistent halal investment habits. "
+                "The focus now is on maintaining discipline through market volatility and avoiding overconfidence."
+            ),
+            "mid": (
+                "An investing readiness score of {score}/100 shows you have started the journey. Building more "
+                "consistent monthly investing habits and broadening your halal diversification are the next "
+                "logical steps."
+            ),
+            "low": (
+                "Your investing readiness score of {score}/100 suggests foundational work is needed before "
+                "scaling investments. Focus first on emergency savings and debt reduction."
+            ),
+        },
+        "Behavioral Discipline": {
+            "high": (
+                "A behavioral discipline score of {score}/100 is one of the most valuable traits an investor "
+                "can have. The ability to stay calm during market drops and ignore hot tips protects years of "
+                "compounding."
+            ),
+            "mid": (
+                "Your behavioral score of {score}/100 suggests occasional emotional decisions may be affecting "
+                "your returns. A written investment plan you commit to in advance is one of the best defenses."
+            ),
+            "low": (
+                "A behavioral discipline score of {score}/100 flags this as an area to address urgently. "
+                "Emotional investing - buying high on excitement and selling low on fear - destroys more wealth "
+                "than poor stock selection."
+            ),
+        },
+    }
+
+    article = "an" if profile[:1].lower() in "aeiou" else "a"
+    insights: list[str] = [
+        f"Your overall readiness score of {overall}/100 places you in {article} {profile} posture toward "
+        f"growth and risk. The insights below are tied directly to your category results."
+    ]
+
+    priority_order = [
+        "Cash Flow",
+        "Emergency Preparedness",
+        "Debt Management",
+        "Investing Readiness",
+        "Behavioral Discipline",
+    ]
+    # Prefer weaker categories first for relevance, but always cover the core five.
+    ordered = sorted(priority_order, key=lambda cat: scores.get(cat, 50.0))
+    for cat in ordered:
+        score = scores.get(cat)
+        if score is None:
+            continue
+        text = templates[cat][band(score)].format(score=int(round(score)))
+        insights.append(text)
+
+    extras = {
+        "Retirement Planning": (
+            "Your retirement planning score of {score}/100 shows how actively this long horizon is being funded. "
+            "Small consistent increases in contributions can matter more than short-term market timing."
+        ),
+        "Goal Clarity": (
+            "Your goal clarity score of {score}/100 reflects how specific and written your targets are. "
+            "Clear dates and dollar amounts make follow-through far more likely."
+        ),
+        "Tax Awareness": (
+            "Your tax awareness score of {score}/100 reflects how fully you are using available tax-advantaged "
+            "accounts. Tax savings are one of the few near-certain improvements available to many investors."
+        ),
+        "Diversification": (
+            "Your diversification score of {score}/100 shows how broadly your halal holdings are spread. "
+            "Reducing concentration risk protects progress when a single sector or stock is under pressure."
+        ),
+        "Insurance and Risk": (
+            "Your insurance and risk score of {score}/100 reflects the protection layer around your plan. "
+            "Coverage gaps can undo years of careful saving after one unexpected event."
+        ),
+    }
+    for cat, score in sorted(scores.items(), key=lambda item: item[1]):
+        if len(insights) >= 7:
+            break
+        if cat in templates:
+            continue
+        if cat in extras:
+            insights.append(extras[cat].format(score=int(round(score))))
+
+    while len(insights) < 5:
+        insights.append(
+            "Use the lowest-scoring categories in this report as your next 30-day focus. "
+            "Steady habits beat perfect timing in every profile."
+        )
+    return insights[:7]
+
+
+def _top_focus_areas(category_scores: dict[str, Any]) -> list[str]:
+    ranked = sorted(
+        ((str(k), float(v)) for k, v in category_scores.items()),
+        key=lambda item: item[1],
+    )
+    focus = ranked[:3]
+    while len(focus) < 3:
+        focus.append((f"Priority Area {len(focus) + 1}", 0.0))
+    lines: list[str] = []
+    for idx, (cat, score) in enumerate(focus, start=1):
+        action = FOCUS_ACTIONS.get(cat, f"Choose one concrete habit to strengthen {cat} this week.")
+        lines.append(f"{idx}. {cat} ({int(round(score))}/100) - {action}")
+    return lines
 
 
 def _profile_allocation(profile: str) -> str:
@@ -489,7 +1171,6 @@ PROFILE_DESCRIPTIONS = {
 }
 
 
-# Exactly 3 habits per category for the educational section (PAGE 10-11).
 HABITS_BY_CATEGORY: dict[str, list[str]] = {
     "Cash Flow": [
         "Track every expense for 30 days using a simple app or notebook",
@@ -545,7 +1226,6 @@ HABITS_BY_CATEGORY: dict[str, list[str]] = {
 
 
 def _habits_for_category(category: str) -> list[str]:
-    """Return exactly 3 non-empty habits for a category."""
     habits = [h.strip() for h in HABITS_BY_CATEGORY.get(category, []) if h and str(h).strip()]
     while len(habits) < 3:
         habits.append(f"Take one concrete next step to strengthen {category}")
@@ -625,6 +1305,254 @@ def _actions_for_categories(weak: list[str]) -> dict[str, list[str]]:
     return {"week": week, "month": month, "ninety": ninety}
 
 
+def _toc_page(styles: dict[str, ParagraphStyle]) -> list[Any]:
+    story: list[Any] = []
+    story.extend(_header_band("What's Inside Your Report"))
+    toc_rows = [
+        ("Executive Summary", "1"),
+        ("Table of Contents", "2"),
+        ("Your Score Breakdown", "3"),
+        ("Costly Mistakes", "4"),
+        ("Personalized Insights", "6"),
+        ("Your Investor Profile", "8"),
+        ("Priority Action Plan", "9"),
+        ("Educational Guidance", "10"),
+        ("Future Scenarios", "12"),
+        ("Financial Checklist", "13"),
+        ("Overall Grade and Next Steps", "14"),
+    ]
+    rows = []
+    for section, page in toc_rows:
+        dots = "." * max(8, 58 - len(section))
+        left = Paragraph(f"{section} <font color='#6b7280'>{dots}</font>", styles["toc_name"])
+        right = Paragraph(page, styles["toc_page"])
+        rows.append([left, right])
+    toc_table = Table(rows, colWidths=[5.9 * inch, 0.7 * inch])
+    toc_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), SILVER),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, TEAL),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+    story.append(toc_table)
+    story.append(Spacer(1, 24))
+    story.append(
+        Paragraph(
+            "Your personalized halal financial roadmap",
+            styles["teal_italic"],
+        )
+    )
+    return story
+
+
+def _future_scenarios(
+    styles: dict[str, ParagraphStyle],
+    profile: str,
+    category_scores: dict[str, Any],
+) -> list[Any]:
+    ranked_low = sorted(category_scores.items(), key=lambda item: float(item[1]))
+    gap_names = [name for name, _ in ranked_low[:3]]
+    gap_text = ", ".join(gap_names) if gap_names else "foundation areas"
+
+    story: list[Any] = []
+    story.extend(_header_band("Future Scenarios (Illustrative)"))
+    story.append(
+        Paragraph(
+            "These scenarios are hypothetical illustrations only. They are not forecasts or promises of returns.",
+            styles["muted"],
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    article = "an" if profile[:1].lower() in "aeiou" else "a"
+    s1_body = (
+        f"As {article} {profile} investor, consistency can matter more than perfect timing. "
+        "When monthly halal investing is automated, savings transfers happen without decision fatigue, "
+        "and high-interest debt shrinks each month, readiness compounds quietly in the background. "
+        "Patience and process turn small contributions into meaningful long-term optionality.<br/><br/>"
+        "<b>Key actions that drive this scenario:</b><br/>"
+        "- Automated monthly halal investment contribution<br/>"
+        "- Emergency fund maintained above 3 months<br/>"
+        "- High-interest debt eliminated<br/>"
+        "- Annual portfolio review and rebalancing"
+    )
+    story.append(_callout("Scenario 1: The Consistent Builder", s1_body, TEAL))
+    story.append(Paragraph("(Illustrative only - not a forecast)", styles["scenario_sub"]))
+
+    s2_body = (
+        f"If habits stay roughly the same, short-term comfort can mask growing opportunity cost. "
+        f"In your results, gaps around {gap_text} are the areas most likely to keep progress flat. "
+        "Nothing dramatic has to go wrong for options to narrow - unfinished systems simply keep "
+        "compounding delayed.<br/><br/>"
+        "<b>Factors that keep this scenario in place:</b><br/>"
+        "- No change to savings automation<br/>"
+        "- Gaps in insurance or diversification continue<br/>"
+        "- Written goals remain unset<br/>"
+        "- Behavioral reactions to market news continue"
+    )
+    story.append(_callout("Scenario 2: The Comfort Zone", s2_body, AMBER))
+    story.append(Paragraph("(Illustrative only - not a forecast)", styles["scenario_sub"]))
+
+    s3_body = (
+        "An unexpected expense, income pause, or family need can arrive at any time. "
+        "Without an adequate emergency buffer or aligned insurance, recovery often means selling "
+        "halal investments at the wrong moment or taking on expensive debt. "
+        "This scenario is not dramatic by design - it is simply what unprepared foundations look like "
+        "under ordinary stress.<br/><br/>"
+        "<b>Vulnerabilities that increase this risk:</b><br/>"
+        "- Emergency fund below 3 months of expenses<br/>"
+        "- Insurance coverage gaps<br/>"
+        "- High-interest debt with no paydown plan<br/>"
+        "- Concentrated rather than diversified holdings"
+    )
+    story.append(_callout("Scenario 3: The Unprepared Setback", s3_body, RED))
+    story.append(Paragraph("(Illustrative only - not a forecast)", styles["scenario_sub"]))
+
+    disclaimer_box = Table(
+        [[
+            Paragraph(
+                "These scenarios are for educational purposes only. They are not financial forecasts, "
+                "projections, or personalized advice. Actual outcomes depend on many factors outside "
+                "the scope of this assessment.",
+                styles["body_left"],
+            )
+        ]],
+        colWidths=[6.8 * inch],
+    )
+    disclaimer_box.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), TEAL_PALE),
+                ("BOX", (0, 0), (-1, -1), 0.5, TEAL),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+    story.append(Spacer(1, 8))
+    story.append(disclaimer_box)
+    story.append(Paragraph(DISCLAIMER, styles["muted"]))
+    return story
+
+
+def _back_cover(styles: dict[str, ParagraphStyle]) -> list[Any]:
+    top = [
+        Spacer(1, 18),
+        _logo_flowable(1.35 * inch),
+        Spacer(1, 10),
+        Paragraph("InvestReady", styles["white_title"]),
+        HRFlowable(width=100, thickness=2, color=TEAL, spaceBefore=2, spaceAfter=10),
+        Paragraph("stocks.irizq.com", ParagraphStyle(
+            "IRCoverLink",
+            parent=styles["white_center"],
+            textColor=TEAL,
+            fontSize=11,
+        )),
+        Spacer(1, 4),
+        Paragraph(
+            "Halal Wealth for Every Muslim",
+            ParagraphStyle(
+                "IRCoverTag",
+                parent=styles["white_center"],
+                fontSize=10,
+                textColor=colors.Color(1, 1, 1, alpha=0.75),
+            ),
+        ),
+        Spacer(1, 12),
+    ]
+    top_table = Table([[top]], colWidths=[7.0 * inch])
+    top_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 18),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ("LEFTPADDING", (0, 0), (-1, -1), 20),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 20),
+            ]
+        )
+    )
+
+    features = Table(
+        [[
+            FeatureIconBox("check", "Shariah Screened", "AAOIFI Standards"),
+            FeatureIconBox("chart", "10 Categories", "Assessed"),
+            FeatureIconBox("doc", "Personalized", "PDF Report"),
+        ]],
+        colWidths=[2.1 * inch, 2.1 * inch, 2.1 * inch],
+    )
+    features.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), NAVY_MID),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 14),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+            ]
+        )
+    )
+
+    quote_block = [
+        Spacer(1, 16),
+        Paragraph(
+            "Earn halal - invest consistently - stay diversified - think long-term - let time grow your rizq.",
+            ParagraphStyle(
+                "IRCoverQuote",
+                parent=styles["teal_italic"],
+                fontSize=12,
+                leading=16,
+                textColor=TEAL,
+            ),
+        ),
+        Spacer(1, 10),
+        Paragraph(
+            "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
+            ParagraphStyle(
+                "IRCoverDua",
+                parent=styles["white_center"],
+                fontSize=10,
+                fontName="Helvetica-Oblique",
+                leading=14,
+            ),
+        ),
+        Spacer(1, 18),
+        Paragraph(DISCLAIMER, styles["cover_disclaimer"]),
+        Spacer(1, 8),
+        Paragraph("2026 iRizq.com. All rights reserved.", styles["cover_copy"]),
+        Spacer(1, 12),
+    ]
+    bottom = Table([[quote_block]], colWidths=[7.0 * inch])
+    bottom.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 24),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 24),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
+            ]
+        )
+    )
+
+    return [top_table, features, bottom]
+
+
 def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     """Generate the InvestReady PDF and return raw bytes."""
     styles = _styles()
@@ -645,6 +1573,9 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         if float(score) < 70
     ]
     actions = _actions_for_categories(weak_cats or list(category_scores.keys())[:3])
+    insights = _personalized_insights(category_scores, overall, profile)
+    focus_areas = _top_focus_areas(category_scores)
+    report_id = _make_report_id()
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -652,75 +1583,30 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         pagesize=letter,
         leftMargin=0.65 * inch,
         rightMargin=0.65 * inch,
-        topMargin=0.55 * inch,
-        bottomMargin=0.65 * inch,
+        topMargin=0.70 * inch,
+        bottomMargin=0.70 * inch,
         title="InvestReady Financial Readiness Report",
         author="iRizq.com",
     )
     story: list[Any] = []
 
     # PAGE 1 - Executive Summary
-    story.append(Paragraph("بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ", styles["bismillah_ar"]))
-    story.append(Paragraph("In the name of Allah, the Most Gracious, the Most Merciful", styles["bismillah_en"]))
+    for item in _bismillah_flowables(styles):
+        story.append(item)
     story.append(Spacer(1, 12))
     story.append(_logo_flowable(1.15 * inch))
     story.append(Spacer(1, 16))
     story.extend(_header_band("InvestReady Financial Readiness Report"))
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 10))
     story.append(Paragraph(f"Prepared for <b>{name}</b>", styles["center"]))
-    story.append(Spacer(1, 16))
+    story.append(Paragraph(f"Report ID: {report_id}", styles["report_id"]))
     meta_bits = []
     if email:
         meta_bits.append(email)
     meta_bits.append(datetime.utcnow().strftime("Generated %B %d, %Y"))
     story.append(Paragraph(" &nbsp;|&nbsp; ".join(meta_bits), styles["muted"]))
-    story.append(Spacer(1, 4))
-
-    # Score block: fixed 60pt allocation so large text cannot overlap neighbors
-    score_block = Table(
-        [
-            [Paragraph("OVERALL SCORE", styles["score_label"])],
-            [Paragraph(f"{overall} / 100", styles["score"])],
-        ],
-        colWidths=[7.0 * inch],
-        rowHeights=[14, 46],
-    )
-    score_block.setStyle(
-        TableStyle(
-            [
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ]
-        )
-    )
-    story.append(score_block)
-    story.append(Paragraph(f"Grade: {grade}", styles["grade"]))
-    story.append(Spacer(1, 4))
-    profile_block = Table(
-        [
-            [Paragraph("YOUR PROFILE", styles["profile_label"])],
-            [Paragraph(f"Investor Profile: {profile}", styles["profile"])],
-        ],
-        colWidths=[7.0 * inch],
-        rowHeights=[12, 24],
-    )
-    profile_block.setStyle(
-        TableStyle(
-            [
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]
-        )
-    )
-    story.append(profile_block)
-    # Clear separation after score/grade/profile before strengths
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 10))
+    story.extend(_score_info_band(overall, grade, profile))
 
     page1_h = ParagraphStyle(
         "IRPage1H",
@@ -743,65 +1629,46 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", page1_item))
     else:
         story.append(Paragraph("No categories currently score as clear strengths.", page1_item))
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 12))
     story.append(Paragraph("<b>Areas Needing Attention</b>", page1_h))
     if risks:
         for item in risks:
             story.append(Paragraph(f"<font color='#f59e0b'>!</font> {item}", page1_item))
     else:
         story.append(Paragraph("No categories currently fall below the attention threshold.", page1_item))
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 12))
     summary = (
         f"{name}, your InvestReady score of {overall}/100 ({grade}) places you in the "
         f"{profile} profile. This report highlights where your foundation is solid and "
         f"where focused action over the next 7, 30, and 90 days can improve readiness. "
         f"Use it as an educational roadmap - not personalized investment advice."
     )
-    story.append(Spacer(1, 12))
     story.append(Paragraph(summary, styles["body"]))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 2 - Score Dashboard
+    # PAGE 2 - Table of Contents
+    story.extend(_toc_page(styles))
+    story.append(PageBreak())
+
+    # PAGE 3 - Score Breakdown with visual bars
     story.extend(_header_band("Your Score Breakdown"))
-    rows = [[Paragraph("<b>Category</b>", styles["body_left"]), Paragraph("<b>Score</b>", styles["body_left"]), Paragraph("<b>Status</b>", styles["body_left"])]]
+    story.append(Spacer(1, 4))
     for cat, score in category_scores.items():
-        sc = float(score)
-        status = "Strong" if sc >= 80 else ("Developing" if sc >= 60 else "Needs Attention")
-        color = _score_color(sc)
-        rows.append(
-            [
-                Paragraph(cat, styles["body_left"]),
-                Paragraph(f"<font color='#{_color_hex(color)}'><b>{int(sc)}</b></font>", styles["body_left"]),
-                Paragraph(status, styles["body_left"]),
-            ]
-        )
-    table = Table(rows, colWidths=[3.6 * inch, 1.2 * inch, 2.0 * inch])
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), NAVY),
-                ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
-                ("BACKGROUND", (0, 1), (-1, -1), SILVER),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d1d5db")),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ]
-        )
-    )
-    story.append(table)
-    story.append(Spacer(1, 14))
-    story.append(Paragraph(f"<b>Overall Score: {overall}/100</b>", styles["h1"]))
+        story.append(ScoreBarRow(cat, float(score)))
+        story.append(Spacer(1, 14))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=NAVY, spaceBefore=4, spaceAfter=10))
+    story.append(ScoreBarRow("Overall Score", float(overall), overall=True))
+    story.append(Spacer(1, 16))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 3-4 - Costly Mistakes
+    # Costly Mistakes
     story.extend(_header_band("Costly Mistakes You May Be Making"))
     story.append(
         Paragraph(
-            "These warnings are generated from your assessment answers. They are educational "
-            "prompts to help you prioritize - not accusations or personalized advice.",
+            "These warnings are generated from your assessment answers and category scores. "
+            "They are educational prompts to help you prioritize - not accusations or personalized advice.",
             styles["body"],
         )
     )
@@ -810,30 +1677,15 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 5-6 - Personalized Insights
+    # Personalized Insights
     story.extend(_header_band("Personalized Insights"))
-    insights = [
-        f"Your overall readiness score of {overall} suggests a {profile.lower()} posture toward risk and growth.",
-        "Cash flow and emergency preparedness form the base of every resilient plan. Weakness here usually shows up as forced decisions later.",
-        "Debt management quality often determines whether investing gains are kept or quietly eroded by interest.",
-        "Investing readiness is less about picking winners and more about process: contributions, diversification, and behavior under stress.",
-        "Retirement and tax awareness compound quietly. Small consistent improvements here can matter more than short-term market timing.",
-        "Goal clarity turns vague intention into measurable progress. Written goals with dates improve follow-through.",
-        "Behavioral discipline is the multiplier. The best allocation fails if fear or hype drives decisions.",
-    ]
-    if overall >= 80:
-        insights.insert(1, "You already show strong fundamentals. Your edge now is consistency, refinement, and avoiding overconfidence.")
-    elif overall >= 60:
-        insights.insert(1, "You have a workable foundation with clear upgrade paths. Focus on the lowest two category scores first.")
-    else:
-        insights.insert(1, "Your results point to foundational gaps. Stabilize cash, debt, and emergency reserves before increasing market risk.")
     for paragraph in insights:
         story.append(Paragraph(paragraph, styles["body"]))
         story.append(HRFlowable(width="40%", thickness=2, color=TEAL, spaceBefore=2, spaceAfter=8, hAlign="LEFT"))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 7 - Investor Profile
+    # Investor Profile
     story.extend(_header_band("Your Investor Profile"))
     story.append(Paragraph("YOUR PROFILE", styles["profile_label"]))
     story.append(Paragraph(f"Investor Profile: {profile}", styles["profile"]))
@@ -843,6 +1695,8 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         "You balance growth and stability with a measured approach through a diversified halal investment portfolio.",
     )
     story.append(Paragraph(profile_copy, styles["body"]))
+    story.append(Spacer(1, 8))
+    story.append(_shariah_callout())
     story.append(Paragraph("<b>Illustrative allocation ranges</b>", styles["h2"]))
     story.append(Paragraph(_profile_allocation(profile), styles["body"]))
     story.append(Paragraph("<b>Common pitfalls for this profile</b>", styles["h2"]))
@@ -856,7 +1710,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 8-9 - Priority Action Plan
+    # Priority Action Plan
     story.extend(_header_band("Priority Action Plan"))
     for label, key, accent in (
         ("THIS WEEK", "week", TEAL),
@@ -867,7 +1721,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 10-11 - Educational Section
+    # Educational Section
     story.extend(_header_band("Educational Guidance for Priority Categories"))
     edu_targets = weak_cats[:5] or list(category_scores.keys())[:3]
     for cat in edu_targets:
@@ -895,51 +1749,20 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             )
         )
         story.append(Paragraph("<b>3 habits to build:</b>", styles["body_left"]))
-        habits = _habits_for_category(cat)
-        for habit in habits:
+        for habit in _habits_for_category(cat):
             if habit:
                 story.append(Paragraph(f"- {habit}", styles["body_left"]))
         story.append(Spacer(1, 6))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 12 - Future Scenarios
-    story.extend(_header_band("Future Scenarios (Illustrative)"))
-    story.append(
-        Paragraph(
-            "These scenarios are hypothetical illustrations only. They are not forecasts or promises of returns.",
-            styles["muted"],
-        )
-    )
-    story.append(
-        _callout(
-            "Steady Improver",
-            "You raise savings automation, reduce expensive debt, and keep investing through volatility. "
-            "Readiness compounds through consistency.",
-            TEAL,
-        )
-    )
-    story.append(
-        _callout(
-            "Status Quo Drift",
-            "Habits stay the same. Short-term comfort remains, but gaps in emergency reserves, "
-            "tax planning, or diversification quietly limit long-term options.",
-            AMBER,
-        )
-    )
-    story.append(
-        _callout(
-            "Shock Without Buffer",
-            "An unexpected expense arrives before foundations are ready. Without cash reserves and "
-            "insurance alignment, recovery takes longer and costs more.",
-            RED,
-        )
-    )
-    story.append(Paragraph(DISCLAIMER, styles["muted"]))
+    # Future Scenarios
+    story.extend(_future_scenarios(styles, profile, category_scores))
     story.append(PageBreak())
 
-    # PAGE 13 - Checklist
-    story.extend(_header_band("Financial Readiness Checklist"))
+    # Checklist
+    story.extend(_header_band("Your Financial Readiness Checklist"))
+    story.append(Spacer(1, 4))
     checklist = [
         "Written budget and known monthly cash surplus",
         "Emergency fund separated from spending money",
@@ -953,16 +1776,14 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         "Behavioral rules for market drops and hot tips",
     ]
     for item in checklist:
-        story.append(Paragraph(f"<font color='#1ec8b8'>&#9744;</font> {item}", styles["body_left"]))
+        story.append(ChecklistItem(item))
+        story.append(Spacer(1, 14))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 14 - Grade and Next Steps
+    # Overall Grade and Next Steps
     story.extend(_header_band("Overall Grade and Next Steps"))
-    story.append(Paragraph("OVERALL SCORE", styles["score_label"]))
-    story.append(Paragraph(f"{overall} / 100", styles["score"]))
-    story.append(Paragraph(f"Grade: {grade}", styles["grade"]))
-    story.append(Spacer(1, 12))
+    story.extend(_score_info_band(overall, grade, profile))
     story.append(
         Paragraph(
             f"Your grade of {grade} reflects an overall score of {overall}/100. "
@@ -971,53 +1792,25 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         )
     )
     story.append(Paragraph("<b>Top 3 focus areas</b>", styles["h2"]))
-    for cat in (weak_cats or list(category_scores.keys()))[:3]:
-        story.append(Paragraph(f"- {cat}", styles["body_left"]))
+    for line in focus_areas:
+        story.append(Paragraph(line, styles["body_left"]))
     story.append(Spacer(1, 8))
     story.append(Paragraph("Continue your journey:", styles["h2"]))
     story.append(Paragraph("iRizq.com &nbsp;|&nbsp; stocks.irizq.com", styles["teal"]))
-    story.append(Paragraph(
-        "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
-        styles["dua"],
-    ))
+    story.append(
+        Paragraph(
+            "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
+            styles["dua"],
+        )
+    )
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
-    # PAGE 15 - Back Cover
-    cover = Table(
-        [[
-            [
-                Spacer(1, 1.8 * inch),
-                _logo_flowable(1.8 * inch),
-                Spacer(1, 16),
-                Paragraph("InvestReady", styles["white_title"]),
-                HRFlowable(width="40%", thickness=3, color=TEAL, spaceBefore=4, spaceAfter=12),
-                Paragraph("stocks.irizq.com", styles["white_center"]),
-                Paragraph("Halal Wealth for Every Muslim", styles["white_center"]),
-                Spacer(1, 0.35 * inch),
-                Paragraph(
-                    "Earn halal - invest consistently - stay diversified - think long-term - let time grow your rizq.",
-                    styles["teal_italic_small"],
-                ),
-                Spacer(1, 0.9 * inch),
-                Paragraph(DISCLAIMER, styles["white_center"]),
-            ]
-        ]],
-        colWidths=[7.0 * inch],
-        rowHeights=[9.2 * inch],
-    )
-    cover.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 24),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 24),
-            ]
-        )
-    )
-    story.append(cover)
+    # Back Cover
+    story.extend(_back_cover(styles))
 
-    doc.build(story)
+    def _canvas_maker(*args: Any, **kwargs: Any) -> InvestReadyCanvas:
+        return InvestReadyCanvas(*args, prepared_for=name, **kwargs)
+
+    doc.build(story, canvasmaker=_canvas_maker)
     return buffer.getvalue()
