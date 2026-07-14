@@ -145,6 +145,19 @@ def ensure_ebook_stats_table() -> None:
                 );
                 """
             )
+            # Safe additive columns for the revamped assessment payload.
+            for statement in (
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS financial_stage VARCHAR(50)",
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS profile_age VARCHAR(20)",
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS profile_income VARCHAR(30)",
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS profile_dependents VARCHAR(20)",
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS behavior_flags JSONB",
+                "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS risk_flags JSONB",
+            ):
+                try:
+                    cur.execute(statement)
+                except Exception:
+                    LOGGER.exception("InvestReady schema alter skipped: %s", statement)
         conn.commit()
 
 
@@ -175,27 +188,56 @@ def save_ebook_subscriber(*, email: str, ip_address: str | None) -> None:
 
 
 def save_investready_submission(payload: dict[str, Any], *, ip_address: str | None) -> None:
+    financial_stage = (
+        str(payload.get("financial_stage") or payload.get("investor_profile") or "").strip()[:50]
+        or None
+    )
+    base_values = (
+        str(payload.get("name") or "").strip() or None,
+        str(payload.get("email") or "").strip().lower(),
+        int(round(float(payload.get("overall_score") or 0))),
+        str(payload.get("letter_grade") or "")[:5] or None,
+        financial_stage,
+        Json(payload.get("answers") or {}),
+        Json(payload.get("category_scores") or {}),
+        ip_address,
+    )
+    extended_values = base_values + (
+        financial_stage,
+        str(payload.get("profile_age") or "").strip()[:20] or None,
+        str(payload.get("profile_income") or "").strip()[:30] or None,
+        str(payload.get("profile_dependents") or "").strip()[:20] or None,
+        Json(payload.get("behavior_flags") or []),
+        Json(payload.get("risk_flags") or {}),
+    )
     with _get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO investready_submissions (
-                    name, email, overall_score, letter_grade, investor_profile,
-                    answers, category_scores, ip_address
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO investready_submissions (
+                        name, email, overall_score, letter_grade, investor_profile,
+                        answers, category_scores, ip_address,
+                        financial_stage, profile_age, profile_income, profile_dependents,
+                        behavior_flags, risk_flags
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    extended_values,
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    str(payload.get("name") or "").strip() or None,
-                    str(payload.get("email") or "").strip().lower(),
-                    int(round(float(payload.get("overall_score") or 0))),
-                    str(payload.get("letter_grade") or "")[:5] or None,
-                    str(payload.get("investor_profile") or "")[:50] or None,
-                    Json(payload.get("answers") or {}),
-                    Json(payload.get("category_scores") or {}),
-                    ip_address,
-                ),
-            )
+            except Exception:
+                LOGGER.exception("Extended InvestReady insert failed; using base columns")
+                conn.rollback()
+                cur.execute(
+                    """
+                    INSERT INTO investready_submissions (
+                        name, email, overall_score, letter_grade, investor_profile,
+                        answers, category_scores, ip_address
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    base_values,
+                )
         conn.commit()
 
 
@@ -214,14 +256,14 @@ def send_investready_email(*, recipient_email: str, name: str, overall_score: in
 Your personalized InvestReady Financial Readiness Report is attached to this email.
 
 Your Overall Score: {overall_score}/100 - {letter_grade}
-Your Investor Profile: {investor_profile}
+Your Financial Stage: {investor_profile}
 
-Your premium report includes:
-- Detailed scores across 10 financial categories
-- Costly mistakes you may be making right now
-- Your personalized priority action plan
-- Educational guidance for your weakest areas
-- Your investor profile and what it means for you
+Your Confidential Financial Summary includes:
+- Detailed scores across your financial readiness categories
+- The 3 financial risks that could cost you the most
+- Your personalized 7, 30, and 90 day action plan
+- Personalized insight for your financial stage
+- Muslim-sensitive protection guidance including Takaful notes
 
 Please review your report and take action on the priority items - small improvements now can make a significant difference over time.
 
@@ -249,14 +291,14 @@ Please check your Spam or Junk folder if you do not see it in your inbox. Someti
       <p style="margin:0 0 16px;">Assalamu Alaikum {safe_name},</p>
       <p style="margin:0 0 16px;">Your personalized InvestReady Financial Readiness Report is attached to this email.</p>
       <p style="margin:0 0 8px;"><strong>Your Overall Score:</strong> {overall_score}/100 - {letter_grade}</p>
-      <p style="margin:0 0 16px;"><strong>Your Investor Profile:</strong> {investor_profile}</p>
-      <p style="margin:0 0 8px;">Your premium report includes:</p>
+      <p style="margin:0 0 16px;"><strong>Your Financial Stage:</strong> {investor_profile}</p>
+      <p style="margin:0 0 8px;">Your Confidential Financial Summary includes:</p>
       <ul style="margin:0 0 16px;padding-left:20px;">
-        <li>Detailed scores across 10 financial categories</li>
-        <li>Costly mistakes you may be making right now</li>
-        <li>Your personalized priority action plan</li>
-        <li>Educational guidance for your weakest areas</li>
-        <li>Your investor profile and what it means for you</li>
+        <li>Detailed scores across your financial readiness categories</li>
+        <li>The 3 financial risks that could cost you the most</li>
+        <li>Your personalized 7, 30, and 90 day action plan</li>
+        <li>Personalized insight for your financial stage</li>
+        <li>Muslim-sensitive protection guidance including Takaful notes</li>
       </ul>
       <p style="margin:0 0 16px;">Please review your report and take action on the priority items - small improvements now can make a significant difference over time.</p>
       <p style="margin:0 0 16px;">If you have any questions, reply to this email.</p>
@@ -437,7 +479,14 @@ def investready_submit() -> tuple[Any, int]:
 
     overall_score = int(round(float(payload.get("overall_score") or 0)))
     letter_grade = str(payload.get("letter_grade") or "").strip() or "C"
-    investor_profile = str(payload.get("investor_profile") or "").strip() or "Moderate"
+    investor_profile = (
+        str(payload.get("financial_stage") or payload.get("investor_profile") or "").strip()
+        or "Growth Ready"
+    )
+    # Keep investor_profile alias populated for older PDF/email code paths.
+    payload["investor_profile"] = investor_profile
+    if not payload.get("financial_stage"):
+        payload["financial_stage"] = investor_profile
     ip_address = request.remote_addr
 
     try:
