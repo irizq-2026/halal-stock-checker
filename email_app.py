@@ -244,6 +244,8 @@ Please check your Spam or Junk folder if you do not see it in your inbox. Someti
     </div>
     <div style="height:4px;background:#1ec8b8;"></div>
     <div style="padding:28px 24px;color:#374151;line-height:1.65;font-size:15px;">
+      <p dir="rtl" style="margin:0 0 6px;text-align:right;font-family:'Amiri',Georgia,serif;font-size:18px;line-height:2;color:#0d1f3c;">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</p>
+      <p dir="ltr" style="margin:0 0 18px;text-align:center;font-size:12px;color:#1ec8b8;font-style:italic;">In the name of Allah, the Most Gracious, the Most Merciful</p>
       <p style="margin:0 0 16px;">Assalamu Alaikum {safe_name},</p>
       <p style="margin:0 0 16px;">Your personalized InvestReady Financial Readiness Report is attached to this email.</p>
       <p style="margin:0 0 8px;"><strong>Your Overall Score:</strong> {overall_score}/100 - {letter_grade}</p>
