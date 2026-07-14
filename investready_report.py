@@ -145,14 +145,58 @@ def _styles() -> dict[str, ParagraphStyle]:
             alignment=TA_CENTER,
             spaceAfter=6,
         ),
+        "score_label": ParagraphStyle(
+            "IRScoreLabel",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            textColor=NAVY,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=4,
+        ),
         "score": ParagraphStyle(
             "IRScore",
             parent=base["Title"],
             fontName="Helvetica-Bold",
-            fontSize=44,
+            fontSize=36,
             textColor=TEAL,
             alignment=TA_CENTER,
+            spaceBefore=0,
             spaceAfter=4,
+            leading=40,
+        ),
+        "grade": ParagraphStyle(
+            "IRGrade",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=24,
+            textColor=NAVY,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=6,
+            leading=28,
+        ),
+        "profile_label": ParagraphStyle(
+            "IRProfileLabel",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=4,
+        ),
+        "profile": ParagraphStyle(
+            "IRProfile",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            textColor=NAVY,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=0,
+            leading=22,
         ),
         "white_center": ParagraphStyle(
             "IRWhiteCenter",
@@ -189,7 +233,7 @@ def _styles() -> dict[str, ParagraphStyle]:
             fontSize=8,
             textColor=TEAL,
             alignment=TA_CENTER,
-            spaceAfter=10,
+            spaceAfter=0,
         ),
         "teal_italic": ParagraphStyle(
             "IRTealItalic",
@@ -212,6 +256,17 @@ def _styles() -> dict[str, ParagraphStyle]:
             spaceBefore=8,
             spaceAfter=8,
             leading=13,
+        ),
+        "dua": ParagraphStyle(
+            "IRDua",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=11,
+            textColor=NAVY,
+            alignment=TA_CENTER,
+            spaceBefore=10,
+            spaceAfter=8,
+            leading=16,
         ),
     }
 
@@ -434,6 +489,69 @@ PROFILE_DESCRIPTIONS = {
 }
 
 
+# Exactly 3 habits per category for the educational section (PAGE 10-11).
+HABITS_BY_CATEGORY: dict[str, list[str]] = {
+    "Cash Flow": [
+        "Track every expense for 30 days using a simple app or notebook",
+        "Set up an automatic transfer to savings on the day you receive your paycheck",
+        "Review your budget every Sunday for 10 minutes to catch overspending early",
+    ],
+    "Emergency Preparedness": [
+        "Open a separate high-yield savings account dedicated only to your emergency fund",
+        "Automate a fixed monthly transfer to your emergency fund before spending on anything else",
+        "Review your emergency fund target every 6 months as your expenses change",
+    ],
+    "Debt Management": [
+        "List all debts by interest rate and focus extra payments on the highest rate first",
+        "Stop adding new high-interest debt by removing saved card details from online stores",
+        "Celebrate each debt paid off to maintain motivation for the full payoff journey",
+    ],
+    "Investing Readiness": [
+        "Invest a fixed amount every month regardless of market conditions - consistency beats timing",
+        "Use the iRizq Halal Stock Checker at stocks.irizq.com to screen investments before buying",
+        "Read one article or watch one video about halal investing every week to build knowledge",
+    ],
+    "Retirement Planning": [
+        "Increase your retirement contribution by 1% every time you receive a pay increase",
+        "Check your retirement account balance and allocation once every 6 months - not daily",
+        "Calculate your retirement number (monthly expenses multiplied by 300) so you have a clear target to work toward",
+    ],
+    "Insurance and Risk": [
+        "Schedule an annual insurance review every January to make sure coverage still fits your life situation",
+        "Read your policy documents once a year so you know exactly what is and is not covered",
+        "Get quotes from at least two providers before renewing any insurance policy",
+    ],
+    "Goal Clarity": [
+        "Write your top 3 financial goals on a card and review them every Monday morning",
+        "Break each goal into monthly milestones so progress is visible and measurable",
+        "Tell one trusted person your financial goals for accountability and encouragement",
+    ],
+    "Tax Awareness": [
+        "Contribute to at least one tax-advantaged account every month before spending elsewhere",
+        "Keep a folder of receipts and documents throughout the year instead of scrambling at tax time",
+        "Schedule a 30-minute tax planning session every quarter to stay ahead of surprises",
+    ],
+    "Diversification": [
+        "Review your asset allocation once every 6 months and rebalance if any category has drifted more than 10% from your target",
+        "Never put more than 20% of your halal portfolio into a single stock or sector",
+        "Add one new halal asset class or fund each year to gradually broaden your diversification",
+    ],
+    "Behavioral Discipline": [
+        "Wait 48 hours before making any unplanned investment decision - impulse and investing are a dangerous combination",
+        "Unfollow social media accounts that promote get-rich-quick schemes or create financial anxiety",
+        "Write down your investment plan and read it before making any changes to your portfolio",
+    ],
+}
+
+
+def _habits_for_category(category: str) -> list[str]:
+    """Return exactly 3 non-empty habits for a category."""
+    habits = [h.strip() for h in HABITS_BY_CATEGORY.get(category, []) if h and str(h).strip()]
+    while len(habits) < 3:
+        habits.append(f"Take one concrete next step to strengthen {category}")
+    return habits[:3]
+
+
 def _actions_for_categories(weak: list[str]) -> dict[str, list[str]]:
     catalog = {
         "Cash Flow": [
@@ -544,38 +662,102 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     # PAGE 1 - Executive Summary
     story.append(Paragraph("بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ", styles["bismillah_ar"]))
     story.append(Paragraph("In the name of Allah, the Most Gracious, the Most Merciful", styles["bismillah_en"]))
-    story.append(_logo_flowable())
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 12))
+    story.append(_logo_flowable(1.15 * inch))
+    story.append(Spacer(1, 16))
     story.extend(_header_band("InvestReady Financial Readiness Report"))
+    story.append(Spacer(1, 12))
     story.append(Paragraph(f"Prepared for <b>{name}</b>", styles["center"]))
+    story.append(Spacer(1, 16))
+    meta_bits = []
     if email:
-        story.append(Paragraph(email, styles["muted"]))
-    story.append(Paragraph(datetime.utcnow().strftime("Generated %B %d, %Y"), styles["muted"]))
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(str(overall), styles["score"]))
-    story.append(Paragraph(f"Overall Score / 100 &nbsp;&nbsp;|&nbsp;&nbsp; Grade: <b>{grade}</b>", styles["center"]))
-    story.append(Paragraph(f"Investor Profile: <b>{profile}</b>", styles["teal"]))
-    story.append(Spacer(1, 6))
+        meta_bits.append(email)
+    meta_bits.append(datetime.utcnow().strftime("Generated %B %d, %Y"))
+    story.append(Paragraph(" &nbsp;|&nbsp; ".join(meta_bits), styles["muted"]))
+    story.append(Spacer(1, 4))
+
+    # Score block: fixed 60pt allocation so large text cannot overlap neighbors
+    score_block = Table(
+        [
+            [Paragraph("OVERALL SCORE", styles["score_label"])],
+            [Paragraph(f"{overall} / 100", styles["score"])],
+        ],
+        colWidths=[7.0 * inch],
+        rowHeights=[14, 46],
+    )
+    score_block.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(score_block)
+    story.append(Paragraph(f"Grade: {grade}", styles["grade"]))
+    story.append(Spacer(1, 4))
+    profile_block = Table(
+        [
+            [Paragraph("YOUR PROFILE", styles["profile_label"])],
+            [Paragraph(f"Investor Profile: {profile}", styles["profile"])],
+        ],
+        colWidths=[7.0 * inch],
+        rowHeights=[12, 24],
+    )
+    profile_block.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(profile_block)
+    # Clear separation after score/grade/profile before strengths
+    story.append(Spacer(1, 20))
+
+    page1_h = ParagraphStyle(
+        "IRPage1H",
+        parent=styles["h2"],
+        spaceBefore=0,
+        spaceAfter=3,
+        fontSize=12,
+    )
+    page1_item = ParagraphStyle(
+        "IRPage1Item",
+        parent=styles["body_left"],
+        fontSize=9,
+        leading=12,
+        spaceAfter=2,
+    )
     strengths_heading = "Your Top Strengths" if strength_label == "Strength" else "Relatively Stronger Areas"
-    story.append(Paragraph(f"<b>{strengths_heading}</b>", styles["h2"]))
+    story.append(Paragraph(f"<b>{strengths_heading}</b>", page1_h))
     if strengths:
         for item in strengths:
-            story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", styles["body_left"]))
+            story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", page1_item))
     else:
-        story.append(Paragraph("No categories currently score as clear strengths.", styles["body_left"]))
-    story.append(Paragraph("<b>Areas Needing Attention</b>", styles["h2"]))
+        story.append(Paragraph("No categories currently score as clear strengths.", page1_item))
+    story.append(Spacer(1, 16))
+    story.append(Paragraph("<b>Areas Needing Attention</b>", page1_h))
     if risks:
         for item in risks:
-            story.append(Paragraph(f"<font color='#f59e0b'>!</font> {item}", styles["body_left"]))
+            story.append(Paragraph(f"<font color='#f59e0b'>!</font> {item}", page1_item))
     else:
-        story.append(Paragraph("No categories currently fall below the attention threshold.", styles["body_left"]))
+        story.append(Paragraph("No categories currently fall below the attention threshold.", page1_item))
+    story.append(Spacer(1, 16))
     summary = (
         f"{name}, your InvestReady score of {overall}/100 ({grade}) places you in the "
         f"{profile} profile. This report highlights where your foundation is solid and "
         f"where focused action over the next 7, 30, and 90 days can improve readiness. "
         f"Use it as an educational roadmap - not personalized investment advice."
     )
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 12))
     story.append(Paragraph(summary, styles["body"]))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
@@ -653,7 +835,9 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
 
     # PAGE 7 - Investor Profile
     story.extend(_header_band("Your Investor Profile"))
-    story.append(Paragraph(profile, styles["score"]))
+    story.append(Paragraph("YOUR PROFILE", styles["profile_label"]))
+    story.append(Paragraph(f"Investor Profile: {profile}", styles["profile"]))
+    story.append(Spacer(1, 16))
     profile_copy = PROFILE_DESCRIPTIONS.get(
         profile,
         "You balance growth and stability with a measured approach through a diversified halal investment portfolio.",
@@ -711,8 +895,10 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             )
         )
         story.append(Paragraph("<b>3 habits to build:</b>", styles["body_left"]))
-        for habit in _actions_for_categories([cat])["week"]:
-            story.append(Paragraph(f"- {habit}", styles["body_left"]))
+        habits = _habits_for_category(cat)
+        for habit in habits:
+            if habit:
+                story.append(Paragraph(f"- {habit}", styles["body_left"]))
         story.append(Spacer(1, 6))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
@@ -773,7 +959,10 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
 
     # PAGE 14 - Grade and Next Steps
     story.extend(_header_band("Overall Grade and Next Steps"))
-    story.append(Paragraph(grade, styles["score"]))
+    story.append(Paragraph("OVERALL SCORE", styles["score_label"]))
+    story.append(Paragraph(f"{overall} / 100", styles["score"]))
+    story.append(Paragraph(f"Grade: {grade}", styles["grade"]))
+    story.append(Spacer(1, 12))
     story.append(
         Paragraph(
             f"Your grade of {grade} reflects an overall score of {overall}/100. "
@@ -789,7 +978,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Paragraph("iRizq.com &nbsp;|&nbsp; stocks.irizq.com", styles["teal"]))
     story.append(Paragraph(
         "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
-        styles["teal_italic"],
+        styles["dua"],
     ))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
