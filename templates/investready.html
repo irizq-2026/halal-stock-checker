@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>InvestReady - Financial Readiness Assessment | iRizq.com</title>
+  <meta name="description" content="Discover your financial readiness score with InvestReady, a free 5-minute assessment from iRizq.com that evaluates your cash flow, emergency savings, debt, investing readiness, retirement planning, insurance, goals, tax awareness, diversification, and behavioral discipline.">
+  <link rel="icon" href="/static/irizq_favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0d1f3c;
+      --navy-mid: #14294f;
+      --teal: #1ec8b8;
+      --teal-dark: #17a898;
+      --teal-pale: #e4f9f7;
+      --green: #3d7a45;
+      --green-lt: #4e9a57;
+      --green-pale: #eaf5eb;
+      --silver: #f1f2f4;
+      --silver-mid: #e2e5e9;
+      --white: #ffffff;
+      --text: #0d1f3c;
+      --text-mid: #374151;
+      --text-muted: #6b7280;
+      --border: #d1d5db;
+      --shadow: rgba(13,31,60,0.09);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--silver);
+      color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.72;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body.question-active {
+      overflow: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    img {
+      max-width: 100%;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .hero-header {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(30, 200, 184, 0.22), transparent 32rem),
+        linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 55%, #07152a 100%);
+      color: var(--white);
+      padding: 1.25rem 1rem 2.6rem;
+    }
+
+    .hero-header:after {
+      content: "";
+      position: absolute;
+      inset: auto -5rem -7rem -5rem;
+      height: 11rem;
+      background: rgba(255, 255, 255, 0.05);
+      transform: rotate(-2deg);
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 980px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.4rem;
+    }
+
+    .brand-row img {
+      width: 92px;
+      height: auto;
+      filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.22));
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid rgba(30, 200, 184, 0.42);
+      background: rgba(30, 200, 184, 0.1);
+      color: #c8fffa;
+      border-radius: 999px;
+      padding: 0.38rem 0.72rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-dot {
+      width: 0.52rem;
+      height: 0.52rem;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 0 rgba(30, 200, 184, 0.7);
+      animation: blink-dot 1.25s ease-in-out infinite;
+    }
+
+    @keyframes blink-dot {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(30, 200, 184, 0.58);
+      }
+      50% {
+        opacity: 0.45;
+        box-shadow: 0 0 0 8px rgba(30, 200, 184, 0);
+      }
+    }
+
+    .hero-title {
+      margin: 1rem auto 0.55rem;
+      font-size: clamp(2.35rem, 11vw, 4.6rem);
+      line-height: 0.98;
+      letter-spacing: -0.07em;
+      font-weight: 800;
+    }
+
+    .hero-title span {
+      color: var(--teal);
+    }
+
+    .hero-subtitle {
+      max-width: 41rem;
+      margin: 0 auto;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: clamp(1rem, 2.8vw, 1.16rem);
+    }
+
+    .hero-chips {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+      max-width: 37rem;
+      margin: 1.5rem auto 0;
+    }
+
+    .chip {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+    }
+
+    .assessment-zone {
+      width: min(100% - 1.25rem, 740px);
+      margin: -1.35rem auto 2rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .progress-shell {
+      background: var(--white);
+      border: 1px solid rgba(209, 213, 219, 0.75);
+      border-radius: 999px;
+      padding: 0.45rem;
+      box-shadow: 0 12px 28px var(--shadow);
+      margin-bottom: 0.85rem;
+    }
+
+    .progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 0.15rem 0.4rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .progress-track {
+      height: 0.55rem;
+      border-radius: 999px;
+      background: var(--silver-mid);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--teal), #5ce3d8);
+      transition: width 250ms ease;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .card {
+      border-radius: calc(var(--radius) + 8px);
+      box-shadow: 0 18px 42px var(--shadow);
+    }
+
+    .welcome-card {
+      background: var(--white);
+      border: 1px solid var(--silver-mid);
+      border-top: 6px solid var(--teal);
+      padding: clamp(1.25rem, 4vw, 2.1rem);
+    }
+
+    .lesson-lbl {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border-radius: 999px;
+      background: var(--teal-pale);
+      color: var(--teal-dark);
+      padding: 0.4rem 0.78rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .welcome-card h2,
+    .capture-card h2,
+    .results-card h2 {
+      margin: 1rem 0 0.5rem;
+      font-size: clamp(1.65rem, 7vw, 2.45rem);
+      line-height: 1.08;
+      letter-spacing: -0.05em;
+    }
+
+    .welcome-card p,
+    .capture-card p,
+    .results-card p {
+      margin: 0;
+      color: var(--text-mid);
+    }
+
+    .takeaways {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1.35rem 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .takeaways li {
+      display: flex;
+      gap: 0.72rem;
+      align-items: flex-start;
+      padding: 0.85rem;
+      border: 1px solid var(--silver-mid);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #ffffff, #fbfcfd);
+      color: var(--text-mid);
+      font-weight: 600;
+    }
+
+    .checkmark {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 1.55rem;
+      height: 1.55rem;
+      border-radius: 50%;
+      background: var(--teal-pale);
+      color: var(--teal-dark);
+      font-weight: 900;
+    }
+
+    .checkmark:before {
+      content: "";
+      width: 0.38rem;
+      height: 0.72rem;
+      border: solid var(--teal-dark);
+      border-width: 0 0.14rem 0.14rem 0;
+      transform: rotate(45deg) translateY(-0.06rem);
+    }
+
+    .button-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 3.2rem;
+      border-radius: 999px;
+      padding: 0.8rem 1.2rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease, background 180ms ease;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      color: var(--navy);
+      background: var(--teal);
+      box-shadow: 0 12px 22px rgba(30, 200, 184, 0.28);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2ee0d0;
+    }
+
+    .btn-ghost {
+      color: var(--navy);
+      background: var(--white);
+      border: 1px solid var(--border);
+    }
+
+    .welcome-note {
+      margin-top: 0.85rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .stage-questions {
+      overflow: hidden;
+      min-height: 35rem;
+      touch-action: pan-y;
+    }
+
+    body.question-active .assessment-zone {
+      margin-top: 0.75rem;
+      margin-bottom: 0;
+    }
+
+    body.question-active .stage-questions.active {
+      height: calc(100dvh - 6.4rem);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    body.question-active .question-frame,
+    body.question-active .question-card {
+      height: 100%;
+    }
+
+    body.question-active .question-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.question-active .question-top,
+    body.question-active .question-actions {
+      flex: 0 0 auto;
+    }
+
+    body.question-active .options-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .question-frame {
+      transition: transform 250ms ease, opacity 250ms ease;
+    }
+
+    .question-frame.slide-left {
+      transform: translateX(-1.2rem);
+      opacity: 0;
+    }
+
+    .question-frame.slide-right {
+      transform: translateX(1.2rem);
+      opacity: 0;
+    }
+
+    .question-card {
+      overflow: hidden;
+      background: var(--white);
+      border: 1px solid var(--silver-mid);
+    }
+
+    .question-top {
+      background:
+        radial-gradient(circle at 90% 15%, rgba(30, 200, 184, 0.2), transparent 12rem),
+        linear-gradient(135deg, var(--navy), var(--navy-mid));
+      color: var(--white);
+      padding: clamp(1.15rem, 5vw, 1.7rem);
+    }
+
+    .question-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .category-label {
+      color: var(--teal);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .q-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3.1rem;
+      height: 2rem;
+      border-radius: 999px;
+      background: var(--teal);
+      color: var(--navy);
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+
+    .question-text {
+      margin: 0;
+      color: var(--white);
+      font-size: clamp(1.32rem, 5.8vw, 2rem);
+      line-height: 1.17;
+      letter-spacing: -0.045em;
+      font-weight: 800;
+    }
+
+    .options-list {
+      display: grid;
+      gap: 0.72rem;
+      padding: clamp(1rem, 4vw, 1.35rem);
+    }
+
+    .option-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.78rem;
+      width: 100%;
+      min-height: 3.45rem;
+      border: 2px solid var(--silver-mid);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--text);
+      text-align: left;
+      padding: 0.8rem 0.88rem;
+      cursor: pointer;
+      transition: border-color 170ms ease, background 170ms ease, transform 170ms ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .option-card:hover {
+      border-color: rgba(30, 200, 184, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .option-card.selected {
+      border-color: var(--teal);
+      background: var(--teal-pale);
+    }
+
+    .select-dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.42rem;
+      height: 1.42rem;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      background: var(--white);
+      color: var(--white);
+      transition: background 170ms ease, border-color 170ms ease;
+    }
+
+    .option-card.selected .select-dot {
+      border-color: var(--teal);
+      background: var(--teal);
+    }
+
+    .option-card.selected .select-dot:after {
+      content: "";
+      width: 0.44rem;
+      height: 0.44rem;
+      border-radius: 50%;
+      background: var(--white);
+    }
+
+    .option-text {
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .multi-help {
+      margin: -0.35rem clamp(1rem, 4vw, 1.35rem) 0;
+      color: var(--text-muted);
+      font-size: 0.87rem;
+      font-weight: 600;
+    }
+
+    .question-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      padding: 0 clamp(1rem, 4vw, 1.35rem) clamp(1rem, 4vw, 1.35rem);
+    }
+
+    .capture-card {
+      overflow: hidden;
+      background: var(--navy);
+      color: var(--white);
+      border: 1px solid rgba(30, 200, 184, 0.2);
+    }
+
+    .capture-inner {
+      background:
+        radial-gradient(circle at 100% 0%, rgba(30, 200, 184, 0.18), transparent 15rem),
+        linear-gradient(145deg, var(--navy), #091832);
+      padding: clamp(1.35rem, 5vw, 2rem);
+    }
+
+    .capture-card p,
+    .capture-card label {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .capture-card h2 {
+      color: var(--white);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 0.85rem;
+      margin: 1.25rem 0 0.85rem;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 3.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--white);
+      padding: 0.85rem 0.95rem;
+      outline: none;
+      transition: border-color 170ms ease, box-shadow 170ms ease, background 170ms ease;
+    }
+
+    .field input::placeholder {
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .field input:focus {
+      border-color: var(--teal);
+      background: rgba(255, 255, 255, 0.11);
+      box-shadow: 0 0 0 4px rgba(30, 200, 184, 0.12);
+    }
+
+    .form-error {
+      min-height: 1.35rem;
+      color: #ffb4b4;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .trust-text,
+    .submit-status {
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .submit-status {
+      min-height: 1.35rem;
+      margin-top: 0.65rem;
+    }
+
+    .results-card {
+      background: var(--white);
+      border: 1px solid var(--silver-mid);
+      padding: clamp(1.15rem, 4vw, 1.8rem);
+    }
+
+    .results-hero {
+      display: grid;
+      gap: 1.2rem;
+      align-items: center;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--silver-mid);
+    }
+
+    .score-ring {
+      justify-self: center;
+      display: grid;
+      place-items: center;
+      width: min(58vw, 12.4rem);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, var(--white) 0 58%, transparent 59%),
+        conic-gradient(var(--teal) var(--score-angle, 0deg), var(--silver-mid) 0);
+      box-shadow: inset 0 0 0 1px var(--silver-mid), 0 18px 34px var(--shadow);
+    }
+
+    .score-number {
+      font-size: clamp(2.5rem, 14vw, 4.6rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.08em;
+    }
+
+    .score-label {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .result-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin: 0.9rem 0;
+    }
+
+    .result-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.46rem 0.75rem;
+      background: var(--teal-pale);
+      color: var(--teal-dark);
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+
+    .result-pill.grade {
+      background: var(--green-pale);
+      color: var(--green);
+    }
+
+    .category-table {
+      display: grid;
+      gap: 0.65rem;
+      margin: 1.3rem 0;
+    }
+
+    .category-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.7rem;
+      align-items: center;
+      padding: 0.85rem;
+      border: 1px solid var(--silver-mid);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .category-name {
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .category-bar {
+      grid-column: 1 / -1;
+      height: 0.48rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--silver-mid);
+    }
+
+    .category-bar span {
+      display: block;
+      width: var(--bar-width, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--bar-color, var(--teal));
+    }
+
+    .category-score {
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .insight-grid {
+      display: grid;
+      gap: 0.85rem;
+      margin: 1.25rem 0;
+    }
+
+    .insight-box {
+      border-radius: var(--radius);
+      padding: 1rem;
+      border: 1px solid var(--silver-mid);
+      background: #fbfcfd;
+    }
+
+    .insight-box h3,
+    .summary-box h3 {
+      margin: 0 0 0.55rem;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .insight-box ul {
+      margin: 0;
+      padding-left: 1.05rem;
+      color: var(--text-mid);
+    }
+
+    .summary-box {
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--teal-pale), #ffffff);
+      border: 1px solid rgba(30, 200, 184, 0.25);
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .email-note {
+      margin: 0.85rem 0 1rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .site-footer {
+      background:
+        radial-gradient(circle at 15% 0%, rgba(30, 200, 184, 0.14), transparent 18rem),
+        linear-gradient(135deg, var(--navy), #07152a);
+      color: rgba(255, 255, 255, 0.72);
+      padding: 2rem 1rem;
+      margin-top: 2.2rem;
+    }
+
+    .footer-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .footer-logo {
+      width: 90px;
+      height: auto;
+      margin-bottom: 0.8rem;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.8rem 1rem;
+      margin: 0.75rem 0;
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    .footer-links a {
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--teal);
+    }
+
+    .disclaimer {
+      max-width: 44rem;
+      margin: 0.75rem auto 0;
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.58);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (min-width: 620px) {
+      .hero-header {
+        padding-top: 1.65rem;
+        padding-bottom: 3.35rem;
+      }
+
+      .brand-row img {
+        width: 112px;
+      }
+
+      .hero-chips {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .assessment-zone {
+        margin-top: -1.8rem;
+      }
+
+      .button-row {
+        flex-direction: row;
+      }
+
+      .button-row .btn {
+        flex: 1;
+      }
+
+      .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .results-hero {
+        grid-template-columns: auto 1fr;
+      }
+
+      .score-ring {
+        justify-self: start;
+      }
+
+      .insight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-height: 720px) {
+      .hero-header {
+        padding-bottom: 2rem;
+      }
+
+      .hero-title {
+        font-size: clamp(2rem, 9vw, 3.4rem);
+      }
+
+      .hero-subtitle {
+        font-size: 0.95rem;
+      }
+
+      .hero-chips {
+        margin-top: 1rem;
+      }
+
+      .stage-questions {
+        min-height: 30rem;
+      }
+
+      .question-top {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+      }
+
+      .option-card {
+        min-height: 3.05rem;
+        padding-top: 0.62rem;
+        padding-bottom: 0.62rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero-header">
+    <div class="hero-inner">
+      <div class="brand-row">
+        <img src="/static/logo.png" alt="iRizq logo" width="112" height="40">
+      </div>
+      <div class="badge"><span class="badge-dot" aria-hidden="true"></span>5-Minute Assessment</div>
+      <h1 class="hero-title">Invest<span>Ready</span></h1>
+      <p class="hero-subtitle">Measure your financial foundation, uncover your readiness gaps, and get a practical score before you invest.</p>
+      <div class="hero-chips" aria-label="Assessment highlights">
+        <div class="chip">30 Questions</div>
+        <div class="chip">10 Categories</div>
+        <div class="chip">Free Report</div>
+        <div class="chip">Instant Results</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="assessment-zone" id="assessmentZone">
+    <div class="progress-shell" aria-live="polite">
+      <div class="progress-meta">
+        <span id="progressLabel">Ready to begin</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <section class="screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
+      <div class="card welcome-card">
+        <span class="lesson-lbl">Financial Readiness Snapshot</span>
+        <h2 id="welcomeTitle">Know where you stand before your next money move.</h2>
+        <p>InvestReady reviews the habits, protections, and planning blocks that support confident long-term investing.</p>
+        <ul class="takeaways">
+          <li><span class="checkmark" aria-hidden="true"></span><span>Get a weighted score across cash flow, debt, investing, insurance, taxes, and behavior.</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>See your top strengths and the three risks most worth addressing first.</span></li>
+          <li><span class="checkmark" aria-hidden="true"></span><span>Receive a clear investor profile and next step toward halal investing education.</span></li>
+        </ul>
+        <div class="button-row">
+          <button class="btn btn-primary" type="button" id="startBtn">Start My Assessment</button>
+          <button class="btn btn-ghost" type="button" id="shareBtn">Share This Assessment</button>
+        </div>
+        <div class="welcome-note">Takes 5 minutes - 100% Free</div>
+      </div>
+    </section>
+
+    <section class="screen stage-questions" id="questionScreen" aria-live="polite" aria-labelledby="questionText">
+      <div class="question-frame" id="questionFrame">
+        <article class="card question-card">
+          <div class="question-top">
+            <div class="question-meta">
+              <span class="category-label" id="categoryLabel">Cash Flow</span>
+              <span class="q-badge" id="questionBadge">Q1</span>
+            </div>
+            <h2 class="question-text" id="questionText">Question text</h2>
+          </div>
+          <div class="options-list" id="optionsList"></div>
+          <p class="multi-help" id="multiHelp" hidden>Select every coverage type you currently have, or choose None.</p>
+          <div class="question-actions">
+            <button class="btn btn-ghost" type="button" id="backBtn">Back</button>
+            <button class="btn btn-primary" type="button" id="nextBtn" disabled>Next</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="screen" id="captureScreen" aria-labelledby="captureTitle">
+      <div class="card capture-card">
+        <div class="capture-inner">
+          <span class="lesson-lbl">Your Report Is Ready</span>
+          <h2 id="captureTitle">Where should we send your InvestReady summary?</h2>
+          <p>Enter your details to view your score now and receive a copy by email.</p>
+          <form id="leadForm" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="nameInput">Name</label>
+                <input id="nameInput" name="name" type="text" autocomplete="name" placeholder="Your name" required>
+              </div>
+              <div class="field">
+                <label for="emailInput">Email</label>
+                <input id="emailInput" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+              </div>
+            </div>
+            <div class="form-error" id="formError" role="alert"></div>
+            <button class="btn btn-primary" type="submit" id="submitBtn">See My Results</button>
+            <div class="submit-status" id="submitStatus" aria-live="polite"></div>
+          </form>
+          <p class="trust-text">Your information is used to send this assessment summary and related iRizq education. You can unsubscribe anytime.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="resultsScreen" aria-labelledby="resultsTitle">
+      <div class="card results-card">
+        <div class="results-hero">
+          <div class="score-ring" id="scoreRing" style="--score-angle: 0deg;">
+            <div>
+              <div class="score-number"><span id="scoreNumber">0</span></div>
+              <div class="score-label">Out of 100</div>
+            </div>
+          </div>
+          <div>
+            <span class="lesson-lbl">Instant Results</span>
+            <h2 id="resultsTitle">Your InvestReady score is in.</h2>
+            <div class="result-badges">
+              <span class="result-pill grade" id="gradeBadge">Grade A</span>
+              <span class="result-pill" id="profileBadge">Moderate</span>
+            </div>
+            <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
+          </div>
+        </div>
+
+        <div class="category-table" id="categoryTable" aria-label="Category scores"></div>
+
+        <div class="insight-grid">
+          <div class="insight-box">
+            <h3>Your top strengths</h3>
+            <ul id="strengthsList"></ul>
+          </div>
+          <div class="insight-box">
+            <h3>Risks to address first</h3>
+            <ul id="risksList"></ul>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>Summary</h3>
+          <p id="summaryText"></p>
+        </div>
+
+        <p class="email-note" id="emailNote">A confirmation email is on the way. If you do not see it soon, please check your spam or promotions folder.</p>
+        <a class="btn btn-primary" href="https://stocks.irizq.com" target="_blank" rel="noopener">Explore Halal Stock Research</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <img class="footer-logo" src="/static/logo.png" alt="iRizq logo" width="90" height="32">
+      <div class="footer-links">
+        <a href="https://irizq.com" target="_blank" rel="noopener">irizq.com</a>
+        <a href="https://stocks.irizq.com" target="_blank" rel="noopener">stocks.irizq.com</a>
+      </div>
+      <p class="disclaimer">Educational only. InvestReady and iRizq do not provide financial, legal, tax, or investment advice. Use this assessment as a learning tool and consult qualified professionals for personal guidance.</p>
+    </div>
+  </footer>
+
+  <script>
+    const BACKEND_URL = window.location.origin;
+
+    const weights = {
+      "Cash Flow": 0.10,
+      "Emergency Preparedness": 0.12,
+      "Debt Management": 0.12,
+      "Investing Readiness": 0.12,
+      "Retirement Planning": 0.10,
+      "Insurance and Risk": 0.08,
+      "Goal Clarity": 0.10,
+      "Tax Awareness": 0.08,
+      "Diversification": 0.10,
+      "Behavioral Discipline": 0.08
+    };
+
+    const questions = [
+      {
+        id: "q1",
+        category: "Cash Flow",
+        text: "How consistently do you spend less than you earn each month?",
+        options: ["Rarely - I often run short", "Some months, but not reliably", "Most months with small gaps", "Almost every month with a clear surplus", "Every month with a planned surplus"]
+      },
+      {
+        id: "q2",
+        category: "Cash Flow",
+        text: "How well do you track your income and expenses?",
+        options: ["I do not track them", "I check balances only when needed", "I review expenses occasionally", "I use a budget or app most months", "I track and review every month"]
+      },
+      {
+        id: "q3",
+        category: "Cash Flow",
+        text: "How predictable is your monthly income?",
+        options: ["Very unpredictable with no buffer", "Unpredictable and hard to plan", "Somewhat variable but manageable", "Mostly stable with occasional changes", "Stable or well planned for variability"]
+      },
+      {
+        id: "q4",
+        category: "Emergency Preparedness",
+        text: "How many months of essential expenses do you have saved?",
+        options: ["Less than 1 month", "1 month", "2 months", "3 to 5 months", "6 months or more"]
+      },
+      {
+        id: "q5",
+        category: "Emergency Preparedness",
+        text: "How accessible is your emergency fund?",
+        options: ["I do not have one", "Hard to access or mixed with investments", "Available but mixed with daily spending", "Separate and available within a few days", "Separate, liquid, and clearly reserved"]
+      },
+      {
+        id: "q6",
+        category: "Emergency Preparedness",
+        text: "How prepared are you for a large unexpected expense?",
+        options: ["I would need high-interest debt", "I would borrow from family or friends", "I could cover part of it with savings", "I could cover most of it with savings", "I could cover it without disrupting goals"]
+      },
+      {
+        id: "q7",
+        category: "Debt Management",
+        text: "How much high-interest consumer debt do you currently carry?",
+        options: ["A large balance I cannot reduce", "A balance that is growing", "A balance I am slowly paying down", "A small balance with a payoff plan", "None"]
+      },
+      {
+        id: "q8",
+        category: "Debt Management",
+        text: "How confident are you in your debt payoff strategy?",
+        options: ["I do not have a strategy", "I make minimum payments only", "I pay extra when possible", "I follow a clear payoff plan", "I am debt free or optimizing low-cost debt"]
+      },
+      {
+        id: "q9",
+        category: "Debt Management",
+        text: "How often do debt payments strain your monthly cash flow?",
+        options: ["Every month", "Most months", "Sometimes", "Rarely", "Never"]
+      },
+      {
+        id: "q10",
+        category: "Investing Readiness",
+        text: "How much do you understand basic investing concepts?",
+        options: ["Not at all", "A few terms only", "Some basics", "Comfortable with the main concepts", "Confident and continuously learning"]
+      },
+      {
+        id: "q11",
+        category: "Investing Readiness",
+        text: "How clear are you on your investment risk tolerance?",
+        options: ["Not clear", "Mostly guessing", "Somewhat aware", "Clear for most decisions", "Clear and documented"]
+      },
+      {
+        id: "q12",
+        category: "Investing Readiness",
+        text: "How regularly do you invest or set aside money to invest?",
+        options: ["Never", "Only when I remember", "Occasionally", "Monthly most of the time", "Automatically on a schedule"]
+      },
+      {
+        id: "q13",
+        category: "Investing Readiness",
+        text: "How familiar are you with halal investing principles?",
+        options: ["Not familiar", "I know it avoids certain industries", "I know some screening basics", "I can compare halal options", "I apply halal screens before investing"]
+      },
+      {
+        id: "q14",
+        category: "Retirement Planning",
+        text: "How actively are you saving for retirement or long-term independence?",
+        options: ["Not saving yet", "Saving rarely", "Saving some but inconsistently", "Saving regularly", "Saving regularly with a target"]
+      },
+      {
+        id: "q15",
+        category: "Retirement Planning",
+        text: "How well do you understand your retirement accounts or long-term vehicles?",
+        options: ["I do not understand them", "I know names only", "I know basic rules", "I understand my options", "I optimize contributions and allocation"]
+      },
+      {
+        id: "q16",
+        category: "Retirement Planning",
+        text: "How often do you review your long-term plan?",
+        options: ["Never", "Only when stressed", "Every few years", "At least yearly", "Yearly with adjustments when life changes"]
+      },
+      {
+        id: "q17",
+        category: "Insurance and Risk",
+        text: "Which insurance protections do you currently have?",
+        multi: true,
+        options: ["Health", "Life", "Disability", "Home or Renters", "Umbrella", "None"]
+      },
+      {
+        id: "q18",
+        category: "Insurance and Risk",
+        text: "How confident are you that your coverage amounts fit your family and assets?",
+        options: ["Not confident", "I have not reviewed them", "Somewhat confident", "Mostly confident", "Very confident after a recent review"]
+      },
+      {
+        id: "q19",
+        category: "Insurance and Risk",
+        text: "How prepared are your documents if someone had to manage your affairs?",
+        options: ["Not prepared", "A few items are scattered", "Basic records exist", "Key documents are organized", "Documents, beneficiaries, and contacts are current"]
+      },
+      {
+        id: "q20",
+        category: "Goal Clarity",
+        text: "How clearly have you defined your financial goals?",
+        options: ["I have not defined them", "I have vague ideas", "I have a few rough goals", "I have clear written goals", "I have written goals with amounts and dates"]
+      },
+      {
+        id: "q21",
+        category: "Goal Clarity",
+        text: "How well do your monthly actions support your goals?",
+        options: ["They do not connect", "They connect rarely", "They connect sometimes", "They connect most months", "They are planned around my goals"]
+      },
+      {
+        id: "q22",
+        category: "Goal Clarity",
+        text: "How often do you review and update your goals?",
+        options: ["Never", "Only after a problem", "Occasionally", "At least yearly", "Quarterly or after major life changes"]
+      },
+      {
+        id: "q23",
+        category: "Tax Awareness",
+        text: "How well do you understand how taxes affect your investments?",
+        options: ["Not at all", "A little", "I know basic account differences", "I consider taxes before major moves", "I plan investments with tax impact in mind"]
+      },
+      {
+        id: "q24",
+        category: "Tax Awareness",
+        text: "How organized are your records for tax season?",
+        options: ["Disorganized", "Mostly gathered at the last minute", "Somewhat organized", "Organized in one place", "Organized and updated throughout the year"]
+      },
+      {
+        id: "q25",
+        category: "Tax Awareness",
+        text: "How often do you seek tax guidance for major financial decisions?",
+        options: ["Never", "Only after filing problems", "Sometimes for complex questions", "Usually before major decisions", "Proactively with a qualified professional"]
+      },
+      {
+        id: "q26",
+        category: "Diversification",
+        text: "How diversified are your savings and investments?",
+        options: ["Mostly in one asset or account", "Concentrated in a few holdings", "Some diversification", "Diversified across several areas", "Diversified and aligned to my plan"]
+      },
+      {
+        id: "q27",
+        category: "Diversification",
+        text: "How much of your future depends on one income source?",
+        options: ["All of it", "Most of it", "Some secondary income or support", "Multiple meaningful sources", "Multiple sources with a clear backup plan"]
+      },
+      {
+        id: "q28",
+        category: "Diversification",
+        text: "How often do you rebalance or review concentration risk?",
+        options: ["Never", "Only after losses", "Occasionally", "At least yearly", "Yearly with clear allocation targets"]
+      },
+      {
+        id: "q29",
+        category: "Behavioral Discipline",
+        text: "How do you usually react to market declines?",
+        options: ["I panic sell or stop investing", "I often make emotional changes", "I feel stressed but usually wait", "I follow my plan most of the time", "I stay disciplined and review calmly"]
+      },
+      {
+        id: "q30",
+        category: "Behavioral Discipline",
+        text: "How often do you make financial decisions based on hype or fear?",
+        options: ["Very often", "Often", "Sometimes", "Rarely", "Almost never"]
+      },
+      {
+        id: "q31",
+        category: "Behavioral Discipline",
+        text: "How strong is your habit of learning before acting financially?",
+        options: ["I act without researching", "I do minimal research", "I research for major decisions", "I research and compare options", "I research, compare, and document my reasoning"]
+      }
+    ];
+
+    const state = {
+      currentIndex: 0,
+      answers: {},
+      selectedMulti: [],
+      scores: null,
+      lead: {
+        name: "",
+        email: ""
+      }
+    };
+
+    const screens = {
+      welcome: document.getElementById("welcomeScreen"),
+      question: document.getElementById("questionScreen"),
+      capture: document.getElementById("captureScreen"),
+      results: document.getElementById("resultsScreen")
+    };
+
+    const progressLabel = document.getElementById("progressLabel");
+    const progressPercent = document.getElementById("progressPercent");
+    const progressFill = document.getElementById("progressFill");
+    const startBtn = document.getElementById("startBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const questionFrame = document.getElementById("questionFrame");
+    const categoryLabel = document.getElementById("categoryLabel");
+    const questionBadge = document.getElementById("questionBadge");
+    const questionText = document.getElementById("questionText");
+    const optionsList = document.getElementById("optionsList");
+    const multiHelp = document.getElementById("multiHelp");
+    const backBtn = document.getElementById("backBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const leadForm = document.getElementById("leadForm");
+    const nameInput = document.getElementById("nameInput");
+    const emailInput = document.getElementById("emailInput");
+    const formError = document.getElementById("formError");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitStatus = document.getElementById("submitStatus");
+
+    function showScreen(name) {
+      const lockQuestions = name === "question";
+      if (!lockQuestions) {
+        document.body.classList.remove("question-active");
+      }
+
+      Object.values(screens).forEach((screen) => screen.classList.remove("active"));
+      screens[name].classList.add("active");
+      updateProgress();
+      document.getElementById("assessmentZone").scrollIntoView({ behavior: "smooth", block: "start" });
+
+      if (lockQuestions) {
+        window.setTimeout(() => {
+          document.body.classList.add("question-active");
+        }, 260);
+      }
+    }
+
+    function updateProgress() {
+      let percent = 0;
+      let label = "Ready to begin";
+
+      if (screens.question.classList.contains("active")) {
+        percent = Math.round((state.currentIndex / questions.length) * 100);
+        label = `Question ${state.currentIndex + 1} of ${questions.length}`;
+      } else if (screens.capture.classList.contains("active")) {
+        percent = 100;
+        label = "Assessment complete";
+      } else if (screens.results.classList.contains("active")) {
+        percent = 100;
+        label = "Results ready";
+      }
+
+      progressLabel.textContent = label;
+      progressPercent.textContent = `${percent}%`;
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function renderQuestion(direction = "left") {
+      const question = questions[state.currentIndex];
+      const slideClass = direction === "right" ? "slide-right" : "slide-left";
+
+      questionFrame.classList.add(slideClass);
+      window.setTimeout(() => {
+        categoryLabel.textContent = question.category;
+        questionBadge.textContent = `Q${state.currentIndex + 1}`;
+        questionText.textContent = question.text;
+        optionsList.innerHTML = "";
+        multiHelp.hidden = !question.multi;
+
+        if (question.multi) {
+          state.selectedMulti = Array.isArray(state.answers[question.id]) ? [...state.answers[question.id]] : [];
+        }
+
+        question.options.forEach((option, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "option-card";
+          button.dataset.index = String(index);
+          button.setAttribute("aria-pressed", "false");
+          button.innerHTML = `<span class="select-dot" aria-hidden="true"></span><span class="option-text"></span>`;
+          button.querySelector(".option-text").textContent = option;
+
+          const isSelected = question.multi
+            ? state.selectedMulti.includes(index)
+            : state.answers[question.id] === index;
+
+          if (isSelected) {
+            button.classList.add("selected");
+            button.setAttribute("aria-pressed", "true");
+          }
+
+          button.addEventListener("click", () => handleOptionSelect(index));
+          optionsList.appendChild(button);
+        });
+
+        backBtn.disabled = state.currentIndex === 0;
+        nextBtn.textContent = state.currentIndex === questions.length - 1 ? "Finish" : "Next";
+        nextBtn.disabled = !hasAnswer(question);
+        updateProgress();
+
+        questionFrame.classList.remove(slideClass);
+      }, 125);
+    }
+
+    function hasAnswer(question) {
+      if (question.multi) {
+        return Array.isArray(state.answers[question.id]);
+      }
+      return Number.isInteger(state.answers[question.id]);
+    }
+
+    function handleOptionSelect(index) {
+      const question = questions[state.currentIndex];
+
+      if (question.multi) {
+        if (index === 5) {
+          state.selectedMulti = [5];
+        } else {
+          state.selectedMulti = state.selectedMulti.filter((selected) => selected !== 5);
+          if (state.selectedMulti.includes(index)) {
+            state.selectedMulti = state.selectedMulti.filter((selected) => selected !== index);
+          } else {
+            state.selectedMulti.push(index);
+          }
+        }
+
+        if (state.selectedMulti.length === 0) {
+          delete state.answers[question.id];
+        } else {
+          state.answers[question.id] = [...state.selectedMulti].sort((a, b) => a - b);
+        }
+
+        renderOptionSelection();
+        nextBtn.disabled = !hasAnswer(question);
+        return;
+      }
+
+      state.answers[question.id] = index;
+      renderOptionSelection();
+      nextBtn.disabled = false;
+      window.setTimeout(() => goNext(), 400);
+    }
+
+    function renderOptionSelection() {
+      const question = questions[state.currentIndex];
+      const selected = question.multi ? state.selectedMulti : [state.answers[question.id]];
+
+      optionsList.querySelectorAll(".option-card").forEach((button) => {
+        const index = Number(button.dataset.index);
+        const isSelected = selected.includes(index);
+        button.classList.toggle("selected", isSelected);
+        button.setAttribute("aria-pressed", String(isSelected));
+      });
+    }
+
+    function goNext() {
+      const question = questions[state.currentIndex];
+      if (!hasAnswer(question)) {
+        return;
+      }
+
+      if (state.currentIndex < questions.length - 1) {
+        state.currentIndex += 1;
+        renderQuestion("left");
+        return;
+      }
+
+      showScreen("capture");
+      nameInput.focus();
+    }
+
+    function goBack() {
+      if (state.currentIndex > 0) {
+        state.currentIndex -= 1;
+        renderQuestion("right");
+      }
+    }
+
+    function scoreForQuestion(question) {
+      const answer = state.answers[question.id];
+      if (question.multi) {
+        if (!Array.isArray(answer) || answer.includes(5)) {
+          return 0;
+        }
+        return Math.min(4, answer.length);
+      }
+      return Number.isInteger(answer) ? answer : 0;
+    }
+
+    function calculateScores() {
+      const categoryTotals = {};
+      const categoryMax = {};
+
+      questions.forEach((question) => {
+        categoryTotals[question.category] = (categoryTotals[question.category] || 0) + scoreForQuestion(question);
+        categoryMax[question.category] = (categoryMax[question.category] || 0) + 4;
+      });
+
+      const categoryScores = {};
+      Object.keys(weights).forEach((category) => {
+        const raw = categoryMax[category] ? (categoryTotals[category] / categoryMax[category]) * 100 : 0;
+        categoryScores[category] = Math.round(raw);
+      });
+
+      const overallRaw = Object.entries(weights).reduce((total, [category, weight]) => {
+        return total + ((categoryScores[category] || 0) * weight);
+      }, 0);
+
+      const overall = Math.round(overallRaw);
+
+      return {
+        category_scores: categoryScores,
+        overall_score: overall,
+        letter_grade: getGrade(overall),
+        investor_profile: getProfile(overall)
+      };
+    }
+
+    function getProfile(score) {
+      if (score <= 40) return "Conservative";
+      if (score <= 55) return "Moderately Conservative";
+      if (score <= 68) return "Moderate";
+      if (score <= 80) return "Moderately Aggressive";
+      return "Aggressive";
+    }
+
+    function getGrade(score) {
+      if (score >= 90) return "A";
+      if (score >= 80) return "B";
+      if (score >= 70) return "C";
+      if (score >= 60) return "D";
+      return "F";
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function buildAnswersPayload() {
+      return questions.reduce((payload, question) => {
+        const answer = state.answers[question.id];
+        payload[question.id] = Array.isArray(answer) ? [...answer] : answer;
+        return payload;
+      }, {});
+    }
+
+    function buildSubmitPayload() {
+      const scores = state.scores || calculateScores();
+      const answerScores = questions.reduce((payload, question) => {
+        payload[question.id] = scoreForQuestion(question);
+        return payload;
+      }, {});
+
+      return {
+        name: state.lead.name,
+        email: state.lead.email,
+        answers: buildAnswersPayload(),
+        scores: answerScores,
+        overall_score: scores.overall_score,
+        letter_grade: scores.letter_grade,
+        investor_profile: scores.investor_profile,
+        category_scores: scores.category_scores
+      };
+    }
+
+    async function submitResults(payload) {
+      const response = await fetch(`${BACKEND_URL}/investready/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Submission failed");
+      }
+
+      return response;
+    }
+
+    function renderResults(emailSent) {
+      const scores = state.scores || calculateScores();
+      state.scores = scores;
+
+      document.getElementById("gradeBadge").textContent = `Grade ${scores.letter_grade}`;
+      document.getElementById("profileBadge").textContent = scores.investor_profile;
+      document.getElementById("greetingText").textContent = `${state.lead.name}, your score reflects your current financial readiness across planning, protection, and investing habits.`;
+      document.getElementById("emailNote").textContent = emailSent
+        ? "A confirmation email is on the way. If you do not see it soon, please check your spam or promotions folder."
+        : "Your results are shown here. We could not confirm the email delivery, so please save this page and check your spam or promotions folder if an email arrives later.";
+
+      renderCategoryTable(scores.category_scores);
+      renderInsights(scores.category_scores);
+      renderSummary(scores);
+      showScreen("results");
+      animateScore(scores.overall_score);
+    }
+
+    function renderCategoryTable(categoryScores) {
+      const table = document.getElementById("categoryTable");
+      table.innerHTML = "";
+
+      Object.entries(categoryScores).forEach(([category, score]) => {
+        const color = score >= 75 ? "var(--green-lt)" : score >= 55 ? "var(--teal)" : "#e07a5f";
+        const row = document.createElement("div");
+        row.className = "category-row";
+        row.innerHTML = `
+          <div class="category-name"></div>
+          <div class="category-score">${score}%</div>
+          <div class="category-bar" aria-hidden="true"><span style="--bar-width: ${score}%; --bar-color: ${color};"></span></div>
+        `;
+        row.querySelector(".category-name").textContent = category;
+        table.appendChild(row);
+      });
+    }
+
+    function renderInsights(categoryScores) {
+      const sorted = Object.entries(categoryScores).sort((a, b) => b[1] - a[1]);
+      const strengths = sorted.slice(0, 3);
+      const risks = [...sorted].sort((a, b) => a[1] - b[1]).slice(0, 3);
+
+      fillList(document.getElementById("strengthsList"), strengths, "is a strong part of your foundation.");
+      fillList(document.getElementById("risksList"), risks, "has the most room for improvement.");
+    }
+
+    function fillList(list, entries, suffix) {
+      list.innerHTML = "";
+      entries.forEach(([category, score]) => {
+        const item = document.createElement("li");
+        item.textContent = `${category} at ${score}% ${suffix}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderSummary(scores) {
+      const summary = document.getElementById("summaryText");
+      const profile = scores.investor_profile.toLowerCase();
+      const grade = scores.letter_grade;
+      summary.textContent = `With an overall score of ${scores.overall_score}/100 and a grade of ${grade}, your current profile is ${profile}. Focus first on the lowest scoring areas, keep protecting your cash flow, and use education before making new investment decisions.`;
+    }
+
+    function animateScore(target) {
+      const scoreEl = document.getElementById("scoreNumber");
+      const ring = document.getElementById("scoreRing");
+      const duration = 950;
+      const start = performance.now();
+
+      function tick(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = Math.round(target * eased);
+        scoreEl.textContent = String(value);
+        ring.style.setProperty("--score-angle", `${value * 3.6}deg`);
+
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    startBtn.addEventListener("click", () => {
+      state.currentIndex = 0;
+      showScreen("question");
+      renderQuestion("left");
+    });
+
+    shareBtn.addEventListener("click", async () => {
+      const shareData = {
+        title: "InvestReady - Financial Readiness Assessment",
+        text: "Discover your financial readiness score with this free iRizq assessment.",
+        url: window.location.href
+      };
+
+      try {
+        if (navigator.share) {
+          await navigator.share(shareData);
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(window.location.href);
+          shareBtn.textContent = "Link Copied";
+          window.setTimeout(() => {
+            shareBtn.textContent = "Share This Assessment";
+          }, 1600);
+        }
+      } catch (error) {
+        shareBtn.textContent = "Share This Assessment";
+      }
+    });
+
+    backBtn.addEventListener("click", goBack);
+    nextBtn.addEventListener("click", goNext);
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    screens.question.addEventListener("touchstart", (event) => {
+      const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    }, { passive: true });
+
+    screens.question.addEventListener("touchend", (event) => {
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+
+      if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY)) {
+        return;
+      }
+
+      if (deltaX < 0) {
+        goNext();
+      } else {
+        goBack();
+      }
+    }, { passive: true });
+
+    leadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formError.textContent = "";
+      submitStatus.textContent = "";
+
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+
+      if (!name) {
+        formError.textContent = "Please enter your name.";
+        nameInput.focus();
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        formError.textContent = "Please enter a valid email address.";
+        emailInput.focus();
+        return;
+      }
+
+      state.lead.name = name;
+      state.lead.email = email;
+      state.scores = calculateScores();
+
+      const payload = buildSubmitPayload();
+      submitBtn.disabled = true;
+      submitStatus.textContent = "Preparing your results...";
+
+      try {
+        await submitResults(payload);
+        submitStatus.textContent = "Results saved.";
+        renderResults(true);
+      } catch (error) {
+        submitStatus.textContent = "Showing your results now.";
+        renderResults(false);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    updateProgress();
+  </script>
+</body>
+</html>
