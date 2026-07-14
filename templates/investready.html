@@ -537,6 +537,53 @@
       background: var(--white);
     }
 
+    .option-card.multi-option {
+      position: relative;
+      padding-right: 2.55rem;
+    }
+
+    .option-card.multi-option .select-dot {
+      border-radius: 0.28rem;
+    }
+
+    .option-card.multi-option.selected .select-dot:after {
+      width: 0.28rem;
+      height: 0.55rem;
+      border-radius: 0;
+      background: transparent;
+      border: solid var(--white);
+      border-width: 0 0.14rem 0.14rem 0;
+      transform: rotate(45deg) translateY(-0.05rem);
+    }
+
+    .option-check-badge {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      width: 1.2rem;
+      height: 1.2rem;
+      border-radius: 0.3rem;
+      border: 2px solid var(--border);
+      background: var(--white);
+      display: none;
+      place-items: center;
+    }
+
+    .option-card.multi-option.selected .option-check-badge {
+      display: grid;
+      border-color: var(--teal);
+      background: var(--teal);
+    }
+
+    .option-card.multi-option.selected .option-check-badge:after {
+      content: "";
+      width: 0.26rem;
+      height: 0.5rem;
+      border: solid var(--white);
+      border-width: 0 0.13rem 0.13rem 0;
+      transform: rotate(45deg) translateY(-0.04rem);
+    }
+
     .option-text {
       font-weight: 700;
       line-height: 1.35;
@@ -550,10 +597,20 @@
     }
 
     .question-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       gap: 0.75rem;
       padding: 0 clamp(1rem, 4vw, 1.35rem) clamp(1rem, 4vw, 1.35rem);
+    }
+
+    .question-actions .btn {
+      flex: 0 0 auto;
+      min-width: 5.5rem;
+      min-height: 36px;
+      padding: 8px 16px;
+      font-size: 13px;
+      box-shadow: none;
     }
 
     .capture-card {
@@ -949,6 +1006,15 @@
       border: 0;
     }
 
+    @media (max-width: 600px) {
+      .question-actions .btn {
+        min-width: 4.6rem;
+        min-height: 32px;
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+    }
+
     @media (min-width: 620px) {
       .hero-header {
         padding-top: 1.65rem;
@@ -1143,11 +1209,11 @@
 
         <div class="insight-grid">
           <div class="insight-box">
-            <h3>Your top strengths</h3>
+            <h3 id="strengthsHeading">Your top strengths</h3>
             <ul id="strengthsList"></ul>
           </div>
           <div class="insight-box">
-            <h3>Risks to address first</h3>
+            <h3 id="risksHeading">Areas needing attention</h3>
             <ul id="risksList"></ul>
           </div>
         </div>
@@ -1491,10 +1557,17 @@
         question.options.forEach((option, index) => {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = "option-card";
+          button.className = question.multi ? "option-card multi-option" : "option-card";
           button.dataset.index = String(index);
           button.setAttribute("aria-pressed", "false");
-          button.innerHTML = `<span class="select-dot" aria-hidden="true"></span><span class="option-text"></span>`;
+          if (question.multi) {
+            button.setAttribute("role", "checkbox");
+            button.setAttribute("aria-checked", "false");
+            button.innerHTML = `<span class="select-dot" aria-hidden="true"></span><span class="option-text"></span><span class="option-check-badge" aria-hidden="true"></span>`;
+          } else {
+            button.setAttribute("role", "radio");
+            button.innerHTML = `<span class="select-dot" aria-hidden="true"></span><span class="option-text"></span>`;
+          }
           button.querySelector(".option-text").textContent = option;
 
           const isSelected = question.multi
@@ -1504,6 +1577,9 @@
           if (isSelected) {
             button.classList.add("selected");
             button.setAttribute("aria-pressed", "true");
+            if (question.multi) {
+              button.setAttribute("aria-checked", "true");
+            }
           }
 
           button.addEventListener("click", () => handleOptionSelect(index));
@@ -1567,6 +1643,9 @@
         const isSelected = selected.includes(index);
         button.classList.toggle("selected", isSelected);
         button.setAttribute("aria-pressed", String(isSelected));
+        if (question.multi) {
+          button.setAttribute("aria-checked", String(isSelected));
+        }
       });
     }
 
@@ -1629,15 +1708,35 @@
         category_scores: categoryScores,
         overall_score: overall,
         letter_grade: getGrade(overall),
-        investor_profile: getProfile(overall)
+        investor_profile: getInvestorProfile()
       };
     }
 
-    function getProfile(score) {
-      if (score <= 40) return "Conservative";
-      if (score <= 55) return "Moderately Conservative";
-      if (score <= 68) return "Moderate";
-      if (score <= 80) return "Moderately Aggressive";
+    function answerValue(questionId) {
+      const value = state.answers[questionId];
+      return Number.isInteger(value) ? value : 0;
+    }
+
+    function getInvestorProfile() {
+      const behavioral = (answerValue("q29") + answerValue("q30") + answerValue("q31")) / 3;
+      const timeHorizon = answerValue("q22");
+      const experience = answerValue("q10");
+      const emergency = answerValue("q4");
+      const debt = answerValue("q7");
+
+      const weighted = (
+        (behavioral * 0.30) +
+        (timeHorizon * 0.25) +
+        (experience * 0.20) +
+        (emergency * 0.15) +
+        (debt * 0.10)
+      );
+      const profileScore = Math.round((weighted / 4) * 100);
+
+      if (profileScore <= 25) return "Conservative";
+      if (profileScore <= 40) return "Moderately Conservative";
+      if (profileScore <= 60) return "Moderate";
+      if (profileScore <= 78) return "Moderately Aggressive";
       return "Aggressive";
     }
 
@@ -1733,19 +1832,49 @@
     }
 
     function renderInsights(categoryScores) {
-      const sorted = Object.entries(categoryScores).sort((a, b) => b[1] - a[1]);
-      const strengths = sorted.slice(0, 3);
-      const risks = [...sorted].sort((a, b) => a[1] - b[1]).slice(0, 3);
+      const rankedHigh = Object.entries(categoryScores).sort((a, b) => b[1] - a[1]);
+      const trueStrengths = rankedHigh.filter(([, score]) => score >= 70);
+      const useRelativeLabel = trueStrengths.length < 3;
+      const strengths = useRelativeLabel
+        ? rankedHigh.slice(0, Math.min(3, rankedHigh.length))
+        : trueStrengths.slice(0, 3);
+      const strengthLabel = useRelativeLabel ? "Relatively Stronger Area" : "Strength";
 
-      fillList(document.getElementById("strengthsList"), strengths, "is a strong part of your foundation.");
-      fillList(document.getElementById("risksList"), risks, "has the most room for improvement.");
+      const risks = Object.entries(categoryScores)
+        .filter(([, score]) => score < 60)
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 3);
+
+      document.getElementById("strengthsHeading").textContent = useRelativeLabel
+        ? "Relatively stronger areas"
+        : "Your top strengths";
+      document.getElementById("risksHeading").textContent = "Areas needing attention";
+
+      fillList(
+        document.getElementById("strengthsList"),
+        strengths,
+        (category, score) => `${strengthLabel}: ${category} at ${score}%`
+      );
+      fillList(
+        document.getElementById("risksList"),
+        risks,
+        (category, score) => `Needs attention: ${category} at ${score}%`
+      );
     }
 
-    function fillList(list, entries, suffix) {
+    function fillList(list, entries, formatter) {
       list.innerHTML = "";
+      if (!entries.length) {
+        const item = document.createElement("li");
+        item.textContent = "No categories currently fall into this group.";
+        list.appendChild(item);
+        return;
+      }
       entries.forEach(([category, score]) => {
         const item = document.createElement("li");
-        item.textContent = `${category} at ${score}% ${suffix}`;
+        item.textContent = typeof formatter === "function"
+          ? formatter(category, score)
+          : `${category} at ${score}%`;
         list.appendChild(item);
       });
     }

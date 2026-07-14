@@ -12,6 +12,8 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     HRFlowable,
     Image,
@@ -35,10 +37,34 @@ AMBER = colors.HexColor("#f59e0b")
 RED = colors.HexColor("#ef4444")
 MUTED = colors.HexColor("#6b7280")
 
+_ARABIC_FONT = "Helvetica"
+
+
+def _register_fonts() -> str:
+    global _ARABIC_FONT
+    candidates = [
+        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    for candidate in candidates:
+        path = Path(candidate)
+        if path.is_file():
+            try:
+                pdfmetrics.registerFont(TTFont("InvestReadyArabic", str(path)))
+                _ARABIC_FONT = "InvestReadyArabic"
+                return _ARABIC_FONT
+            except Exception:
+                continue
+    return _ARABIC_FONT
+
+
+_register_fonts()
+
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logo.png"
 DISCLAIMER = (
-    "Educational only - not financial, investment, or tax advice. "
-    "Consult a qualified professional before making financial decisions."
+    "Educational only. iRizq does not provide financial, legal, tax, or investment advice. "
+    "Use this assessment as a learning tool and consult qualified professionals for personal guidance."
 )
 
 
@@ -123,7 +149,7 @@ def _styles() -> dict[str, ParagraphStyle]:
             "IRScore",
             parent=base["Title"],
             fontName="Helvetica-Bold",
-            fontSize=36,
+            fontSize=44,
             textColor=TEAL,
             alignment=TA_CENTER,
             spaceAfter=4,
@@ -145,6 +171,47 @@ def _styles() -> dict[str, ParagraphStyle]:
             textColor=WHITE,
             alignment=TA_CENTER,
             spaceAfter=10,
+        ),
+        "bismillah_ar": ParagraphStyle(
+            "IRBismillahAr",
+            parent=base["BodyText"],
+            fontName=_ARABIC_FONT,
+            fontSize=11,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceAfter=2,
+            leading=16,
+        ),
+        "bismillah_en": ParagraphStyle(
+            "IRBismillahEn",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=8,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceAfter=10,
+        ),
+        "teal_italic": ParagraphStyle(
+            "IRTealItalic",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=10,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceBefore=10,
+            spaceAfter=8,
+            leading=14,
+        ),
+        "teal_italic_small": ParagraphStyle(
+            "IRTealItalicSmall",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=9,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceBefore=8,
+            spaceAfter=8,
+            leading=13,
         ),
     }
 
@@ -213,16 +280,26 @@ def _callout(title: str, body: str, border_color: colors.Color = AMBER) -> KeepT
     return KeepTogether([table, Spacer(1, 8)])
 
 
-def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], list[str]]:
+def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], list[str], str]:
     ranked = sorted(
         ((str(k), float(v)) for k, v in category_scores.items()),
         key=lambda item: item[1],
         reverse=True,
     )
-    strengths = [f"{name} ({int(score)}/100)" for name, score in ranked[:3]]
-    risks = [f"{name} ({int(score)}/100)" for name, score in ranked[-3:]]
-    risks.reverse()
-    return strengths, risks
+    true_strengths = [(name, score) for name, score in ranked if score >= 70]
+    use_relative = len(true_strengths) < 3
+    strength_source = ranked[:3] if use_relative else true_strengths[:3]
+    strength_label = "Relatively Stronger Area" if use_relative else "Strength"
+    strengths = [f"{strength_label}: {name} ({int(score)}/100)" for name, score in strength_source]
+
+    risks = [
+        f"Needs attention: {name} ({int(score)}/100)"
+        for name, score in sorted(
+            ((str(k), float(v)) for k, v in category_scores.items() if float(v) < 60),
+            key=lambda item: item[1],
+        )[:3]
+    ]
+    return strengths, risks, strength_label
 
 
 def _mistakes(answers: dict[str, Any], category_scores: dict[str, Any]) -> list[tuple[str, str]]:
@@ -323,13 +400,38 @@ def _mistakes(answers: dict[str, Any], category_scores: dict[str, Any]) -> list[
 
 def _profile_allocation(profile: str) -> str:
     mapping = {
-        "Conservative": "Cash/short-term 30-50%, Bonds/sukuk-like stability 30-40%, Equities 10-30%",
-        "Moderately Conservative": "Cash 20-30%, Stability assets 30-40%, Equities 30-40%",
-        "Moderate": "Cash 10-20%, Stability assets 20-30%, Equities 50-70%",
-        "Moderately Aggressive": "Cash 5-15%, Stability assets 10-20%, Equities 65-80%",
-        "Aggressive": "Cash 0-10%, Stability assets 0-15%, Equities 80-100%",
+        "Conservative": "Cash/short-term 30-50%, Sukuk and Shariah-compliant income funds 30-40%, Halal equities 10-30%",
+        "Moderately Conservative": "Cash 20-30%, Sukuk and income funds 30-40%, Halal equities 30-40%",
+        "Moderate": "Cash 10-20%, Sukuk 20-30%, Halal equities 50-70%",
+        "Moderately Aggressive": "Cash 5-15%, Sukuk 10-20%, Halal equities 65-80%",
+        "Aggressive": "Cash 0-10%, Sukuk 0-15%, Halal equities 80-100%",
     }
     return mapping.get(profile, mapping["Moderate"])
+
+
+PROFILE_DESCRIPTIONS = {
+    "Conservative": (
+        "You prefer capital preservation over growth. Focus on building your financial foundation "
+        "with stable, low-risk halal investments such as Shariah-compliant money market funds and "
+        "sukuk before taking on more risk."
+    ),
+    "Moderately Conservative": (
+        "You seek some growth but prioritize stability. A balanced halal portfolio with a mix of "
+        "Shariah-compliant income funds and equities suits your approach."
+    ),
+    "Moderate": (
+        "You balance growth and stability. You can handle some volatility in pursuit of long-term "
+        "gains through a diversified halal equity and sukuk portfolio."
+    ),
+    "Moderately Aggressive": (
+        "You prioritize growth and can tolerate market swings. A halal equity-focused portfolio with "
+        "broad diversification aligns with your profile."
+    ),
+    "Aggressive": (
+        "You seek maximum growth and are comfortable with significant volatility. A halal equity "
+        "portfolio with global diversification and long investment horizon suits you well."
+    ),
+}
 
 
 def _actions_for_categories(weak: list[str]) -> dict[str, list[str]]:
@@ -417,7 +519,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         str(k): float(v) for k, v in (payload.get("category_scores") or {}).items()
     }
     answers = payload.get("answers") or {}
-    strengths, risks = _strengths_and_risks(category_scores)
+    strengths, risks, strength_label = _strengths_and_risks(category_scores)
     mistakes = _mistakes(answers, category_scores)
     weak_cats = [
         name_
@@ -440,6 +542,8 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story: list[Any] = []
 
     # PAGE 1 - Executive Summary
+    story.append(Paragraph("بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ", styles["bismillah_ar"]))
+    story.append(Paragraph("In the name of Allah, the Most Gracious, the Most Merciful", styles["bismillah_en"]))
     story.append(_logo_flowable())
     story.append(Spacer(1, 8))
     story.extend(_header_band("InvestReady Financial Readiness Report"))
@@ -452,12 +556,19 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Paragraph(f"Overall Score / 100 &nbsp;&nbsp;|&nbsp;&nbsp; Grade: <b>{grade}</b>", styles["center"]))
     story.append(Paragraph(f"Investor Profile: <b>{profile}</b>", styles["teal"]))
     story.append(Spacer(1, 6))
-    story.append(Paragraph("<b>3 Biggest Strengths</b>", styles["h2"]))
-    for item in strengths:
-        story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", styles["body_left"]))
-    story.append(Paragraph("<b>3 Top Risks</b>", styles["h2"]))
-    for item in risks:
-        story.append(Paragraph(f"<font color='#f59e0b'>!</font> {item}", styles["body_left"]))
+    strengths_heading = "Your Top Strengths" if strength_label == "Strength" else "Relatively Stronger Areas"
+    story.append(Paragraph(f"<b>{strengths_heading}</b>", styles["h2"]))
+    if strengths:
+        for item in strengths:
+            story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", styles["body_left"]))
+    else:
+        story.append(Paragraph("No categories currently score as clear strengths.", styles["body_left"]))
+    story.append(Paragraph("<b>Areas Needing Attention</b>", styles["h2"]))
+    if risks:
+        for item in risks:
+            story.append(Paragraph(f"<font color='#f59e0b'>!</font> {item}", styles["body_left"]))
+    else:
+        story.append(Paragraph("No categories currently fall below the attention threshold.", styles["body_left"]))
     summary = (
         f"{name}, your InvestReady score of {overall}/100 ({grade}) places you in the "
         f"{profile} profile. This report highlights where your foundation is solid and "
@@ -543,13 +654,10 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     # PAGE 7 - Investor Profile
     story.extend(_header_band("Your Investor Profile"))
     story.append(Paragraph(profile, styles["score"]))
-    profile_copy = {
-        "Conservative": "You prefer capital preservation over growth. Focus on building your foundation before taking investment risk.",
-        "Moderately Conservative": "You seek some growth but prioritize stability. A balanced approach with limited risk is your sweet spot.",
-        "Moderate": "You balance growth and stability. You can handle some volatility in pursuit of long-term gains.",
-        "Moderately Aggressive": "You prioritize growth and can tolerate market swings. You think long-term and stay disciplined.",
-        "Aggressive": "You seek maximum growth and are comfortable with significant volatility. You have strong discipline and a long time horizon.",
-    }.get(profile, "You balance growth and stability with a measured approach.")
+    profile_copy = PROFILE_DESCRIPTIONS.get(
+        profile,
+        "You balance growth and stability with a measured approach through a diversified halal investment portfolio.",
+    )
     story.append(Paragraph(profile_copy, styles["body"]))
     story.append(Paragraph("<b>Illustrative allocation ranges</b>", styles["h2"]))
     story.append(Paragraph(_profile_allocation(profile), styles["body"]))
@@ -561,7 +669,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             styles["body"],
         )
     )
-    story.append(Paragraph("This is educational - not personalized investment advice.", styles["muted"]))
+    story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
     # PAGE 8-9 - Priority Action Plan
@@ -679,6 +787,10 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Spacer(1, 8))
     story.append(Paragraph("Continue your journey:", styles["h2"]))
     story.append(Paragraph("iRizq.com &nbsp;|&nbsp; stocks.irizq.com", styles["teal"]))
+    story.append(Paragraph(
+        "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
+        styles["teal_italic"],
+    ))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
@@ -693,7 +805,12 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
                 HRFlowable(width="40%", thickness=3, color=TEAL, spaceBefore=4, spaceAfter=12),
                 Paragraph("stocks.irizq.com", styles["white_center"]),
                 Paragraph("Halal Wealth for Every Muslim", styles["white_center"]),
-                Spacer(1, 1.2 * inch),
+                Spacer(1, 0.35 * inch),
+                Paragraph(
+                    "Earn halal - invest consistently - stay diversified - think long-term - let time grow your rizq.",
+                    styles["teal_italic_small"],
+                ),
+                Spacer(1, 0.9 * inch),
                 Paragraph(DISCLAIMER, styles["white_center"]),
             ]
         ]],

@@ -209,7 +209,7 @@ def send_investready_email(*, recipient_email: str, name: str, overall_score: in
 
     safe_name = (name or "there").strip() or "there"
     subject = "Your InvestReady Financial Readiness Report"
-    plain = f"""Bismillah {safe_name},
+    plain = f"""Assalamu Alaikum {safe_name},
 
 Your personalized InvestReady Financial Readiness Report is attached to this email.
 
@@ -244,7 +244,7 @@ Please check your Spam or Junk folder if you do not see it in your inbox. Someti
     </div>
     <div style="height:4px;background:#1ec8b8;"></div>
     <div style="padding:28px 24px;color:#374151;line-height:1.65;font-size:15px;">
-      <p style="margin:0 0 16px;">Bismillah {safe_name},</p>
+      <p style="margin:0 0 16px;">Assalamu Alaikum {safe_name},</p>
       <p style="margin:0 0 16px;">Your personalized InvestReady Financial Readiness Report is attached to this email.</p>
       <p style="margin:0 0 8px;"><strong>Your Overall Score:</strong> {overall_score}/100 - {letter_grade}</p>
       <p style="margin:0 0 16px;"><strong>Your Investor Profile:</strong> {investor_profile}</p>
