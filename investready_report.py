@@ -89,9 +89,14 @@ DISCLAIMER = (
     "Use this assessment as a learning tool and consult qualified professionals for personal guidance."
 )
 
-BISMILLAH_AR = "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ"
+# Simpler Arabic without diacritics for more reliable font/ligature rendering.
+BISMILLAH_AR = "بسم الله الرحمن الرحيم"
 BISMILLAH_EN = "In the name of Allah, the Most Gracious, the Most Merciful"
 BISMILLAH_EN_FALLBACK = "Bismillah ir-Rahman ir-Raheem"
+FOUNDATION_STRENGTHS_MSG = (
+    "Focus on building your financial foundation across all categories before identifying "
+    "specific strengths. Your priority action plan below shows where to start."
+)
 
 
 def _styles() -> dict[str, ParagraphStyle]:
@@ -310,10 +315,49 @@ def _styles() -> dict[str, ParagraphStyle]:
             "IRBismillahEn",
             parent=base["BodyText"],
             fontName="Helvetica-Oblique",
-            fontSize=8,
+            fontSize=9,
             textColor=TEAL,
             alignment=TA_CENTER,
             spaceAfter=0,
+        ),
+        "bismillah_translit": ParagraphStyle(
+            "IRBismillahTranslit",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=11,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceAfter=2,
+            leading=14,
+        ),
+        "foundation_msg": ParagraphStyle(
+            "IRFoundationMsg",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=10,
+            textColor=NAVY,
+            alignment=TA_LEFT,
+            leading=14,
+            spaceAfter=6,
+        ),
+        "toc_howto_h": ParagraphStyle(
+            "IRTocHowToH",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            textColor=NAVY,
+            spaceBefore=8,
+            spaceAfter=10,
+        ),
+        "toc_howto_body": ParagraphStyle(
+            "IRTocHowToBody",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=TEXT,
+            leading=13,
+            spaceAfter=12,
+            alignment=TA_LEFT,
         ),
         "teal_italic": ParagraphStyle(
             "IRTealItalic",
@@ -520,20 +564,25 @@ def _shariah_callout() -> KeepTogether:
 
 
 def _bismillah_flowables(styles: dict[str, ParagraphStyle]) -> list[Any]:
-    """Render Arabic Bismillah with shaping, or English-only fallback."""
-    items: list[Any] = []
-    if _HAS_ARABIC_FONT and _ARABIC_LIBS_OK and arabic_reshaper and get_display:
-        try:
+    """Render Arabic Bismillah with shaping, or English-only fallback.
+
+    Never raises - any Arabic shaping/rendering failure falls back to transliteration.
+    """
+    try:
+        if _HAS_ARABIC_FONT and _ARABIC_LIBS_OK and arabic_reshaper and get_display:
             reshaped = arabic_reshaper.reshape(BISMILLAH_AR)
             bidi_text = get_display(reshaped)
-            items.append(Paragraph(bidi_text, styles["bismillah_ar"]))
-            items.append(Paragraph(BISMILLAH_EN, styles["bismillah_en"]))
-            return items
-        except Exception:
-            pass
-    items.append(Paragraph(BISMILLAH_EN_FALLBACK, styles["bismillah_en"]))
-    items.append(Paragraph(BISMILLAH_EN, styles["bismillah_en"]))
-    return items
+            if bidi_text and str(bidi_text).strip():
+                return [
+                    Paragraph(bidi_text, styles["bismillah_ar"]),
+                    Paragraph(BISMILLAH_EN, styles["bismillah_en"]),
+                ]
+    except Exception:
+        pass
+    return [
+        Paragraph(BISMILLAH_EN_FALLBACK, styles["bismillah_translit"]),
+        Paragraph(BISMILLAH_EN, styles["bismillah_en"]),
+    ]
 
 
 def _make_report_id() -> str:
@@ -653,7 +702,7 @@ class ChecklistItem(Flowable):
 class FeatureIconBox(Flowable):
     """Back-cover feature box with a simple canvas icon."""
 
-    def __init__(self, kind: str, title: str, subtitle: str, width: float = 1.9 * inch, height: float = 70):
+    def __init__(self, kind: str, title: str, subtitle: str, width: float = 1.95 * inch, height: float = 92):
         super().__init__()
         self.kind = kind
         self.title = title
@@ -663,13 +712,15 @@ class FeatureIconBox(Flowable):
 
     def draw(self) -> None:
         c = self.canv
+        # Background first, then border/content on top (16pt inner padding).
+        pad = 16
+        c.setFillColor(colors.HexColor("#102848"))
         c.setStrokeColor(WHITE)
         c.setLineWidth(0.5)
-        c.setFillColor(NAVY_MID)
         c.roundRect(0, 0, self.width, self.height, 6, fill=1, stroke=1)
 
         cx = self.width / 2
-        icon_y = self.height - 22
+        icon_y = self.height - pad - 10
         c.setStrokeColor(TEAL)
         c.setFillColor(TEAL)
         c.setLineWidth(1.2)
@@ -691,10 +742,38 @@ class FeatureIconBox(Flowable):
 
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(cx, 22, self.title)
+        c.drawCentredString(cx, pad + 18, self.title)
         c.setFillColor(TEAL)
         c.setFont("Helvetica", 8)
-        c.drawCentredString(cx, 10, self.subtitle)
+        c.drawCentredString(cx, pad, self.subtitle)
+
+
+class BackCoverFeaturesBand(Flowable):
+    """Full-width mid-band: navy background drawn first, then three feature boxes."""
+
+    def __init__(self, width: float = 7.0 * inch, height: float = 140):
+        super().__init__()
+        self.width = width
+        self.height = height
+
+    def draw(self) -> None:
+        c = self.canv
+        # 1) Background rectangle first so boxes never float on white.
+        c.setFillColor(NAVY_MID)
+        c.rect(0, 0, self.width, self.height, fill=1, stroke=0)
+
+        box_w = 1.95 * inch
+        box_h = 92
+        gap = (self.width - 3 * box_w) / 4.0
+        y = 20  # >= 20pt padding below / above boxes (band height accommodates)
+        boxes = [
+            ("check", "Shariah Screened", "AAOIFI Standards"),
+            ("chart", "10 Categories", "Assessed"),
+            ("doc", "Personalized", "PDF Report"),
+        ]
+        for idx, (kind, title, subtitle) in enumerate(boxes):
+            x = gap + idx * (box_w + gap)
+            FeatureIconBox(kind, title, subtitle, width=box_w, height=box_h).drawOn(c, x, y)
 
 
 class InvestReadyCanvas(pdfcanvas.Canvas):
@@ -769,18 +848,15 @@ class InvestReadyCanvas(pdfcanvas.Canvas):
         self.drawRightString(right, footer_y, "iRizq.com")
 
 
-def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], list[str], str]:
+def _strengths_and_risks(
+    category_scores: dict[str, Any],
+) -> tuple[list[str], list[str], str, str | None]:
+    """Return strengths, risks, strength_label, and optional foundation message."""
     ranked = sorted(
         ((str(k), float(v)) for k, v in category_scores.items()),
         key=lambda item: item[1],
         reverse=True,
     )
-    true_strengths = [(name, score) for name, score in ranked if score >= 70]
-    use_relative = len(true_strengths) < 3
-    strength_source = ranked[:3] if use_relative else true_strengths[:3]
-    strength_label = "Relatively Stronger Area" if use_relative else "Strength"
-    strengths = [f"{strength_label}: {name} ({int(score)}/100)" for name, score in strength_source]
-
     risks = [
         f"Needs attention: {name} ({int(score)}/100)"
         for name, score in sorted(
@@ -788,7 +864,31 @@ def _strengths_and_risks(category_scores: dict[str, Any]) -> tuple[list[str], li
             key=lambda item: item[1],
         )[:3]
     ]
-    return strengths, risks, strength_label
+
+    scores = [float(v) for v in category_scores.values()]
+    if not scores:
+        return [], risks, "", FOUNDATION_STRENGTHS_MSG
+
+    highest = max(scores)
+    all_tied = len(set(round(s, 4) for s in scores)) == 1
+    if highest < 50 or all_tied:
+        return [], risks, "", FOUNDATION_STRENGTHS_MSG
+
+    true_strengths = [(name, score) for name, score in ranked if score >= 70]
+    relative_strengths = [(name, score) for name, score in ranked if 60 <= score < 70]
+
+    if true_strengths:
+        strengths = [f"Strength: {name} ({int(score)}/100)" for name, score in true_strengths[:3]]
+        return strengths, risks, "Strength", None
+
+    if relative_strengths:
+        strengths = [
+            f"Relatively Stronger Area: {name} ({int(score)}/100)"
+            for name, score in relative_strengths[:3]
+        ]
+        return strengths, risks, "Relatively Stronger Area", None
+
+    return [], risks, "", FOUNDATION_STRENGTHS_MSG
 
 
 CATEGORY_GAP_COPY: dict[str, tuple[str, str]] = {
@@ -1171,6 +1271,167 @@ PROFILE_DESCRIPTIONS = {
 }
 
 
+CATEGORY_EDU: dict[str, dict[str, str]] = {
+    "Cash Flow": {
+        "why": (
+            "Cash flow is the engine of every financial plan. Without knowing your monthly surplus, "
+            "you cannot consistently save, invest, or plan for the future. Most financial setbacks "
+            "trace back to cash flow problems that were ignored too long."
+        ),
+        "misconception": (
+            "Many people believe they need to earn more before budgeting makes sense. In reality, "
+            "budgeting is how you create the margin to build wealth at any income level."
+        ),
+        "improvement": (
+            "You know your exact monthly income and expenses. You have a surplus every month that "
+            "automatically moves to savings or investments before you can spend it."
+        ),
+    },
+    "Emergency Preparedness": {
+        "why": (
+            "An emergency fund is not about pessimism - it is about freedom. Without a buffer, any "
+            "unexpected expense forces a bad financial decision: selling investments early, taking "
+            "on debt, or missing payments."
+        ),
+        "misconception": (
+            "Many people keep emergency savings mixed with their regular account. This makes it "
+            "invisible and too easy to spend. A separate account makes the buffer real and intentional."
+        ),
+        "improvement": (
+            "You have 3-6 months of expenses in a separate account you never touch except for genuine "
+            "emergencies. It is automated, growing, and gives you confidence under stress."
+        ),
+    },
+    "Debt Management": {
+        "why": (
+            "High-interest debt is a guaranteed negative return on your money. Every month you carry "
+            "it, the interest quietly erodes the gains from everything else you are doing right. It is "
+            "the financial equivalent of a slow leak."
+        ),
+        "misconception": (
+            "Many people invest while carrying high-interest debt, believing market returns will "
+            "outpace interest costs. For debt above 10%, this is almost never true after risk is "
+            "accounted for."
+        ),
+        "improvement": (
+            "You have no high-interest debt. Any remaining debt is low-rate and on a clear paydown "
+            "schedule. Your cash flow is not being bled by interest payments every month."
+        ),
+    },
+    "Investing Readiness": {
+        "why": (
+            "Consistent halal investing over long periods is how ordinary Muslims build extraordinary "
+            "wealth. The investment itself matters less than the consistency, the halal screening, and "
+            "the patience to stay invested through volatility."
+        ),
+        "misconception": (
+            "Many new investors believe they need to find the right stock or the perfect time to start. "
+            "In reality, starting with any Shariah-compliant fund consistently beats waiting for perfect "
+            "information indefinitely."
+        ),
+        "improvement": (
+            "You invest a fixed halal amount every month automatically. You use Shariah-compliant ETFs "
+            "or screened stocks. You do not react to short-term market swings."
+        ),
+    },
+    "Retirement Planning": {
+        "why": (
+            "Retirement planning is time-sensitive in a way other goals are not. Every year of delay "
+            "in starting contributions costs more than the year before due to the compounding you miss. "
+            "Starting at 25 versus 35 can double the outcome with the same monthly amount."
+        ),
+        "misconception": (
+            "Many people assume retirement planning is for older people or higher earners. In fact, "
+            "small consistent contributions started early matter far more than large contributions "
+            "started late."
+        ),
+        "improvement": (
+            "You contribute regularly to a retirement account. You know your retirement number. Your "
+            "contribution increases automatically with your income."
+        ),
+    },
+    "Insurance and Risk": {
+        "why": (
+            "Insurance converts unpredictable catastrophic risk into a known manageable cost. Without "
+            "it, a single illness, accident, or disaster can set back years of careful financial "
+            "progress in a matter of weeks."
+        ),
+        "misconception": (
+            "Many people view insurance as an expense to minimize rather than a foundation to build on. "
+            "Adequate coverage is one of the highest-return decisions available to a family."
+        ),
+        "improvement": (
+            "You have health, life, and disability coverage proportionate to your income and dependents. "
+            "You review coverage every year as your life situation changes."
+        ),
+    },
+    "Goal Clarity": {
+        "why": (
+            "Financial goals without written targets and dates are wishes, not plans. Research "
+            "consistently shows that written specific goals are dramatically more likely to be achieved "
+            "than vague intentions, regardless of income level."
+        ),
+        "misconception": (
+            "Many people believe they know their goals because they think about them often. Mental "
+            "goals are easily overridden by day-to-day spending decisions. Writing them creates a "
+            "commitment."
+        ),
+        "improvement": (
+            "You have 3-5 written financial goals with specific dollar targets and dates. You review "
+            "them weekly. Your spending decisions are filtered through whether they help or hurt those "
+            "goals."
+        ),
+    },
+    "Tax Awareness": {
+        "why": (
+            "Tax-advantaged accounts offer guaranteed returns in the form of tax savings that do not "
+            "depend on market performance. Not using them is one of the most common and most costly "
+            "financial mistakes across all income levels."
+        ),
+        "misconception": (
+            "Many people believe tax planning is only for high earners or requires a financial advisor. "
+            "In reality, basic tax-advantaged account use is accessible to most working people and "
+            "requires only simple annual decisions."
+        ),
+        "improvement": (
+            "You contribute to at least one tax-advantaged account monthly. You do basic tax planning "
+            "each quarter. You are not leaving obvious tax savings unused."
+        ),
+    },
+    "Diversification": {
+        "why": (
+            "Concentration risk means your outcomes depend heavily on a single company, sector, or "
+            "geography. For halal investors, diversification through Shariah-compliant ETFs and funds "
+            "reduces this exposure while maintaining compliance."
+        ),
+        "misconception": (
+            "Many investors believe they are diversified because they own multiple stocks. If those "
+            "stocks are all in the same sector or region, the diversification is mostly illusory."
+        ),
+        "improvement": (
+            "No single position represents more than 20% of your halal portfolio. You hold exposure "
+            "across multiple sectors and geographies through Shariah-screened instruments."
+        ),
+    },
+    "Behavioral Discipline": {
+        "why": (
+            "Behavioral mistakes - panic selling in downturns, chasing hot tips, overtrading - destroy "
+            "more wealth than poor investment selection. The best halal portfolio fails if fear or greed "
+            "drives the decisions around it."
+        ),
+        "misconception": (
+            "Many investors believe they will stay calm during market drops because they have good "
+            "intentions. In practice, seeing account values fall triggers emotional responses in almost "
+            "everyone without a written plan in place."
+        ),
+        "improvement": (
+            "You have a written investment policy that defines what you will do in a downturn before "
+            "it happens. You do not check your portfolio daily. You ignore hot tips by default."
+        ),
+    },
+}
+
+
 HABITS_BY_CATEGORY: dict[str, list[str]] = {
     "Cash Flow": [
         "Track every expense for 30 days using a simple app or notebook",
@@ -1285,24 +1546,48 @@ def _actions_for_categories(weak: list[str]) -> dict[str, list[str]]:
             "Use a checklist before every new investment",
         ],
     }
+    defaults = {
+        "week": (
+            "Visit stocks.irizq.com and screen one investment you currently hold or are "
+            "considering for Shariah compliance."
+        ),
+        "month": (
+            "Write down your top 3 financial goals with a target date and dollar amount "
+            "for each - review them every Monday."
+        ),
+        "ninety": (
+            "Schedule a 30-minute financial review to check progress on all three action "
+            "plan items and set new 90-day targets."
+        ),
+    }
     week: list[str] = []
     month: list[str] = []
     ninety: list[str] = []
-    for idx, cat in enumerate(weak[:3]):
-        items = catalog.get(cat, ["Review this category and choose one improvement habit"])
+    cats = (weak[:3] + ["Cash Flow", "Emergency Preparedness", "Debt Management"])[:3]
+    for idx, cat in enumerate(cats):
+        items = list(catalog.get(cat, [])[:3])
         if idx == 0:
-            week.extend(items[:2])
+            week = items
         elif idx == 1:
-            month.extend(items[:2])
+            month = items
         else:
-            ninety.extend(items[:2])
-    if not week:
-        week = ["Complete a 7-day money audit", "Automate one savings transfer"]
-    if not month:
-        month = ["Build or top up emergency savings", "Review debt repayment order"]
-    if not ninety:
-        ninety = ["Document a written investment policy", "Rebalance and diversify gradually"]
-    return {"week": week, "month": month, "ninety": ninety}
+            ninety = items
+
+    def _ensure_three(items: list[str], key: str) -> list[str]:
+        out = [i for i in items if i and str(i).strip()]
+        while len(out) < 3:
+            filler = defaults[key]
+            if filler not in out:
+                out.append(filler)
+            else:
+                out.append(f"Complete one additional action from your {key} priorities")
+        return out[:3]
+
+    return {
+        "week": _ensure_three(week, "week"),
+        "month": _ensure_three(month, "month"),
+        "ninety": _ensure_three(ninety, "ninety"),
+    }
 
 
 def _toc_page(styles: dict[str, ParagraphStyle]) -> list[Any]:
@@ -1342,13 +1627,26 @@ def _toc_page(styles: dict[str, ParagraphStyle]) -> list[Any]:
         )
     )
     story.append(toc_table)
-    story.append(Spacer(1, 24))
+    story.append(Spacer(1, 18))
     story.append(
         Paragraph(
             "Your personalized halal financial roadmap",
             styles["teal_italic"],
         )
     )
+    story.append(Spacer(1, 14))
+    story.append(Paragraph("How to Use This Report", styles["toc_howto_h"]))
+    for paragraph in (
+        "Start with the Executive Summary on page 1 to understand your overall score and the "
+        "most urgent priorities at a glance.",
+        "Review Your Score Breakdown on page 3 to see how each of the 10 categories contributes "
+        "to your overall readiness and where the biggest gaps are.",
+        "Work through the Priority Action Plan on page 9. The actions are ordered by urgency - "
+        "start with This Week before moving to 30 and 90 day items.",
+        "Return to the Educational Guidance on page 10 when you are ready to go deeper on any "
+        "specific category. Each section includes habits you can start immediately.",
+    ):
+        story.append(Paragraph(paragraph, styles["toc_howto_body"]))
     return story
 
 
@@ -1387,10 +1685,10 @@ def _future_scenarios(
     story.append(Paragraph("(Illustrative only - not a forecast)", styles["scenario_sub"]))
 
     s2_body = (
-        f"If habits stay roughly the same, short-term comfort can mask growing opportunity cost. "
-        f"In your results, gaps around {gap_text} are the areas most likely to keep progress flat. "
-        "Nothing dramatic has to go wrong for options to narrow - unfinished systems simply keep "
-        "compounding delayed.<br/><br/>"
+        f"For {article} {profile} investor, if habits stay roughly the same, short-term comfort can "
+        f"mask growing opportunity cost. In your results, gaps around {gap_text} are the areas most "
+        "likely to keep progress flat. Nothing dramatic has to go wrong for options to narrow - "
+        "unfinished systems simply keep compounding delayed.<br/><br/>"
         "<b>Factors that keep this scenario in place:</b><br/>"
         "- No change to savings automation<br/>"
         "- Gaps in insurance or diversification continue<br/>"
@@ -1401,9 +1699,9 @@ def _future_scenarios(
     story.append(Paragraph("(Illustrative only - not a forecast)", styles["scenario_sub"]))
 
     s3_body = (
-        "An unexpected expense, income pause, or family need can arrive at any time. "
-        "Without an adequate emergency buffer or aligned insurance, recovery often means selling "
-        "halal investments at the wrong moment or taking on expensive debt. "
+        f"Even for {article} {profile} investor, an unexpected expense, income pause, or family need "
+        "can arrive at any time. Without an adequate emergency buffer or aligned insurance, recovery "
+        "often means selling halal investments at the wrong moment or taking on expensive debt. "
         "This scenario is not dramatic by design - it is simply what unprepared foundations look like "
         "under ordinary stress.<br/><br/>"
         "<b>Vulnerabilities that increase this risk:</b><br/>"
@@ -1484,27 +1782,7 @@ def _back_cover(styles: dict[str, ParagraphStyle]) -> list[Any]:
         )
     )
 
-    features = Table(
-        [[
-            FeatureIconBox("check", "Shariah Screened", "AAOIFI Standards"),
-            FeatureIconBox("chart", "10 Categories", "Assessed"),
-            FeatureIconBox("doc", "Personalized", "PDF Report"),
-        ]],
-        colWidths=[2.1 * inch, 2.1 * inch, 2.1 * inch],
-    )
-    features.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY_MID),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
-            ]
-        )
-    )
+    features = BackCoverFeaturesBand(width=7.0 * inch, height=140)
 
     quote_block = [
         Spacer(1, 16),
@@ -1565,7 +1843,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         str(k): float(v) for k, v in (payload.get("category_scores") or {}).items()
     }
     answers = payload.get("answers") or {}
-    strengths, risks, strength_label = _strengths_and_risks(category_scores)
+    strengths, risks, strength_label, foundation_msg = _strengths_and_risks(category_scores)
     mistakes = _mistakes(answers, category_scores)
     weak_cats = [
         name_
@@ -1622,13 +1900,16 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         leading=12,
         spaceAfter=2,
     )
-    strengths_heading = "Your Top Strengths" if strength_label == "Strength" else "Relatively Stronger Areas"
-    story.append(Paragraph(f"<b>{strengths_heading}</b>", page1_h))
-    if strengths:
+    if foundation_msg:
+        story.append(Paragraph("<b>Strengths</b>", page1_h))
+        story.append(Paragraph(foundation_msg, styles["foundation_msg"]))
+    else:
+        strengths_heading = (
+            "Your Top Strengths" if strength_label == "Strength" else "Relatively Stronger Areas"
+        )
+        story.append(Paragraph(f"<b>{strengths_heading}</b>", page1_h))
         for item in strengths:
             story.append(Paragraph(f"<font color='#1ec8b8'>&#10003;</font> {item}", page1_item))
-    else:
-        story.append(Paragraph("No categories currently score as clear strengths.", page1_item))
     story.append(Spacer(1, 12))
     story.append(Paragraph("<b>Areas Needing Attention</b>", page1_h))
     if risks:
@@ -1725,26 +2006,37 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.extend(_header_band("Educational Guidance for Priority Categories"))
     edu_targets = weak_cats[:5] or list(category_scores.keys())[:3]
     for cat in edu_targets:
+        edu = CATEGORY_EDU.get(cat, {})
         story.append(Paragraph(cat, styles["h2"]))
         story.append(HRFlowable(width="100%", thickness=2, color=TEAL, spaceAfter=6))
         story.append(
             Paragraph(
-                f"<b>Why {cat} matters:</b> Strength in this area reduces avoidable risk and "
-                f"improves long-term optionality.",
+                f"<b>Why {cat} matters:</b> "
+                + edu.get(
+                    "why",
+                    "Strength in this area reduces avoidable risk and improves long-term optionality.",
+                ),
                 styles["body"],
             )
         )
         story.append(
             Paragraph(
-                "<b>Common misconception:</b> Waiting for perfect conditions. Progress usually "
-                "comes from small repeatable habits, not perfect timing.",
+                "<b>Common misconception:</b> "
+                + edu.get(
+                    "misconception",
+                    "Waiting for perfect conditions. Progress usually comes from small repeatable "
+                    "habits, not perfect timing.",
+                ),
                 styles["body"],
             )
         )
         story.append(
             Paragraph(
-                "<b>What improvement looks like:</b> Clear numbers, automated systems, and a "
-                "written rule set you can follow under stress.",
+                "<b>What improvement looks like:</b> "
+                + edu.get(
+                    "improvement",
+                    "Clear numbers, automated systems, and a written rule set you can follow under stress.",
+                ),
                 styles["body"],
             )
         )
@@ -1797,12 +2089,6 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     story.append(Spacer(1, 8))
     story.append(Paragraph("Continue your journey:", styles["h2"]))
     story.append(Paragraph("iRizq.com &nbsp;|&nbsp; stocks.irizq.com", styles["teal"]))
-    story.append(
-        Paragraph(
-            "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
-            styles["dua"],
-        )
-    )
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
 
