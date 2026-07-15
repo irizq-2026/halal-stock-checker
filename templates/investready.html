@@ -426,17 +426,21 @@
     }
 
     .question-card {
-      overflow: hidden;
+      overflow: visible;
       background: var(--white);
       border: 1px solid var(--silver-mid);
     }
 
     .question-top {
+      position: relative;
+      z-index: 5;
+      overflow: visible;
       background:
         radial-gradient(circle at 90% 15%, rgba(30, 200, 184, 0.2), transparent 12rem),
         linear-gradient(135deg, var(--navy), var(--navy-mid));
       color: var(--white);
       padding: clamp(1.15rem, 5vw, 1.7rem);
+      border-radius: var(--radius) var(--radius) 0 0;
     }
 
     .question-meta {
@@ -453,6 +457,115 @@
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    .category-with-info {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      max-width: calc(100% - 3.6rem);
+      z-index: 20;
+    }
+
+    .section-info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin-left: 8px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--teal);
+      background: rgba(30, 200, 184, 0.15);
+      color: var(--teal);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      vertical-align: middle;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .section-info-btn:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+    }
+
+    .section-tooltip {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      width: max-content;
+      max-width: min(280px, calc(100vw - 2rem));
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(30, 200, 184, 0.3);
+      background: var(--navy);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.6;
+      text-align: left;
+      text-transform: none;
+      letter-spacing: normal;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 100ms ease;
+    }
+
+    .section-tooltip.is-open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 150ms ease;
+    }
+
+    .section-tooltip.align-right {
+      left: auto;
+      right: 0;
+    }
+
+    .section-tooltip.is-above {
+      top: auto;
+      bottom: calc(100% + 10px);
+    }
+
+    .section-tooltip::before {
+      content: "";
+      position: absolute;
+      top: -6px;
+      left: 14px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 6px solid var(--teal);
+    }
+
+    .section-tooltip.align-right::before {
+      left: auto;
+      right: 14px;
+    }
+
+    .section-tooltip.is-above::before {
+      top: auto;
+      bottom: -6px;
+      border-bottom: none;
+      border-top: 6px solid var(--teal);
+    }
+
+    /* Keep tooltip visible above clipped question layout containers. */
+    body.section-tooltip-open .stage-questions,
+    body.section-tooltip-open .question-frame,
+    body.section-tooltip-open .question-card {
+      overflow: visible;
     }
 
     .q-badge {
@@ -1146,7 +1259,18 @@
         <article class="card question-card">
           <div class="question-top">
             <div class="question-meta">
-              <span class="category-label" id="categoryLabel">About You</span>
+              <div class="category-with-info">
+                <span class="category-label" id="categoryLabel">About You</span>
+                <button
+                  class="section-info-btn"
+                  type="button"
+                  id="sectionInfoBtn"
+                  aria-label="About this section"
+                  aria-expanded="false"
+                  aria-controls="sectionTooltip"
+                >i</button>
+                <div class="section-tooltip" id="sectionTooltip" role="tooltip"></div>
+              </div>
               <span class="q-badge" id="questionBadge">Q1</span>
             </div>
             <h2 class="question-text" id="questionText">Question text</h2>
@@ -1309,6 +1433,29 @@
         range: [81, 100],
         blurb: "Your fundamentals are strong. Focus on optimizing and scaling what is working."
       }
+    };
+
+    const SECTION_EXPLANATIONS = {
+      "ABOUT YOU":
+        "Your age, income, and dependents help us personalize your score and benchmarks. Answers are private and used only to generate your report.",
+      "CASH STABILITY":
+        "This section assesses whether you have enough accessible savings to absorb financial shocks without disrupting your investments or taking on debt.",
+      "DEBT POSITION":
+        "High-interest debt quietly competes with your ability to save and invest. This section helps identify how much of a drag debt may be creating.",
+      "SAVINGS BEHAVIOR":
+        "Consistent saving habits matter more than the amount. This section looks at whether saving is automated and reliable or sporadic and intention-driven.",
+      "INVESTING READINESS":
+        "This section assesses whether you have the habits and knowledge to invest consistently in a halal-compliant way.",
+      "RETIREMENT PLANNING":
+        "Long-term planning compounds quietly over decades. This section looks at whether your retirement is structured or left to chance.",
+      "FINANCIAL BEHAVIOR":
+        "How you make and stick to financial decisions matters more than the decisions themselves. This section looks at your financial discipline and stress levels.",
+      "RISK AND BEHAVIOR":
+        "Your actual risk behavior often differs from your stated tolerance. This section helps identify any gap between the two.",
+      "FINANCIAL PROTECTION":
+        "Financial protection helps absorb unexpected shocks. We understand some Muslims have concerns about conventional insurance - answer based on whatever protection arrangements you currently have in place, including Takaful or savings-based approaches.",
+      "TAX AWARENESS":
+        "Tax-advantaged accounts offer guaranteed returns in the form of tax savings. This section assesses whether you are using the tools available to you."
     };
 
     const questions = [
@@ -1666,6 +1813,8 @@
     const questionText = document.getElementById("questionText");
     const optionsList = document.getElementById("optionsList");
     const multiHelp = document.getElementById("multiHelp");
+    const sectionInfoBtn = document.getElementById("sectionInfoBtn");
+    const sectionTooltip = document.getElementById("sectionTooltip");
     const backBtn = document.getElementById("backBtn");
     const nextBtn = document.getElementById("nextBtn");
     const leadForm = document.getElementById("leadForm");
@@ -1674,6 +1823,72 @@
     const formError = document.getElementById("formError");
     const submitBtn = document.getElementById("submitBtn");
     const submitStatus = document.getElementById("submitStatus");
+    let sectionTooltipCloseTimer = null;
+
+    function getSectionExplanation(section) {
+      const key = String(section || "").trim().toUpperCase();
+      return SECTION_EXPLANATIONS[key] || "";
+    }
+
+    function isSectionTooltipOpen() {
+      return sectionTooltip.classList.contains("is-open");
+    }
+
+    function positionSectionTooltip() {
+      sectionTooltip.classList.remove("align-right", "is-above");
+      const iconRect = sectionInfoBtn.getBoundingClientRect();
+      const tipRect = sectionTooltip.getBoundingClientRect();
+      const pad = 8;
+      if (iconRect.left + tipRect.width > window.innerWidth - pad) {
+        sectionTooltip.classList.add("align-right");
+      }
+      if (iconRect.bottom + 10 + tipRect.height > window.innerHeight - pad) {
+        sectionTooltip.classList.add("is-above");
+      }
+    }
+
+    function closeSectionTooltip() {
+      document.body.classList.remove("section-tooltip-open");
+      if (!isSectionTooltipOpen()) {
+        sectionInfoBtn.setAttribute("aria-expanded", "false");
+        return;
+      }
+      sectionTooltip.classList.remove("is-open");
+      sectionInfoBtn.setAttribute("aria-expanded", "false");
+      if (sectionTooltipCloseTimer) {
+        window.clearTimeout(sectionTooltipCloseTimer);
+      }
+      sectionTooltipCloseTimer = window.setTimeout(() => {
+        sectionTooltip.classList.remove("align-right", "is-above");
+        sectionTooltipCloseTimer = null;
+      }, 100);
+    }
+
+    function openSectionTooltip() {
+      if (sectionTooltipCloseTimer) {
+        window.clearTimeout(sectionTooltipCloseTimer);
+        sectionTooltipCloseTimer = null;
+      }
+      document.body.classList.add("section-tooltip-open");
+      sectionTooltip.classList.add("is-open");
+      sectionInfoBtn.setAttribute("aria-expanded", "true");
+      // Measure after becoming visible for overflow adjustments.
+      window.requestAnimationFrame(() => {
+        positionSectionTooltip();
+      });
+    }
+
+    function toggleSectionTooltip(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (isSectionTooltipOpen()) {
+        closeSectionTooltip();
+      } else {
+        openSectionTooltip();
+      }
+    }
 
     function getActiveQuestions() {
       return questions.filter((q) => !(typeof q.skipIf === "function" && q.skipIf(state.answers)));
@@ -1686,6 +1901,7 @@
 
     function showScreen(name) {
       const lockQuestions = name === "question";
+      closeSectionTooltip();
       if (!lockQuestions) {
         document.body.classList.remove("question-active");
       }
@@ -1746,17 +1962,18 @@
 
       questionFrame.classList.add(slideClass);
       window.setTimeout(() => {
+        closeSectionTooltip();
         categoryLabel.textContent = question.section;
         questionBadge.textContent = `Q${state.currentIndex + 1}`;
         questionText.textContent = question.text;
         optionsList.innerHTML = "";
+        sectionTooltip.textContent = getSectionExplanation(question.section);
+        sectionInfoBtn.hidden = !sectionTooltip.textContent;
 
-        const helpText = question.multi
-          ? (question.multiHelp || "Select all that apply.")
-          : (question.purpose || "");
-        if (helpText) {
+        // Section explanations only appear in the info tooltip - never inline.
+        if (question.multi) {
           multiHelp.hidden = false;
-          multiHelp.textContent = helpText;
+          multiHelp.textContent = question.multiHelp || "Select all that apply.";
         } else {
           multiHelp.hidden = true;
           multiHelp.textContent = "";
@@ -2289,6 +2506,26 @@
     backBtn.addEventListener("click", goBack);
     nextBtn.addEventListener("click", goNext);
 
+    sectionInfoBtn.addEventListener("click", toggleSectionTooltip);
+    sectionTooltip.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    document.addEventListener("click", (event) => {
+      if (!isSectionTooltipOpen()) {
+        return;
+      }
+      const target = event.target;
+      if (sectionInfoBtn.contains(target) || sectionTooltip.contains(target)) {
+        return;
+      }
+      closeSectionTooltip();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeSectionTooltip();
+      }
+    });
+
     let touchStartX = 0;
     let touchStartY = 0;
 
@@ -2300,6 +2537,17 @@
 
     screens.question.addEventListener("touchend", (event) => {
       const touch = event.changedTouches[0];
+      const target = event.target;
+      if (
+        sectionInfoBtn.contains(target) ||
+        sectionTooltip.contains(target)
+      ) {
+        return;
+      }
+      if (isSectionTooltipOpen()) {
+        closeSectionTooltip();
+        return;
+      }
       const deltaX = touch.clientX - touchStartX;
       const deltaY = touch.clientY - touchStartY;
       if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY)) {
