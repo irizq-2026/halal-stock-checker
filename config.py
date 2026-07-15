@@ -6,6 +6,13 @@ import os
 from dataclasses import dataclass
 
 
+def _normalize_database_url(raw: str | None) -> str:
+    value = (raw or "").strip().strip("'\"")
+    if value.startswith("postgres://"):
+        return "postgresql+psycopg2://" + value[len("postgres://") :]
+    return value
+
+
 def _env_float(name: str, default: float) -> float:
     raw = os.getenv(name)
     if raw is None:
@@ -28,9 +35,11 @@ def _env_int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://postgres:postgres@localhost:5432/halal_stocks",
+    database_url: str = _normalize_database_url(
+        os.getenv(
+            "DATABASE_URL",
+            "postgresql+psycopg2://postgres:postgres@localhost:5432/halal_stocks",
+        )
     )
     sec_user_agent: str = os.getenv(
         "SEC_USER_AGENT",

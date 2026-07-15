@@ -1688,6 +1688,7 @@ class SecRefreshService:
         row.operating_income = None
         row.net_income = None
         row.shares_outstanding = yfinance_data.shares_outstanding
+        row.calculated_at = datetime.now(UTC)
 
         components = _scale_financial_components(packet.component_breakdown or {}, fx_rate)
         valuation = dict(components.get("valuation") or {})
