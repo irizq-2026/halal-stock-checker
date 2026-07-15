@@ -45,7 +45,7 @@ Also check out our free Halal Stock Checker at stocks.irizq.com to screen any US
 If you have any questions, just reply to this email.
 
 Barak Allahu feekum,
-Sarfaraz
+Sarfaraz Nasir - Co-founder
 iRizq.com | stocks.irizq.com
 """
 
@@ -74,7 +74,7 @@ HTML_BODY = """<!DOCTYPE html>
       to screen any US-listed stock for Shariah compliance.
     </p>
     <p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
-    <p style="margin:0 0 8px;">Barak Allahu feekum,<br>Sarfaraz</p>
+    <p style="margin:0 0 8px;">Barak Allahu feekum,<br>Sarfaraz Nasir - Co-founder</p>
     <p style="margin:0;color:#87C77B;">
       <a href="https://www.irizq.com" style="color:#87C77B;text-decoration:none;">iRizq.com</a>
       |
@@ -270,7 +270,7 @@ Please review your report and take action on the priority items - small improvem
 If you have any questions, reply to this email.
 
 Barak Allahu feekum,
-Sarfaraz
+Sarfaraz Nasir - Co-founder
 iRizq.com | stocks.irizq.com
 
 Please check your Spam or Junk folder if you do not see it in your inbox. Sometimes emails are accidentally delivered there.
@@ -302,7 +302,7 @@ Please check your Spam or Junk folder if you do not see it in your inbox. Someti
       </ul>
       <p style="margin:0 0 16px;">Please review your report and take action on the priority items - small improvements now can make a significant difference over time.</p>
       <p style="margin:0 0 16px;">If you have any questions, reply to this email.</p>
-      <p style="margin:0 0 8px;">Barak Allahu feekum,<br>Sarfaraz</p>
+      <p style="margin:0 0 8px;">Barak Allahu feekum,<br>Sarfaraz Nasir - Co-founder</p>
       <p style="margin:0;color:#1ec8b8;">
         <a href="https://www.irizq.com" style="color:#1ec8b8;text-decoration:none;">iRizq.com</a>
         |
@@ -481,7 +481,7 @@ def investready_submit() -> tuple[Any, int]:
     letter_grade = str(payload.get("letter_grade") or "").strip() or "C"
     investor_profile = (
         str(payload.get("financial_stage") or payload.get("investor_profile") or "").strip()
-        or "Growth Ready"
+        or "Stage 3: Growth Preparation"
     )
     # Keep investor_profile alias populated for older PDF/email code paths.
     payload["investor_profile"] = investor_profile

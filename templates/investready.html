@@ -1325,7 +1325,7 @@
             <h2 id="resultsTitle">Here is your Confidential Financial Summary.</h2>
             <div class="result-badges">
               <span class="result-pill grade" id="gradeBadge">Grade A</span>
-              <span class="result-pill" id="profileBadge">Growth Ready</span>
+              <span class="result-pill" id="profileBadge">Stage 3: Growth Preparation</span>
             </div>
             <p id="verdictText">Your financial foundation is developing.</p>
             <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
@@ -1413,23 +1413,23 @@
     };
 
     const STAGE_META = {
-      "Foundation Builder": {
+      "Stage 1: Foundation Building": {
         range: [0, 25],
         blurb: "Your priority is building the financial foundation before focusing on growth."
       },
-      "Stability Seeker": {
+      "Stage 2: Stability Building": {
         range: [26, 45],
         blurb: "You are working toward stability. Consistent habits will accelerate progress."
       },
-      "Growth Ready": {
+      "Stage 3: Growth Preparation": {
         range: [46, 65],
         blurb: "Your foundation is developing. You are approaching readiness for focused growth."
       },
-      "Wealth Builder": {
+      "Stage 4: Wealth Building": {
         range: [66, 80],
         blurb: "You have a strong foundation and are positioned to build wealth systematically."
       },
-      "Optimizer": {
+      "Stage 5: Optimization": {
         range: [81, 100],
         blurb: "Your fundamentals are strong. Focus on optimizing and scaling what is working."
       }
@@ -2255,11 +2255,11 @@
         (risk * 0.20)
       );
 
-      if (stageScore <= 25) return "Foundation Builder";
-      if (stageScore <= 45) return "Stability Seeker";
-      if (stageScore <= 65) return "Growth Ready";
-      if (stageScore <= 80) return "Wealth Builder";
-      return "Optimizer";
+      if (stageScore <= 25) return "Stage 1: Foundation Building";
+      if (stageScore <= 45) return "Stage 2: Stability Building";
+      if (stageScore <= 65) return "Stage 3: Growth Preparation";
+      if (stageScore <= 80) return "Stage 4: Wealth Building";
+      return "Stage 5: Optimization";
     }
 
     function getGrade(score) {
