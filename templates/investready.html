@@ -1325,7 +1325,7 @@
             <h2 id="resultsTitle">Here is your Confidential Financial Summary.</h2>
             <div class="result-badges">
               <span class="result-pill grade" id="gradeBadge">Grade A</span>
-              <span class="result-pill" id="profileBadge">Stage 3: Growth Preparation</span>
+              <span class="result-pill" id="profileBadge">Profile: Pre-Growth</span>
             </div>
             <p id="verdictText">Your financial foundation is developing.</p>
             <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
@@ -1413,23 +1413,23 @@
     };
 
     const STAGE_META = {
-      "Stage 1: Foundation Building": {
+      "Profile: Foundation": {
         range: [0, 25],
         blurb: "Your priority is building the financial foundation before focusing on growth."
       },
-      "Stage 2: Stability Building": {
+      "Profile: Stability": {
         range: [26, 45],
         blurb: "You are working toward stability. Consistent habits will accelerate progress."
       },
-      "Stage 3: Growth Preparation": {
+      "Profile: Pre-Growth": {
         range: [46, 65],
         blurb: "Your foundation is developing. You are approaching readiness for focused growth."
       },
-      "Stage 4: Wealth Building": {
+      "Profile: Growth": {
         range: [66, 80],
         blurb: "You have a strong foundation and are positioned to build wealth systematically."
       },
-      "Stage 5: Optimization": {
+      "Profile: Advanced": {
         range: [81, 100],
         blurb: "Your fundamentals are strong. Focus on optimizing and scaling what is working."
       }
@@ -2255,11 +2255,11 @@
         (risk * 0.20)
       );
 
-      if (stageScore <= 25) return "Stage 1: Foundation Building";
-      if (stageScore <= 45) return "Stage 2: Stability Building";
-      if (stageScore <= 65) return "Stage 3: Growth Preparation";
-      if (stageScore <= 80) return "Stage 4: Wealth Building";
-      return "Stage 5: Optimization";
+      if (stageScore <= 25) return "Profile: Foundation";
+      if (stageScore <= 45) return "Profile: Stability";
+      if (stageScore <= 65) return "Profile: Pre-Growth";
+      if (stageScore <= 80) return "Profile: Growth";
+      return "Profile: Advanced";
     }
 
     function getGrade(score) {
@@ -2453,7 +2453,7 @@
       const summary = document.getElementById("summaryText");
       const stage = scores.financial_stage;
       const blurb = (STAGE_META[stage] || {}).blurb || "";
-      summary.textContent = `With a Financial Readiness Score of ${scores.overall_score}/100 and grade ${scores.letter_grade}, your Financial Stage is ${stage}. ${blurb}`;
+      summary.textContent = `With a Financial Readiness Score of ${scores.overall_score}/100 and grade ${scores.letter_grade}, your profile is ${stage}. ${blurb}`;
     }
 
     function animateScore(target) {

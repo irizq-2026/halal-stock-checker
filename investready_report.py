@@ -83,110 +83,110 @@ Q4_LABELS = {
 }
 
 FINANCIAL_STAGE_DESCRIPTIONS = {
-    "Stage 1: Foundation Building": (
+    "Profile: Foundation": (
         "Your priority is building the financial foundation before focusing on growth."
     ),
-    "Stage 2: Stability Building": (
+    "Profile: Stability": (
         "You are working toward stability. Consistent habits will accelerate progress."
     ),
-    "Stage 3: Growth Preparation": (
+    "Profile: Pre-Growth": (
         "Your foundation is developing. You are approaching readiness for focused growth."
     ),
-    "Stage 4: Wealth Building": (
+    "Profile: Growth": (
         "You have a strong foundation and are positioned to build wealth systematically."
     ),
-    "Stage 5: Optimization": (
+    "Profile: Advanced": (
         "Your fundamentals are strong. Focus on optimizing and scaling what is working."
     ),
 }
 
 STAGE_BOTTOM_LINE = {
-    "Stage 1: Foundation Building": (
+    "Profile: Foundation": (
         "Your finances are in an early-stage build phase. The priority is stability and "
         "habit formation, not investment scaling."
     ),
-    "Stage 2: Stability Building": (
+    "Profile: Stability": (
         "You are in a stability-building phase. Addressing the gaps identified will create "
         "the platform for more confident financial growth."
     ),
-    "Stage 3: Growth Preparation": (
+    "Profile: Pre-Growth": (
         "You are approaching a growth phase but have key gaps to close first. Addressing "
         "these now will make growth more sustainable."
     ),
-    "Stage 4: Wealth Building": (
+    "Profile: Growth": (
         "You are in an active wealth-building phase. Fine-tuning the gaps identified will "
         "improve your trajectory meaningfully."
     ),
-    "Stage 5: Optimization": (
+    "Profile: Advanced": (
         "You are in an optimization phase. The opportunities identified here are "
         "refinements to an already strong foundation."
     ),
 }
 
 STAGE_INSIGHT = {
-    "Stage 1: Foundation Building": (
+    "Profile: Foundation": (
         "The good news is that at your stage, the actions that matter most are simple and "
         "within immediate reach. Building the foundation now creates a platform that makes "
         "everything else easier."
     ),
-    "Stage 2: Stability Building": (
+    "Profile: Stability": (
         "You have already built some structure. The opportunity is to close the remaining "
         "gaps before they become more expensive to fix. Progress from here accelerates as "
         "each piece of the foundation locks in."
     ),
-    "Stage 3: Growth Preparation": (
+    "Profile: Pre-Growth": (
         "You are closer to a strong financial position than your score may suggest. "
         "Targeted improvements to your weakest areas will shift your trajectory "
         "meaningfully within 6 to 12 months."
     ),
-    "Stage 4: Wealth Building": (
+    "Profile: Growth": (
         "Your foundation is solid. The focus from here is refinement and optimization "
         "rather than reconstruction. Small improvements to high-impact areas will "
         "compound into significant gains."
     ),
-    "Stage 5: Optimization": (
+    "Profile: Advanced": (
         "Your financial fundamentals are strong. The opportunities identified here are "
         "precision improvements that will protect and accelerate what you have already built."
     ),
 }
 
 STAGE_VERDICT = {
-    "Stage 1: Foundation Building": (
+    "Profile: Foundation": (
         "Your priority is building the financial habits and buffers that make everything "
         "else possible. Growth should come after stability."
     ),
-    "Stage 2: Stability Building": (
+    "Profile: Stability": (
         "You are making progress on your foundation. The gaps identified are addressable "
         "with consistent focused effort over the next 3 to 6 months."
     ),
-    "Stage 3: Growth Preparation": (
+    "Profile: Pre-Growth": (
         "Your foundation is developing well. Closing the identified gaps will position "
         "you for more confident financial growth."
     ),
-    "Stage 4: Wealth Building": (
+    "Profile: Growth": (
         "You are positioned to build wealth systematically. The improvements identified "
         "will strengthen an already solid foundation."
     ),
-    "Stage 5: Optimization": (
+    "Profile: Advanced": (
         "Your financial fundamentals are strong. The opportunities here are precision "
         "improvements to an already well-structured position."
     ),
 }
 
 STAGE_RECOMMENDATION = {
-    "Stage 1: Foundation Building": (
+    "Profile: Foundation": (
         "Focus entirely on stability before any growth or investment scaling."
     ),
-    "Stage 2: Stability Building": (
+    "Profile: Stability": (
         "Build your emergency buffer and reduce debt before increasing investment activity."
     ),
-    "Stage 3: Growth Preparation": (
+    "Profile: Pre-Growth": (
         "Close your top 3 identified gaps before scaling investment contributions."
     ),
-    "Stage 4: Wealth Building": (
+    "Profile: Growth": (
         "Optimize your existing structure and automate the remaining manual decisions."
     ),
-    "Stage 5: Optimization": (
+    "Profile: Advanced": (
         "Refine and protect what is working. Focus on the smallest high-impact "
         "improvements identified."
     ),
@@ -235,17 +235,31 @@ INSIGHT_PROBLEM_LABELS = {
 }
 
 STAGE_ALIASES = {
-    "Foundation Builder": "Stage 1: Foundation Building",
-    "Stability Seeker": "Stage 2: Stability Building",
-    "Growth Ready": "Stage 3: Growth Preparation",
-    "Wealth Builder": "Stage 4: Wealth Building",
-    "Optimizer": "Stage 5: Optimization",
-    "Stage 1: Foundation Building": "Stage 1: Foundation Building",
-    "Stage 2: Stability Building": "Stage 2: Stability Building",
-    "Stage 3: Growth Preparation": "Stage 3: Growth Preparation",
-    "Stage 4: Wealth Building": "Stage 4: Wealth Building",
-    "Stage 5: Optimization": "Stage 5: Optimization",
+    "Foundation Builder": "Profile: Foundation",
+    "Stability Seeker": "Profile: Stability",
+    "Growth Ready": "Profile: Pre-Growth",
+    "Wealth Builder": "Profile: Growth",
+    "Optimizer": "Profile: Advanced",
+    "Stage 1: Foundation Building": "Profile: Foundation",
+    "Stage 2: Stability Building": "Profile: Stability",
+    "Stage 3: Growth Preparation": "Profile: Pre-Growth",
+    "Stage 4: Wealth Building": "Profile: Growth",
+    "Stage 5: Optimization": "Profile: Advanced",
+    "Profile: Foundation": "Profile: Foundation",
+    "Profile: Stability": "Profile: Stability",
+    "Profile: Pre-Growth": "Profile: Pre-Growth",
+    "Profile: Growth": "Profile: Growth",
+    "Profile: Advanced": "Profile: Advanced",
 }
+
+PROFILE_SHORT_NAMES = {
+    "Profile: Foundation": "Foundation",
+    "Profile: Stability": "Stability",
+    "Profile: Pre-Growth": "Pre-Growth",
+    "Profile: Growth": "Growth",
+    "Profile: Advanced": "Advanced",
+}
+
 
 STRENGTH_OBS = {
     "Cash Stability": (
@@ -685,7 +699,7 @@ def _styles() -> dict[str, ParagraphStyle]:
             fontSize=9,
             textColor=TEAL,
             alignment=TA_CENTER,
-            spaceAfter=16,
+            spaceAfter=6,
             leading=12,
         ),
         "bismillah_translit": ParagraphStyle(
@@ -1062,24 +1076,47 @@ def _normalize_stage(stage: str) -> str:
     value = str(stage or "").strip()
     if value in STAGE_ALIASES:
         return STAGE_ALIASES[value]
-    # Handle payload values that already match new names loosely.
     for alias, canonical in STAGE_ALIASES.items():
         if value.lower() == alias.lower() or value.lower() == canonical.lower():
             return canonical
-    return "Stage 3: Growth Preparation"
+    return "Profile: Pre-Growth"
+
+
+def _profile_short(stage: str) -> str:
+    canonical = _normalize_stage(stage)
+    return PROFILE_SHORT_NAMES.get(canonical, canonical.replace("Profile: ", ""))
+
+
+def _peer_percentile(overall: int) -> str:
+    score = int(overall)
+    if score >= 85:
+        return "top 10%"
+    if score >= 70:
+        return "top 25%"
+    if score >= 55:
+        return "top 50%"
+    if score >= 40:
+        return "bottom 40%"
+    if score >= 25:
+        return "bottom 25%"
+    return "bottom 10%"
 
 
 def _grade_stage_clarify() -> list[Any]:
     styles = _styles()
+    clarify = ParagraphStyle(
+        "IRBandClarifyTight",
+        parent=styles["band_clarify"],
+        spaceBefore=6,
+        spaceAfter=4,
+    )
     return [
-        Spacer(1, 8),
+        Spacer(1, 4),
         Paragraph(
-            "Your grade reflects your overall readiness score. Your financial stage reflects "
-            "where you are on the wealth-building journey based on your habits, stability, "
-            "and investing profile.",
-            styles["band_clarify"],
+            "Your grade measures overall readiness. Your profile reflects your financial "
+            "behavior and habits pattern - independent of your score.",
+            clarify,
         ),
-        Spacer(1, 8),
     ]
 
 
@@ -1091,7 +1128,7 @@ def _make_report_id() -> str:
 class ScoreInfoBand(Flowable):
     """Navy score band with thin vertical separators between columns."""
 
-    def __init__(self, overall: int, grade: str, stage: str, width: float = 7.0 * inch, height: float = 80):
+    def __init__(self, overall: int, grade: str, stage: str, width: float = 7.0 * inch, height: float = 72):
         super().__init__()
         self.overall = overall
         self.grade = grade
@@ -1119,7 +1156,7 @@ class ScoreInfoBand(Flowable):
 
         col_w = self.width / 3.0
         centers = [col_w * 0.5, col_w * 1.5, col_w * 2.5]
-        labels = ["OVERALL SCORE", "GRADE", "FINANCIAL STAGE"]
+        labels = ["OVERALL SCORE", "GRADE", "PROFILE"]
         values = [f"{self.overall} / 100", str(self.grade), str(self.stage)]
         value_sizes = [22, 22, 10 if len(self.stage) > 18 else 12]
 
@@ -1130,7 +1167,7 @@ class ScoreInfoBand(Flowable):
             c.setFillColor(WHITE)
             c.setFont("Helvetica-Bold", vsize)
             # Wrap long stage names onto two lines if needed.
-            if label == "FINANCIAL STAGE" and len(value) > 22 and ":" in value:
+            if label == "PROFILE" and ":" in value:
                 left, right = value.split(":", 1)
                 c.drawCentredString(cx, self.height / 2 + 2, f"{left}:")
                 c.setFont("Helvetica-Bold", max(9, vsize - 1))
@@ -1144,7 +1181,7 @@ def _score_info_band(overall: int, grade: str, stage: str) -> list[Any]:
         ScoreInfoBand(overall, grade, stage),
         HRFlowable(width="100%", thickness=2, color=TEAL, spaceBefore=0, spaceAfter=0),
         *_grade_stage_clarify(),
-        Spacer(1, 8),
+        Spacer(1, 4),
     ]
 
 
@@ -1176,20 +1213,36 @@ class ScoreBarRow(Flowable):
         c.setFillColor(BAR_BG)
         c.rect(bar_x, bar_y, bar_w, bar_h, fill=1, stroke=0)
 
-        fill_w = (self.score / 100.0) * bar_w
-        if fill_w > 0:
-            c.setFillColor(fill_color)
-            c.rect(bar_x, bar_y, fill_w, bar_h, fill=1, stroke=0)
+        # Always show a visible stub so zero never looks like a rendering error.
+        if self.score <= 0:
+            fill_w = 5
+            fill_color = RED
+        else:
+            fill_w = (self.score / 100.0) * bar_w
+            if self.score <= 10:
+                fill_w = max(fill_w, 12)
+        c.setFillColor(fill_color)
+        c.rect(bar_x, bar_y, fill_w, bar_h, fill=1, stroke=0)
 
         score_x = bar_x + bar_w + 10
         c.setFillColor(fill_color)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(score_x, 5, f"{int(round(self.score))}")
+        score_text = f"{int(round(self.score))}"
+        c.drawString(score_x, 5, score_text)
 
-        status_x = score_x + 36
+        cursor_x = score_x + c.stringWidth(score_text, "Helvetica-Bold", 10) + 4
+        if self.score <= 0 and not self.overall:
+            c.setFillColor(MUTED)
+            c.setFont("Helvetica-Oblique", 8)
+            note = "(not yet started)"
+            c.drawString(cursor_x, 5, note)
+            cursor_x += c.stringWidth(note, "Helvetica-Oblique", 8) + 6
+        else:
+            cursor_x = score_x + 36
+
         c.setFont("Helvetica", 9)
         c.setFillColor(fill_color)
-        c.drawString(status_x, 5, status)
+        c.drawString(cursor_x, 5, status)
 
 
 class FeatureIconBox(Flowable):
@@ -1936,8 +1989,10 @@ def _current_path_lines(
     scores: dict[str, float],
     flags: dict[str, bool],
     answers: dict[str, Any] | None = None,
+    overall: int | None = None,
 ) -> list[str]:
     _ = answers or {}
+    overall_score = int(overall if overall is not None else 0)
     pool = {
         "Financial Behavior": (
             "Investment decisions influenced by emotion tend to compound negatively over time. "
@@ -2019,8 +2074,12 @@ def _current_path_lines(
         )
     lines = [_clean_text(x) for x in lines[:4]]
     lines.append(
-        "None of these outcomes require a dramatic event to occur - they are the natural "
-        "result of unchanged patterns applied consistently over time."
+        _clean_text(
+            f"At a readiness score of {overall_score}/100, the gap between current habits and a "
+            "resilient financial foundation grows with each passing month that patterns stay "
+            "unchanged. The cost of inaction is not dramatic - it is gradual and quiet, which "
+            "makes it more dangerous."
+        )
     )
     return lines
 
@@ -2528,8 +2587,8 @@ def _page_toc(
         Paragraph("GRADE", label_style),
         Paragraph(str(grade), value_style),
         Spacer(1, 6),
-        Paragraph("FINANCIAL STAGE", label_style),
-        Paragraph(stage, value_style),
+        Paragraph("PROFILE", label_style),
+        Paragraph(_profile_short(stage), value_style),
     ]
     right_col = [
         Paragraph("STRONGEST AREA", label_style),
@@ -2575,6 +2634,105 @@ def _safe_extend(story: list[Any], builder: Any, label: str) -> None:
         story.append(Paragraph(f"Detail: {type(exc).__name__}", styles["muted"]))
 
 
+def _cover_snapshot_box(
+    styles: dict[str, ParagraphStyle],
+    *,
+    report_id: str,
+    stage: str,
+    scores: dict[str, float],
+) -> Table:
+    label_style = ParagraphStyle(
+        "IRCoverSnapLabel",
+        parent=styles["body"],
+        fontName="Helvetica",
+        fontSize=7,
+        textColor=MUTED,
+        leading=9,
+        alignment=TA_LEFT,
+        spaceAfter=1,
+    )
+    value_style = ParagraphStyle(
+        "IRCoverSnapValue",
+        parent=styles["body"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        textColor=NAVY,
+        leading=12,
+        alignment=TA_LEFT,
+        spaceAfter=6,
+    )
+    strongest = max(scores.items(), key=lambda item: item[1])[0] if scores else "N/A"
+    weakest = min(scores.items(), key=lambda item: item[1])[0] if scores else "N/A"
+    completed = datetime.utcnow().strftime("%B %d, %Y")
+    left = [
+        Paragraph("COMPLETED", label_style),
+        Paragraph(completed, value_style),
+        Paragraph("REPORT ID", label_style),
+        Paragraph(report_id, value_style),
+        Paragraph("SECTIONS", label_style),
+        Paragraph("9 categories assessed", value_style),
+    ]
+    right = [
+        Paragraph("STRONGEST", label_style),
+        Paragraph(strongest, value_style),
+        Paragraph("PRIORITY GAP", label_style),
+        Paragraph(weakest, value_style),
+        Paragraph("STAGE", label_style),
+        Paragraph(_profile_short(stage), value_style),
+    ]
+    table = Table([[left, right]], colWidths=[3.4 * inch, 3.4 * inch])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), SILVER),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
+    return table
+
+
+def _cover_contains_rows(styles: dict[str, ParagraphStyle]) -> list[Any]:
+    row_style = ParagraphStyle(
+        "IRCoverContains",
+        parent=styles["body"],
+        fontName="Helvetica",
+        fontSize=9,
+        textColor=NAVY,
+        leading=12,
+        alignment=TA_LEFT,
+        spaceAfter=2,
+    )
+    items = [
+        "A diagnosis of your 3 biggest financial risks identified from your responses",
+        "A personalized 7, 30, and 90-day action plan based on your specific gaps",
+        "Educational guidance tailored to your financial stage and Muslim values",
+    ]
+    rows: list[Any] = []
+    for item in items:
+        bullet = Paragraph("<font color='#1ec8b8'>&#9679;</font>", row_style)
+        body = Paragraph(_clean_text(item), row_style)
+        row = Table([[bullet, body]], colWidths=[0.22 * inch, 6.5 * inch])
+        row.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ]
+            )
+        )
+        rows.append(row)
+    return rows
+
+
 def _page_cover(
     styles: dict[str, ParagraphStyle],
     *,
@@ -2584,39 +2742,46 @@ def _page_cover(
     overall: int,
     grade: str,
     stage: str,
+    scores: dict[str, float] | None = None,
 ) -> list[Any]:
+    scores = scores or {}
     story: list[Any] = []
     for item in _bismillah_flowables(styles):
         story.append(item)
-    story.append(Spacer(1, 10))
-    story.append(_logo_flowable(1.15 * inch))
-    story.append(Spacer(1, 12))
-    story.extend(_header_band("InvestReady Financial Readiness Report"))
+    story.append(Spacer(1, 4))
+    story.append(_logo_flowable(0.95 * inch))
     story.append(Spacer(1, 6))
-    story.append(Paragraph("Confidential Financial Summary", styles["teal_italic"]))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph(f"Prepared for <b>{name}</b>", styles["center"]))
-    story.append(Spacer(1, 4))
-    story.append(
-        Paragraph(
-            "This report was generated based on your personal responses and is intended "
-            "solely for your private use.",
-            styles["privacy"],
-        )
+    story.extend(_header_band("InvestReady Financial Readiness Report"))
+    cover_sub = ParagraphStyle(
+        "IRCoverSub",
+        parent=styles["teal_italic"],
+        spaceBefore=2,
+        spaceAfter=2,
     )
-    story.append(Spacer(1, 4))
-    story.append(Paragraph(f"Report ID: {report_id}", styles["report_id"]))
-    meta_bits = []
+    story.append(Paragraph("Confidential Financial Summary", cover_sub))
+    story.append(Paragraph(f"Prepared for <b>{name}</b>", styles["center"]))
     if email:
-        meta_bits.append(email)
-    meta_bits.append(datetime.utcnow().strftime("Generated %B %d, %Y"))
-    story.append(Paragraph(" &nbsp;|&nbsp; ".join(meta_bits), styles["muted"]))
-    story.append(Spacer(1, 12))
+        story.append(Paragraph(email, styles["muted"]))
+    story.append(Spacer(1, 6))
     story.extend(_score_info_band(overall, grade, stage))
+    story.append(Spacer(1, 8))
+    snap_h = ParagraphStyle(
+        "IRCoverSnapH",
+        parent=styles["section_h"],
+        fontSize=11,
+        spaceBefore=0,
+        spaceAfter=4,
+    )
+    story.append(Paragraph("Your Assessment Snapshot", snap_h))
+    story.append(_cover_snapshot_box(styles, report_id=report_id, stage=stage, scores=scores))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("What This Report Contains", snap_h))
+    story.extend(_cover_contains_rows(styles))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=1, color=TEAL, spaceBefore=2, spaceAfter=6))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
     return story
-
 
 def _page_executive_summary(
     styles: dict[str, ParagraphStyle],
@@ -2647,6 +2812,44 @@ def _page_executive_summary(
             styles["body"],
         )
     )
+    percentile = _peer_percentile(overall)
+    peer_note_style = ParagraphStyle(
+        "IRPeerNote",
+        parent=styles["body"],
+        fontName="Helvetica-Oblique",
+        fontSize=8,
+        textColor=MUTED,
+        leading=11,
+        spaceBefore=4,
+        spaceAfter=0,
+    )
+    peer_body = (
+        f"Based on assessment data, a score of {overall} places you in approximately the "
+        f"{percentile} of respondents who have completed this assessment."
+    )
+    peer_inner = [
+        Paragraph(_clean_text(peer_body), styles["shariah_body"]),
+        Paragraph(
+            "Percentile estimates are based on aggregate scoring distributions and are "
+            "provided for educational context only.",
+            peer_note_style,
+        ),
+    ]
+    peer_table = Table([[peer_inner]], colWidths=[6.8 * inch])
+    peer_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), TEAL_PALE),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, TEAL),
+            ]
+        )
+    )
+    story.append(Spacer(1, 6))
+    story.append(KeepTogether([peer_table, Spacer(1, 6)]))
 
     story.append(Paragraph("Key Strengths", styles["section_h"]))
     if strengths:
@@ -2684,11 +2887,20 @@ def _page_executive_summary(
 
     story.append(Spacer(1, 8))
     story.append(Paragraph("Bottom Line", styles["section_h"]))
-    bottom = STAGE_BOTTOM_LINE.get(
-        stage,
-        "Your next gains will come from closing the highest-impact gaps identified in this report.",
+    strongest_cat, strongest_score = (
+        max(scores.items(), key=lambda item: item[1]) if scores else ("Cash Stability", 0)
     )
-    story.append(Paragraph(_sentence_join("In summary, ", bottom), styles["body"]))
+    weakest_cat, weakest_score = (
+        min(scores.items(), key=lambda item: item[1]) if scores else ("Investing Readiness", 0)
+    )
+    bottom = (
+        f"In summary, {name}, your score of {overall}/100 places you in the "
+        f"{_profile_short(stage)} profile. Your {strongest_cat} score of "
+        f"{int(round(strongest_score))} shows what is possible when good habits are in place. "
+        f"Closing the gap on {weakest_cat} ({int(round(weakest_score))}/100) is the single "
+        f"highest-leverage improvement available to you right now."
+    )
+    story.append(Paragraph(_clean_text(bottom), styles["body"]))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
     return story
@@ -2800,11 +3012,12 @@ def _page_real_life(
     scores: dict[str, float],
     flags: dict[str, bool],
     answers: dict[str, Any] | None = None,
+    overall: int = 0,
 ) -> list[Any]:
     story: list[Any] = []
     story.extend(_header_band("What This Means in Real Life"))
     story.append(Paragraph("If Your Current Pattern Continues", styles["path_h_navy"]))
-    for line in _current_path_lines(scores, flags, answers):
+    for line in _current_path_lines(scores, flags, answers, overall=overall):
         story.append(Paragraph(line, styles["body"]))
     story.append(Paragraph("If You Address These Gaps", styles["path_h_teal"]))
     for line in _improved_path_lines(scores, flags):
@@ -3001,6 +3214,57 @@ def _page_mistakes(
     return story
 
 
+def _next_milestone_text(scores: dict[str, float]) -> str:
+    if not scores:
+        return (
+            "Choose one gap from this report and complete one concrete action on it within "
+            "the next 7 days."
+        )
+    lowest = min(scores.items(), key=lambda item: item[1])[0]
+    milestones = {
+        "Investing Readiness": (
+            "Begin your first halal investment contribution - even $25 per month - within "
+            "the next 30 days. Use stocks.irizq.com to find a Shariah-compliant fund to start with."
+        ),
+        "Savings Behavior": (
+            "Set up an automated savings transfer for any fixed amount within the next 7 days. "
+            "The amount matters less than the automation."
+        ),
+        "Financial Behavior": (
+            "Write one page of investment rules this week - what you will buy, hold, and do "
+            "in a market drop. Commit to it before the next market move."
+        ),
+        "Debt Position": (
+            "List every debt by interest rate today and make one extra payment on the highest "
+            "rate balance this month."
+        ),
+        "Cash Stability": (
+            "Open a dedicated emergency fund account today and make the first transfer - even "
+            "$50 starts the habit."
+        ),
+        "Retirement Planning": (
+            "Open or increase your halal-compatible retirement contribution by any amount "
+            "before the end of this month."
+        ),
+        "Tax Awareness": (
+            "Review which tax-advantaged accounts you qualify for and open or fund at least "
+            "one before the end of this month."
+        ),
+        "Financial Protection": (
+            "Research one Takaful or Shariah-compliant protection option this month and compare "
+            "it to your current coverage gap."
+        ),
+        "Risk Alignment": (
+            "Write down your maximum acceptable drawdown and the action you will take in a 20% "
+            "drop before the next market move."
+        ),
+    }
+    return milestones.get(
+        lowest,
+        "Choose one gap from this report and complete one concrete action on it within the next 7 days.",
+    )
+
+
 def _page_verdict(
     styles: dict[str, ParagraphStyle],
     *,
@@ -3008,7 +3272,9 @@ def _page_verdict(
     overall: int,
     grade: str,
     stage: str,
+    scores: dict[str, float] | None = None,
 ) -> list[Any]:
+    scores = scores or {}
     story: list[Any] = []
     story.extend(_header_band("Your Financial Readiness Verdict"))
     story.extend(_score_info_band(overall, grade, stage))
@@ -3020,7 +3286,7 @@ def _page_verdict(
         Paragraph(
             _clean_text(
                 f"{name}, your Financial Readiness Score of {overall}/100 places you in the "
-                f"{stage} stage. {verdict}"
+                f"{_profile_short(stage)} profile. {verdict}"
             ),
             styles["body"],
         )
@@ -3045,17 +3311,71 @@ def _page_verdict(
                 parent=styles["teal_italic"],
                 fontSize=10,
                 alignment=TA_CENTER,
-                spaceBefore=12,
+                spaceBefore=10,
+                spaceAfter=8,
+            ),
+        )
+    )
+
+    milestone_h = ParagraphStyle(
+        "IRMilestoneH",
+        parent=styles["h2"],
+        fontSize=12,
+        textColor=TEAL,
+        spaceBefore=4,
+        spaceAfter=4,
+    )
+    story.append(Paragraph("Your Next Milestone", milestone_h))
+    story.append(
+        _dense_callout(
+            "Focus Here First",
+            _clean_text(_next_milestone_text(scores)),
+            TEAL,
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "Track Your Progress",
+            ParagraphStyle(
+                "IRTrackH",
+                parent=styles["h2"],
+                fontSize=11,
+                textColor=NAVY,
+                spaceBefore=4,
+                spaceAfter=4,
+            ),
+        )
+    )
+    story.append(
+        Paragraph(
+            _clean_text(
+                "Financial readiness is not a one-time measurement. Retake this assessment in "
+                "90 days to measure your improvement across all 9 categories. Small consistent "
+                "actions compound into meaningful score changes over time."
+            ),
+            styles["body"],
+        )
+    )
+    story.append(
+        Paragraph(
+            "stocks.irizq.com/investready",
+            ParagraphStyle(
+                "IRRetakeLink",
+                parent=styles["teal"],
+                fontSize=10,
+                alignment=TA_CENTER,
+                spaceBefore=4,
                 spaceAfter=10,
             ),
         )
     )
+
     story.append(Paragraph("Continue your journey:", styles["center"]))
     story.append(Paragraph("iRizq.com &nbsp;|&nbsp; stocks.irizq.com", styles["teal"]))
     story.append(Paragraph(FINAL_DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
     return story
-
 
 def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     """Generate the InvestReady PDF and return raw bytes."""
@@ -3067,7 +3387,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     stage = _normalize_stage(
         payload.get("financial_stage")
         or payload.get("investor_profile")
-        or "Stage 3: Growth Preparation"
+        or "Profile: Pre-Growth"
     )
 
     scores = _normalize_scores(payload.get("category_scores") or {})
@@ -3115,6 +3435,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             overall=overall,
             grade=grade,
             stage=stage,
+            scores=scores,
         ),
         "Cover",
     )
@@ -3148,7 +3469,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     )
     _safe_extend(
         story,
-        lambda: _page_real_life(styles, scores, flags, answers),
+        lambda: _page_real_life(styles, scores, flags, answers, overall),
         "What This Means",
     )
     _safe_extend(story, lambda: _page_action_plan(styles, actions), "Action Plan")
@@ -3172,6 +3493,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             overall=overall,
             grade=grade,
             stage=stage,
+            scores=scores,
         ),
         "Final Verdict",
     )
