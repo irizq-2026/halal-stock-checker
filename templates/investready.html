@@ -496,11 +496,11 @@
     }
 
     .section-tooltip {
-      position: absolute;
-      top: calc(100% + 10px);
+      position: fixed;
+      top: 0;
       left: 0;
       width: max-content;
-      max-width: min(280px, calc(100vw - 2rem));
+      max-width: min(280px, calc(100vw - 1.5rem));
       padding: 14px 16px;
       border-radius: 10px;
       border: 1px solid rgba(30, 200, 184, 0.3);
@@ -513,11 +513,12 @@
       text-transform: none;
       letter-spacing: normal;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      z-index: 999;
+      z-index: 9999;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
       transition: opacity 100ms ease;
+      --tooltip-arrow-left: 14px;
     }
 
     .section-tooltip.is-open {
@@ -527,31 +528,16 @@
       transition: opacity 150ms ease;
     }
 
-    .section-tooltip.align-right {
-      left: auto;
-      right: 0;
-    }
-
-    .section-tooltip.is-above {
-      top: auto;
-      bottom: calc(100% + 10px);
-    }
-
     .section-tooltip::before {
       content: "";
       position: absolute;
       top: -6px;
-      left: 14px;
+      left: var(--tooltip-arrow-left);
       width: 0;
       height: 0;
       border-left: 6px solid transparent;
       border-right: 6px solid transparent;
       border-bottom: 6px solid var(--teal);
-    }
-
-    .section-tooltip.align-right::before {
-      left: auto;
-      right: 14px;
     }
 
     .section-tooltip.is-above::before {
@@ -1834,17 +1820,59 @@
       return sectionTooltip.classList.contains("is-open");
     }
 
+    function clearSectionTooltipPosition() {
+      sectionTooltip.classList.remove("is-above");
+      sectionTooltip.style.left = "";
+      sectionTooltip.style.top = "";
+      sectionTooltip.style.maxWidth = "";
+      sectionTooltip.style.removeProperty("--tooltip-arrow-left");
+    }
+
     function positionSectionTooltip() {
-      sectionTooltip.classList.remove("align-right", "is-above");
+      const pad = 12;
+      const gap = 10;
       const iconRect = sectionInfoBtn.getBoundingClientRect();
+      const maxWidth = Math.min(280, window.innerWidth - pad * 2);
+      sectionTooltip.style.maxWidth = `${maxWidth}px`;
+
+      // Measure with current content after max-width is applied.
       const tipRect = sectionTooltip.getBoundingClientRect();
-      const pad = 8;
-      if (iconRect.left + tipRect.width > window.innerWidth - pad) {
-        sectionTooltip.classList.add("align-right");
+      const tipW = tipRect.width || maxWidth;
+      const tipH = tipRect.height || 120;
+
+      // Prefer below the icon, starting near the icon's left edge.
+      let left = iconRect.left;
+      let top = iconRect.bottom + gap;
+      let above = false;
+
+      // Keep the full tooltip inside the viewport horizontally.
+      if (left + tipW > window.innerWidth - pad) {
+        left = window.innerWidth - pad - tipW;
       }
-      if (iconRect.bottom + 10 + tipRect.height > window.innerHeight - pad) {
-        sectionTooltip.classList.add("is-above");
+      if (left < pad) {
+        left = pad;
       }
+
+      // Flip above when there is not enough room below.
+      if (top + tipH > window.innerHeight - pad) {
+        top = iconRect.top - gap - tipH;
+        above = true;
+      }
+      if (top < pad) {
+        top = pad;
+        above = false;
+      }
+
+      sectionTooltip.style.left = `${Math.round(left)}px`;
+      sectionTooltip.style.top = `${Math.round(top)}px`;
+      sectionTooltip.classList.toggle("is-above", above);
+
+      // Point the arrow at the info icon center.
+      const arrowLeft = Math.min(
+        Math.max(12, iconRect.left + iconRect.width / 2 - left - 6),
+        tipW - 18
+      );
+      sectionTooltip.style.setProperty("--tooltip-arrow-left", `${Math.round(arrowLeft)}px`);
     }
 
     function closeSectionTooltip() {
@@ -1859,7 +1887,7 @@
         window.clearTimeout(sectionTooltipCloseTimer);
       }
       sectionTooltipCloseTimer = window.setTimeout(() => {
-        sectionTooltip.classList.remove("align-right", "is-above");
+        clearSectionTooltipPosition();
         sectionTooltipCloseTimer = null;
       }, 100);
     }
@@ -2507,6 +2535,16 @@
     nextBtn.addEventListener("click", goNext);
 
     sectionInfoBtn.addEventListener("click", toggleSectionTooltip);
+    window.addEventListener("resize", () => {
+      if (isSectionTooltipOpen()) {
+        positionSectionTooltip();
+      }
+    });
+    window.addEventListener("scroll", () => {
+      if (isSectionTooltipOpen()) {
+        positionSectionTooltip();
+      }
+    }, true);
     sectionTooltip.addEventListener("click", (event) => {
       event.stopPropagation();
     });
