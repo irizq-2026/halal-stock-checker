@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import random
+import re
 import string
 from datetime import datetime
 from pathlib import Path
@@ -528,6 +529,36 @@ def _styles() -> dict[str, ParagraphStyle]:
             alignment=TA_RIGHT,
             leading=16,
         ),
+        "toc_howto_h": ParagraphStyle(
+            "IRTocHowToH",
+            parent=base["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            textColor=NAVY,
+            spaceBefore=8,
+            spaceAfter=10,
+        ),
+        "toc_howto_body": ParagraphStyle(
+            "IRTocHowToBody",
+            parent=base["BodyText"],
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=TEXT,
+            leading=13,
+            spaceAfter=12,
+            alignment=TA_LEFT,
+        ),
+        "mistake_note": ParagraphStyle(
+            "IRMistakeNote",
+            parent=base["BodyText"],
+            fontName="Helvetica-Oblique",
+            fontSize=9,
+            textColor=TEAL,
+            alignment=TA_LEFT,
+            leading=12,
+            spaceBefore=4,
+            spaceAfter=2,
+        ),
         "white_center": ParagraphStyle(
             "IRWhiteCenter",
             parent=base["BodyText"],
@@ -719,6 +750,20 @@ def _styles() -> dict[str, ParagraphStyle]:
     }
 
 
+def _letter_grade(score: float) -> str:
+    """Intuitive grade scale used in the app and PDF."""
+    value = float(score)
+    if value >= 85:
+        return "A"
+    if value >= 70:
+        return "B"
+    if value >= 55:
+        return "C"
+    if value >= 40:
+        return "D"
+    return "F"
+
+
 def _score_color(score: float) -> colors.Color:
     if score >= 80:
         return TEAL
@@ -733,6 +778,37 @@ def _score_status(score: float) -> str:
     if score >= 60:
         return "Developing"
     return "Needs Attention"
+
+
+def _pluralize_count(count: int, singular: str, plural: str) -> str:
+    return f"{count} {singular}" if count == 1 else f"{count} {plural}"
+
+
+def _clean_text(text: str) -> str:
+    """Collapse whitespace and normalize hyphen variants to regular hyphens."""
+    cleaned = str(text or "").replace("\u2014", "-").replace("\u2013", "-")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _sentence_join(prefix: str, continuation: str) -> str:
+    """Join prefix + continuation with correct mid-sentence capitalization."""
+    text = _clean_text(continuation)
+    if not text:
+        return _clean_text(prefix)
+    fixed = text[0].lower() + text[1:] if text[0].isupper() else text
+    return _clean_text(f"{prefix}{fixed}")
+
+
+def _grade_label(score: float) -> str:
+    grade = _letter_grade(score)
+    labels = {
+        "A": "Excellent Financial Readiness",
+        "B": "Strong Foundation",
+        "C": "Developing Foundation",
+        "D": "Needs Attention",
+        "F": "Foundation Building Required",
+    }
+    return labels.get(grade, "Developing Foundation")
 
 
 def _color_hex(color: colors.Color) -> str:
@@ -768,12 +844,19 @@ def _header_band(title: str) -> list[Any]:
     return [table, HRFlowable(width="100%", thickness=3, color=TEAL, spaceAfter=12)]
 
 
-def _callout(title: str, body: str, border_color: colors.Color = AMBER) -> KeepTogether:
+def _callout(
+    title: str,
+    body: str,
+    border_color: colors.Color = AMBER,
+    note: str | None = None,
+) -> KeepTogether:
     styles = _styles()
     inner = [
         Paragraph(f"<b>{title}</b>", styles["h2"]),
         Paragraph(body, styles["body_left"]),
     ]
+    if note:
+        inner.append(Paragraph(_clean_text(note), styles["mistake_note"]))
     table = Table([[inner]], colWidths=[6.8 * inch])
     table.setStyle(
         TableStyle(
@@ -1273,7 +1356,29 @@ def _risk_pack(
             "takaful": False,
         }
 
-    if category in {"Financial Behavior", "Risk Alignment"}:
+    if category == "Risk Alignment":
+        return {
+            "name": "Risk Alignment Risk",
+            "means": (
+                "Based on your responses, there may be a gap between the risk you say "
+                "you can handle and how you would likely react under real market pressure. "
+                "That mismatch is one of the most common ways investors abandon otherwise "
+                "sound halal strategies."
+            ),
+            "costs": [
+                "Selling during a drawdown after previously claiming high risk tolerance",
+                "Taking more risk than your behavior can sustain",
+                "Strategy changes that interrupt long-term compounding",
+            ],
+            "fixes": [
+                "Write down your maximum acceptable drawdown before the next market move",
+                "Match portfolio risk to the action you would take in a 20% drop",
+                "Review risk rules once a quarter when markets are calm",
+            ],
+            "takaful": False,
+        }
+
+    if category == "Financial Behavior":
         return {
             "name": "Behavioral Risk",
             "means": (
@@ -1378,21 +1483,134 @@ def _risk_pack(
     }
 
 
+def _opportunity_cost_risk() -> dict[str, Any]:
+    return {
+        "name": "Opportunity Cost Risk",
+        "category": "General",
+        "score": 0.0,
+        "means": (
+            "Based on your responses, there may be areas where inaction is itself a "
+            "financial risk. Delayed decisions on saving, investing, or protection carry "
+            "a compounding cost that is easy to underestimate."
+        ),
+        "costs": [
+            "Lost compounding years that cannot be recovered later",
+            "Inflation quietly reducing the purchasing power of idle cash",
+            "Protection and savings gaps that become more expensive to close over time",
+        ],
+        "fixes": [
+            "Choose one delayed decision from this report and complete it this week",
+            "Automate one savings or investing transfer so progress does not depend on motivation",
+            "Reassess in 90 days and measure whether the gap has narrowed",
+        ],
+        "takaful": False,
+    }
+
+
 def _build_risks(
     scores: dict[str, float],
     answers: dict[str, Any],
     flags: dict[str, bool],
 ) -> list[dict[str, Any]]:
-    lowest = _ranked(scores)[:3]
-    while len(lowest) < 3:
-        lowest.append((f"Priority Area {len(lowest) + 1}", 0.0))
-    risks = []
-    for cat, score in lowest:
+    """Build exactly 3 risks from unique categories/names."""
+    ranked = _ranked(scores)
+    risks: list[dict[str, Any]] = []
+    used_names: set[str] = set()
+    used_categories: set[str] = set()
+
+    # If RISK_MISMATCH is set, prioritize Risk Alignment once.
+    if flags.get("RISK_MISMATCH"):
+        score = float(scores.get("Risk Alignment", 50))
+        pack = _risk_pack(
+            "Risk Alignment",
+            score,
+            answers=answers,
+            flags=flags,
+            scores=scores,
+        )
+        pack["category"] = "Risk Alignment"
+        pack["score"] = score
+        risks.append(pack)
+        used_names.add(pack["name"])
+        used_categories.add("Risk Alignment")
+        # Do not also consume Financial Behavior as a second behavioral slot.
+        used_categories.add("Financial Behavior")
+
+    for cat, score in ranked:
+        if len(risks) >= 3:
+            break
+        if cat in used_categories:
+            continue
+        # If Risk Alignment already used, skip Financial Behavior (and vice versa name clash).
+        if cat == "Financial Behavior" and "Risk Alignment Risk" in used_names:
+            continue
+        if cat == "Risk Alignment" and "Behavioral Risk" in used_names:
+            continue
         pack = _risk_pack(cat, score, answers=answers, flags=flags, scores=scores)
+        name = str(pack.get("name") or "")
+        if not name or name in used_names:
+            continue
         pack["category"] = cat
         pack["score"] = score
         risks.append(pack)
-    return risks
+        used_names.add(name)
+        used_categories.add(cat)
+
+    while len(risks) < 3:
+        filler = _opportunity_cost_risk()
+        if filler["name"] in used_names:
+            filler["name"] = f"Opportunity Cost Risk {len(risks) + 1}"
+        risks.append(filler)
+        used_names.add(filler["name"])
+
+    # Final uniqueness verification.
+    final: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for risk in risks:
+        name = str(risk.get("name") or "")
+        if name in seen:
+            continue
+        seen.add(name)
+        final.append(risk)
+    while len(final) < 3:
+        final.append(_opportunity_cost_risk())
+    assert len({r["name"] for r in final[:3]}) == 3
+    return final[:3]
+
+
+def _action_core(text: str) -> str:
+    """Normalize an action to a short core key for cross-section deduplication."""
+    cleaned = _clean_text(text).lower()
+    cleaned = re.sub(r"[^a-z0-9\s]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    # Collapse near-duplicates around the same core instruction.
+    if "investment rule" in cleaned or "rule set" in cleaned or "no panic rule" in cleaned:
+        return "write investment rules"
+    if "list every debt" in cleaned:
+        return "list every debt"
+    if "emergency fund" in cleaned and ("transfer" in cleaned or "automatic" in cleaned or "open" in cleaned):
+        return "emergency fund transfer"
+    if "retake" in cleaned or "reassess your financial readiness" in cleaned:
+        return "retake assessment"
+    if "takaful" in cleaned or "shariah compliant protection" in cleaned:
+        return "research protection options"
+    if "stocks.irizq.com" in cleaned or "shariah compliance" in cleaned:
+        return "screen shariah compliance"
+    return cleaned[:56]
+
+
+def _pick_unique_actions(candidates: list[str], used: set[str], limit: int = 3) -> list[str]:
+    picked: list[str] = []
+    for action in candidates:
+        text = _clean_text(action)
+        core = _action_core(text)
+        if not text or core in used:
+            continue
+        picked.append(text)
+        used.add(core)
+        if len(picked) >= limit:
+            break
+    return picked
 
 
 def _action_plan(
@@ -1410,104 +1628,118 @@ def _action_plan(
     stability = float(scores.get("Cash Stability", 100))
     risk_align = float(scores.get("Risk Alignment", 100))
 
-    days7: list[str] = []
+    days7_candidates: list[str] = []
     if flags.get("CRITICAL_STABILITY") or stability < 50:
-        days7.append(
+        days7_candidates.append(
             "Calculate your exact monthly expenses and set an emergency fund target of "
             "3 months as your first milestone."
         )
     if debt < 55 or _ans_int(answers, "q6", 4) <= 1:
-        days7.append(
+        days7_candidates.append(
             "List every debt with its balance and interest rate. Identify the highest "
             "rate and commit to paying more than the minimum this month."
         )
     if flags.get("LOW_SAVER") or savings < 50:
-        days7.append(
+        days7_candidates.append(
             "Set up an automatic transfer for any fixed amount on your next payday - "
             "even $50 builds the habit."
         )
-    days7.append(
+    days7_candidates.append(
         "Visit stocks.irizq.com and verify the Shariah compliance of one investment "
         "you currently hold or are considering."
     )
-    if flags.get("EMOTIONAL_INVEST") or behavior < 50:
-        days7.append(
+    if flags.get("EMOTIONAL_INVEST") or behavior < 50 or flags.get("RISK_MISMATCH"):
+        days7_candidates.append(
             "Write a one-page rule set for what you will buy, hold, and refuse to sell "
             "under stress."
         )
-    days7 = days7[:3]
+    days7_candidates.append(
+        "Block 20 minutes this week to review this report and choose one habit to automate."
+    )
+    used: set[str] = set()
+    days7 = _pick_unique_actions(days7_candidates, used, 3)
     while len(days7) < 3:
-        days7.append(
-            "Block 20 minutes this week to review this report and choose one habit to automate."
-        )
+        filler = "Write down your top financial priority for this week and one action that moves it forward."
+        if _action_core(filler) not in used:
+            days7.append(filler)
+            used.add(_action_core(filler))
+        else:
+            break
 
-    days30: list[str] = []
+    days30_candidates: list[str] = []
     if savings < 65:
-        days30.append(
+        days30_candidates.append(
             "Increase your automated savings by any percentage - even 1% creates "
             "meaningful momentum over 12 months."
         )
     if flags.get("POOR_PLANNING") or _ans_int(answers, "q15", 4) <= 1:
-        days30.append(
+        days30_candidates.append(
             "Install a simple expense tracking app and categorize your last 30 days of "
             "spending to find your biggest cash leak."
         )
     if investing < 40 and stability >= 55 and debt >= 55:
-        days30.append(
+        days30_candidates.append(
             "Open a halal investment account and make your first contribution - amount "
             "matters less than starting the habit."
         )
-    if flags.get("EMOTIONAL_INVEST") or behavior < 60 or flags.get("RISK_MISMATCH"):
-        days30.append(
-            "Write one page defining your investment rules - what you will buy, hold, "
-            "and sell under what conditions."
-        )
-    days30.append(
-        "Schedule a 30-minute financial review to assess progress on your 7-day actions."
+    days30_candidates.extend(
+        [
+            "List every debt with its balance, minimum payment, and interest rate - then "
+            "commit to paying double the minimum on the highest rate this month.",
+            "Open a separate savings account specifically for your emergency fund and make "
+            "the first transfer today - any amount starts the habit.",
+            "Screen your top 3 current or planned investments at stocks.irizq.com to "
+            "confirm their Shariah compliance status.",
+            "Calculate your actual monthly savings rate from the last 3 months of bank "
+            "statements and compare it to your target rate.",
+            "Schedule a 30-minute financial review to assess progress on your 7-day actions.",
+            "Raise one automated transfer by a small fixed amount and keep it unchanged for 30 days.",
+        ]
     )
-    days30 = days30[:3]
-    while len(days30) < 3:
-        days30.append(
-            "Raise one automated transfer by a small fixed amount and keep it unchanged for 30 days."
-        )
+    days30 = _pick_unique_actions(days30_candidates, used, 3)
 
-    days90: list[str] = []
+    days90_candidates: list[str] = []
     if retirement < 65:
-        days90.append(
+        days90_candidates.append(
             "Open or increase contributions to a halal-compatible retirement account "
             "by at least 1% of income."
         )
     if investing > 0 and investing < 70:
-        days90.append(
+        days90_candidates.append(
             "Review your portfolio for concentration risk - no single position should "
             "exceed 20% of total investments."
         )
     if tax < 65:
-        days90.append(
+        days90_candidates.append(
             "Schedule a 30-minute session to review which tax-advantaged accounts you "
             "qualify for and are not using."
         )
     if protection < 65:
-        days90.append(
+        days90_candidates.append(
             "Research Takaful or Shariah-compliant protection options available in your "
             "area for health and income protection."
         )
     if risk_align < 60:
-        days90.append(
+        days90_candidates.append(
             "Revisit your written risk rules after one calm month and confirm they still "
             "match how you would act in a 20% drop."
         )
-    days90.append(
-        "Reassess your Financial Readiness Score by retaking this assessment and measure "
-        "your improvement."
+    days90_candidates.extend(
+        [
+            "Increase your retirement or long-term savings contribution by 1% of income "
+            "and automate it so it does not require a monthly decision.",
+            "Research at least one Takaful or Shariah-compliant protection option "
+            "available in your area and compare it to your current coverage gap.",
+            "Write your 3 financial goals with specific dollar targets and dates, then "
+            "review them every Monday morning for the next month.",
+            "Set a calendar reminder to retake the InvestReady assessment in 90 days to "
+            "measure improvement across all 9 categories.",
+            "Document one structural improvement completed in the last quarter and one still open.",
+        ]
     )
-    days90 = days90[:3]
-    while len(days90) < 3:
-        days90.append(
-            "Document one structural improvement completed in the last quarter and one still open."
-        )
+    days90 = _pick_unique_actions(days90_candidates, used, 3)
 
-    return {"days7": days7, "days30": days30, "days90": days90}
+    return {"days7": days7[:3], "days30": days30[:3], "days90": days90[:3]}
 
 
 def _current_path_lines(
@@ -1515,78 +1747,166 @@ def _current_path_lines(
     flags: dict[str, bool],
     answers: dict[str, Any] | None = None,
 ) -> list[str]:
-    answers = answers or {}
+    _ = answers or {}
+    pool = {
+        "Financial Behavior": (
+            "Investment decisions influenced by emotion tend to compound negatively over time. "
+            "The pattern of reacting to market moves rather than following a plan typically "
+            "results in buying high and selling low - the opposite of what builds wealth."
+        ),
+        "Debt Position": (
+            "High-interest debt that remains unaddressed continues to quietly consume cash flow "
+            "that could otherwise be building your halal investment base. The longer it remains, "
+            "the more expensive it becomes relative to your savings rate."
+        ),
+        "Cash Stability": (
+            "Without an adequate emergency buffer, the next financial shock - whether a job "
+            "change, medical cost, or unexpected expense - will force reactive decisions rather "
+            "than strategic ones. This pattern typically resets months of careful progress in a "
+            "short period."
+        ),
+        "Savings Behavior": (
+            "Inconsistent savings creates a gap between intention and outcome that widens "
+            "gradually. Without automation, savings decisions compete with spending decisions "
+            "every month - and spending usually wins."
+        ),
+        "Retirement Planning": (
+            "Delayed or inconsistent retirement contributions mean compounding works at a "
+            "fraction of its potential. Each year of delay requires proportionally more "
+            "contribution later to reach the same outcome."
+        ),
+        "Tax Awareness": (
+            "Unused tax-advantaged accounts represent a guaranteed return being left on the "
+            "table. At any income level, this is one of the most accessible and consistently "
+            "overlooked improvements available."
+        ),
+        "Financial Protection": (
+            "Protection gaps mean that a single health or income disruption event could reverse "
+            "significant financial progress. This risk grows in proportion to your dependents "
+            "and financial responsibilities."
+        ),
+    }
     lines: list[str] = []
-    if float(scores.get("Cash Stability", 100)) < 60 or flags.get("CRITICAL_STABILITY"):
-        lines.append(
-            "Financial shocks will likely require debt or forced investment withdrawals to manage."
-        )
-    if float(scores.get("Savings Behavior", 100)) < 60 or flags.get("LOW_SAVER"):
-        lines.append(
-            "Progress toward financial goals will be slow and vulnerable to disruption."
-        )
+    used: set[str] = set()
+    for cat, score in _ranked(scores):
+        if score >= 70:
+            continue
+        text = pool.get(cat)
+        if not text or cat in used:
+            continue
+        used.add(cat)
+        lines.append(_clean_text(text))
+        if len(lines) >= 3:
+            break
+    if flags.get("CRITICAL_STABILITY") and "Cash Stability" not in used:
+        lines.insert(0, _clean_text(pool["Cash Stability"]))
+        used.add("Cash Stability")
+    if flags.get("LOW_SAVER") and "Savings Behavior" not in used and len(lines) < 4:
+        lines.append(_clean_text(pool["Savings Behavior"]))
+        used.add("Savings Behavior")
     if (
-        flags.get("EMOTIONAL_INVEST")
-        or flags.get("OVERSPEND")
-        or flags.get("LOW_DISCIPLINE")
-        or flags.get("POOR_PLANNING")
-        or flags.get("DEBT_HABIT")
-        or float(scores.get("Financial Behavior", 100)) < 55
+        (
+            flags.get("EMOTIONAL_INVEST")
+            or flags.get("OVERSPEND")
+            or flags.get("LOW_DISCIPLINE")
+            or flags.get("POOR_PLANNING")
+            or flags.get("DEBT_HABIT")
+        )
+        and "Financial Behavior" not in used
+        and len(lines) < 4
     ):
-        lines.append(
-            "Investment decisions may continue to be influenced by market emotion rather than strategy."
-        )
-    if float(scores.get("Investing Readiness", 100)) <= 5 or _ans_int(answers, "q10", 1) == 0:
-        lines.append(
-            "Delayed investing means compounding works for others while your savings "
-            "lose purchasing power to inflation."
-        )
-    if float(scores.get("Debt Position", 100)) < 55:
-        lines.append(
-            "High-interest obligations will keep absorbing cash that could otherwise build reserves."
-        )
+        lines.append(_clean_text(pool["Financial Behavior"]))
+        used.add("Financial Behavior")
     if not lines:
+        lines = [
+            "Without tightening the weakest categories, progress will remain uneven and easier to reverse.",
+            "Small gaps in buffering, saving, and discipline tend to compound quietly over time.",
+            "Leaving weaker categories unaddressed usually delays compounding more than market timing ever helps.",
+        ]
+    while len(lines) < 3:
         lines.append(
-            "Without tightening the weakest categories, progress will remain uneven and easier to reverse."
+            "Leaving weaker categories unaddressed usually delays compounding more than market timing ever helps."
         )
-    return lines[:4]
+    lines = [_clean_text(x) for x in lines[:4]]
+    lines.append(
+        "None of these outcomes require a dramatic event to occur - they are the natural "
+        "result of unchanged patterns applied consistently over time."
+    )
+    return lines
 
 
 def _improved_path_lines(
     scores: dict[str, float],
     flags: dict[str, bool],
 ) -> list[str]:
+    pool = {
+        "Financial Behavior": (
+            "A written investment policy created before the next market move removes most "
+            "emotional decision-making before it happens. Investors with written rules "
+            "consistently outperform those without them, not because of better picks but "
+            "because of fewer mistakes."
+        ),
+        "Debt Position": (
+            "Clearing high-rate debt frees monthly cash flow and eliminates a guaranteed drag "
+            "on your net worth. This cash can then compound in your favor rather than working "
+            "against you."
+        ),
+        "Cash Stability": (
+            "A 3 to 6 month emergency buffer converts financial shocks from crises into "
+            "inconveniences. It also removes the pressure that causes most premature "
+            "investment sales at exactly the wrong time."
+        ),
+        "Savings Behavior": (
+            "Automating savings removes the monthly decision entirely. Consistent automated "
+            "contributions - even small ones - compound more reliably than larger irregular "
+            "deposits made when motivation is high."
+        ),
+        "Retirement Planning": (
+            "Increasing retirement contributions by even 1% with each pay review creates a "
+            "compounding improvement that is difficult to replicate later. The earlier this "
+            "habit is in place, the more it works in your favor."
+        ),
+        "Tax Awareness": (
+            "Using available tax-advantaged accounts creates a compounding advantage that "
+            "grows tax-deferred or tax-free. This improvement requires one decision and then "
+            "works automatically in the background."
+        ),
+        "Financial Protection": (
+            "Addressing protection gaps - whether through Takaful or other Shariah-compliant "
+            "arrangements - converts a binary risk into a managed one. With dependents, this "
+            "improvement has an immediate positive impact on family financial security."
+        ),
+    }
     lines: list[str] = []
-    if float(scores.get("Cash Stability", 100)) < 70 or flags.get("CRITICAL_STABILITY"):
-        lines.append(
-            "A 3-6 month buffer means financial shocks become inconveniences rather than crises."
-        )
-    if float(scores.get("Savings Behavior", 100)) < 70 or flags.get("LOW_SAVER"):
-        lines.append(
-            "Consistent automated savings creates momentum that compounds quietly in the background."
-        )
-    if (
-        flags.get("EMOTIONAL_INVEST")
-        or flags.get("RISK_MISMATCH")
-        or float(scores.get("Financial Behavior", 100)) < 65
-    ):
-        lines.append(
-            "A written investment plan eliminates most emotional decision-making before it happens."
-        )
-    if float(scores.get("Investing Readiness", 100)) < 50:
-        lines.append(
-            "Beginning halal investments now - even small amounts - creates compounding "
-            "that cannot be replicated later."
-        )
-    if float(scores.get("Debt Position", 100)) < 65:
-        lines.append(
-            "Clearing high-rate debt frees monthly cash and removes a guaranteed drag on progress."
-        )
+    used: set[str] = set()
+    for cat, score in _ranked(scores):
+        if score >= 70:
+            continue
+        text = pool.get(cat)
+        if not text or cat in used:
+            continue
+        used.add(cat)
+        lines.append(_clean_text(text))
+        if len(lines) >= 3:
+            break
+    if flags.get("CRITICAL_STABILITY") and "Cash Stability" not in used:
+        lines.insert(0, _clean_text(pool["Cash Stability"]))
     if not lines:
+        lines = [
+            "Closing the remaining gaps will make growth more durable and less dependent on perfect conditions.",
+            "A clearer monthly surplus and automatic contribution habit create consistency that markets alone cannot provide.",
+            "Closing foundation gaps first makes every later investment decision more resilient.",
+        ]
+    while len(lines) < 3:
         lines.append(
-            "Closing the remaining gaps will make growth more durable and less dependent on perfect conditions."
+            "Closing foundation gaps first makes every later investment decision more resilient."
         )
-    return lines[:4]
+    lines = [_clean_text(x) for x in lines[:4]]
+    lines.append(
+        "Financial readiness built on these foundations creates compounding momentum that "
+        "grows regardless of what markets do."
+    )
+    return lines
 
 
 def _behavior_gap_labels(flags: dict[str, bool], scores: dict[str, float]) -> list[str]:
@@ -1622,14 +1942,17 @@ def _mistakes_for_profile(
     answers: dict[str, Any],
     flags: dict[str, bool],
     dependents: str,
-) -> list[tuple[str, str]]:
-    mistakes: list[tuple[str, str]] = []
+) -> list[tuple[str, str, str]]:
+    """Return (title, detail, profile_note) tuples tied to the user's scores/flags."""
+    mistakes: list[tuple[str, str, str]] = []
     investing = float(scores.get("Investing Readiness", 0))
     debt = float(scores.get("Debt Position", 100))
     savings = float(scores.get("Savings Behavior", 100))
     behavior = float(scores.get("Financial Behavior", 100))
     protection = float(scores.get("Financial Protection", 100))
     tax = float(scores.get("Tax Awareness", 100))
+    risk_align = float(scores.get("Risk Alignment", 100))
+    stability = float(scores.get("Cash Stability", 100))
     has_dependents = str(dependents).strip().lower() not in {"", "0", "none", "no", "n/a"}
 
     if flags.get("CRITICAL_STABILITY"):
@@ -1638,6 +1961,9 @@ def _mistakes_for_profile(
                 "Investing Before the Foundation Is Stable",
                 "Many people begin investing while carrying insufficient emergency reserves. "
                 "The first market drop forces a sale at exactly the wrong moment.",
+                f"Based on your responses, your cash stability score of {int(round(stability))} "
+                "and thin emergency buffer flag indicate investing before reserves are solid "
+                "is a live risk for your profile.",
             )
         )
     if flags.get("EMOTIONAL_INVEST") or behavior < 50 or _ans_int(answers, "q19", 2) == 0:
@@ -1646,6 +1972,8 @@ def _mistakes_for_profile(
                 "Reacting to Market Noise",
                 "Checking portfolios daily and reacting to headlines is one of the most "
                 "reliable ways to underperform a simple consistent strategy.",
+                f"Based on your responses, your financial behavior score of {int(round(behavior))} "
+                "suggests emotion-driven decisions are more likely under market pressure.",
             )
         )
     if flags.get("LOW_SAVER") or savings < 55:
@@ -1654,6 +1982,8 @@ def _mistakes_for_profile(
                 "Waiting for the Right Amount to Start Saving",
                 "The habit matters more than the amount. Starting with any consistent "
                 "number beats waiting until you can save more.",
+                f"Based on your responses, your savings behavior score of {int(round(savings))} "
+                "points to inconsistent saving as a primary drag on readiness.",
             )
         )
     if debt < 55 and investing > 0:
@@ -1662,6 +1992,9 @@ def _mistakes_for_profile(
                 "Investing While High-Interest Debt Compounds",
                 "Debt above 10% interest offers a guaranteed return when paid down that "
                 "is very difficult to match through investment returns after risk is factored.",
+                f"Based on your responses, your debt position score of {int(round(debt))} "
+                "combined with active investing readiness means high-rate debt may be competing "
+                "with your investment contributions.",
             )
         )
     if protection < 55 and has_dependents:
@@ -1672,6 +2005,8 @@ def _mistakes_for_profile(
                 "exploring halal alternatives. A protection gap with dependents creates "
                 "significant family financial risk. Takaful and Shariah-compliant protection "
                 "options exist and should be explored through a qualified Islamic finance advisor.",
+                f"Based on your responses, your financial protection score of {int(round(protection))} "
+                "and dependents profile make protection gaps especially costly for your household.",
             )
         )
     if tax < 55:
@@ -1681,6 +2016,8 @@ def _mistakes_for_profile(
                 "Tax-advantaged accounts offer guaranteed returns in the form of tax "
                 "savings. Not using available accounts is one of the most common and "
                 "costly oversights at every income level.",
+                f"Based on your responses, your tax awareness score of {int(round(tax))} "
+                "suggests available tax-advantaged accounts may be underused.",
             )
         )
     if flags.get("RISK_MISMATCH"):
@@ -1690,6 +2027,9 @@ def _mistakes_for_profile(
                 "Stated risk tolerance often differs from behavioral risk tolerance. "
                 "Your responses suggest a gap between how much risk you think you can "
                 "handle and how you would likely react under real pressure.",
+                f"Based on your responses, your risk alignment score of {int(round(risk_align))} "
+                "suggests a gap between your stated tolerance and likely behavior under real "
+                "market pressure.",
             )
         )
 
@@ -1698,119 +2038,236 @@ def _mistakes_for_profile(
             "Treating Readiness as a One-Time Decision",
             "Financial readiness is built through repeated systems. A strong month "
             "followed by neglected habits usually resets progress.",
+            "Based on your responses, uneven category scores show readiness gains will "
+            "fade unless habits are reviewed on a recurring schedule.",
         ),
         (
             "Skipping Written Goals",
             "Without dates and dollar targets, monthly decisions drift toward comfort "
             "spending instead of structured growth.",
+            "Based on your responses, clearer written targets would sharpen the priorities "
+            "already surfaced by your lowest scoring categories.",
         ),
         (
             "Ignoring Small Structural Leaks",
             "Unused automation, unreviewed subscriptions, and unclear debt priorities "
             "quietly erase gains that investing alone cannot replace.",
+            "Based on your responses, structural gaps in your weaker categories are more "
+            "likely to erase progress than a single market setback.",
         ),
     ]
-    seen = {title for title, _ in mistakes}
-    for title, detail in fallbacks:
+    seen = {title for title, _detail, _note in mistakes}
+    for title, detail, note in fallbacks:
         if len(mistakes) >= 5:
             break
         if title in seen:
             continue
-        mistakes.append((title, detail))
+        mistakes.append((title, detail, note))
         seen.add(title)
-    return mistakes[:5]
+    return [
+        (_clean_text(t), _clean_text(d), _clean_text(n))
+        for t, d, n in mistakes[:5]
+    ]
+
+
+class FullBleedBackCover(Flowable):
+    """Full-page navy back cover drawn from page origin with no top white margin."""
+
+    LEFT_M = 0.65 * inch
+    BOTTOM_M = 0.70 * inch
+    TOP_M = 0.70 * inch
+
+    def __init__(self, styles: dict[str, ParagraphStyle]):
+        super().__init__()
+        self.styles = styles
+
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        self.width = availWidth
+        # Fit the current frame exactly so reportlab does not reject the flowable.
+        self.height = max(1.0, float(availHeight))
+        return self.width, self.height
+
+    def _draw_para(self, c: Any, text: str, style: ParagraphStyle, x: float, y: float, width: float) -> float:
+        para = Paragraph(_clean_text(text), style)
+        _w, h = para.wrap(width, 800)
+        para.drawOn(c, x, y - h)
+        return h
+
+    def draw(self) -> None:
+        c = self.canv
+        c.saveState()
+        # Draw FIRST: full-bleed navy from page (0,0) to (page_width, page_height).
+        c.setFillColor(NAVY)
+        c.rect(-self.LEFT_M, -self.BOTTOM_M, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
+
+        cx = self.width / 2.0
+        y = self.height - 28
+
+        if LOGO_PATH.is_file():
+            try:
+                logo_w = 1.2 * inch
+                c.drawImage(
+                    str(LOGO_PATH),
+                    cx - logo_w / 2,
+                    y - logo_w,
+                    width=logo_w,
+                    height=logo_w,
+                    mask="auto",
+                    preserveAspectRatio=True,
+                )
+                y -= logo_w + 12
+            except Exception:
+                pass
+
+        c.setFillColor(WHITE)
+        c.setFont("Helvetica-Bold", 20)
+        c.drawCentredString(cx, y, "InvestReady")
+        y -= 14
+        c.setStrokeColor(TEAL)
+        c.setLineWidth(2)
+        c.line(cx - 50, y, cx + 50, y)
+        y -= 18
+        c.setFillColor(TEAL)
+        c.setFont("Helvetica", 11)
+        c.drawCentredString(cx, y, "stocks.irizq.com")
+        y -= 16
+        c.setFillColor(colors.Color(1, 1, 1, alpha=0.75))
+        c.setFont("Helvetica", 10)
+        c.drawCentredString(cx, y, "Halal Wealth for Every Muslim")
+        y -= 28
+
+        box_w = 1.95 * inch
+        box_h = 92
+        gap = (self.width - 3 * box_w) / 4.0
+        box_y = max(8, y - box_h)
+        boxes = [
+            ("check", "Shariah Screened", "AAOIFI Standards"),
+            ("chart", "10 Categories", "Assessed"),
+            ("doc", "Personalized", "PDF Report"),
+        ]
+        for idx, (kind, title, subtitle) in enumerate(boxes):
+            x = gap + idx * (box_w + gap)
+            FeatureIconBox(kind, title, subtitle, width=box_w, height=box_h).drawOn(c, x, box_y)
+        y = box_y - 24
+
+        quote_style = ParagraphStyle(
+            "IRCoverQuoteDraw",
+            parent=self.styles["teal_italic"],
+            fontSize=12,
+            leading=16,
+            textColor=TEAL,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=0,
+        )
+        dua_style = ParagraphStyle(
+            "IRCoverDuaDraw",
+            parent=self.styles["white_center"],
+            fontSize=10,
+            fontName="Helvetica-Oblique",
+            leading=14,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=0,
+        )
+        pad_x = 18
+        text_w = self.width - 2 * pad_x
+        h = self._draw_para(
+            c,
+            "Earn halal - invest consistently - stay diversified - think long-term - let time grow your rizq.",
+            quote_style,
+            pad_x,
+            y,
+            text_w,
+        )
+        y -= h + 12
+        h = self._draw_para(
+            c,
+            "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
+            dua_style,
+            pad_x,
+            y,
+            text_w,
+        )
+        y -= h + 16
+        h = self._draw_para(c, DISCLAIMER, self.styles["cover_disclaimer"], pad_x, y, text_w)
+        y -= h + 10
+        self._draw_para(
+            c,
+            "2026 iRizq.com. All rights reserved.",
+            self.styles["cover_copy"],
+            pad_x,
+            y,
+            text_w,
+        )
+        c.restoreState()
 
 
 def _back_cover(styles: dict[str, ParagraphStyle]) -> list[Any]:
-    top = [
-        Spacer(1, 18),
-        _logo_flowable(1.35 * inch),
-        Spacer(1, 10),
-        Paragraph("InvestReady", styles["white_title"]),
-        HRFlowable(width=100, thickness=2, color=TEAL, spaceBefore=2, spaceAfter=10),
-        Paragraph(
-            "stocks.irizq.com",
-            ParagraphStyle(
-                "IRCoverLink",
-                parent=styles["white_center"],
-                textColor=TEAL,
-                fontSize=11,
-            ),
-        ),
-        Spacer(1, 4),
-        Paragraph(
-            "Halal Wealth for Every Muslim",
-            ParagraphStyle(
-                "IRCoverTag",
-                parent=styles["white_center"],
-                fontSize=10,
-                textColor=colors.Color(1, 1, 1, alpha=0.75),
-            ),
-        ),
-        Spacer(1, 12),
+    return [FullBleedBackCover(styles)]
+
+
+def _page_toc(styles: dict[str, ParagraphStyle]) -> list[Any]:
+    """PAGE 2 - Table of contents matching the current report structure."""
+    story: list[Any] = []
+    story.extend(_header_band("What's Inside Your Report"))
+    # Cover=1, TOC=2, then content pages below.
+    toc_rows = [
+        ("Executive Summary", "3"),
+        ("Your 3 Financial Risks", "4"),
+        ("Financial Readiness Breakdown", "5"),
+        ("What This Means in Real Life", "6"),
+        ("Your Personalized Action Plan", "7"),
+        ("Personalized Insight", "9"),
+        ("Mistakes to Avoid", "10"),
+        ("Your Financial Readiness Verdict", "11"),
     ]
-    top_table = Table([[top]], colWidths=[7.0 * inch])
-    top_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 18),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                ("LEFTPADDING", (0, 0), (-1, -1), 20),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 20),
-            ]
+    rows = []
+    for section, page in toc_rows:
+        dots = "." * max(8, 58 - len(section))
+        left = Paragraph(
+            f"{section} <font color='#6b7280'>{dots}</font>",
+            styles["toc_name"],
         )
-    )
-
-    features = BackCoverFeaturesBand(width=7.0 * inch, height=140)
-
-    quote_block = [
-        Spacer(1, 16),
-        Paragraph(
-            "Earn halal - invest consistently - stay diversified - think long-term - let time grow your rizq.",
-            ParagraphStyle(
-                "IRCoverQuote",
-                parent=styles["teal_italic"],
-                fontSize=12,
-                leading=16,
-                textColor=TEAL,
-            ),
-        ),
-        Spacer(1, 10),
-        Paragraph(
-            "May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.",
-            ParagraphStyle(
-                "IRCoverDua",
-                parent=styles["white_center"],
-                fontSize=10,
-                fontName="Helvetica-Oblique",
-                leading=14,
-            ),
-        ),
-        Spacer(1, 18),
-        Paragraph(DISCLAIMER, styles["cover_disclaimer"]),
-        Spacer(1, 8),
-        Paragraph("2026 iRizq.com. All rights reserved.", styles["cover_copy"]),
-        Spacer(1, 12),
-    ]
-    bottom = Table([[quote_block]], colWidths=[7.0 * inch])
-    bottom.setStyle(
+        right = Paragraph(page, styles["toc_page"])
+        rows.append([left, right])
+    toc_table = Table(rows, colWidths=[5.9 * inch, 0.7 * inch])
+    toc_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 24),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 24),
+                ("BACKGROUND", (0, 0), (-1, -1), SILVER),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, TEAL),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
         )
     )
-
-    return [top_table, features, bottom]
+    story.append(toc_table)
+    story.append(Spacer(1, 18))
+    story.append(
+        Paragraph(
+            "Your personalized halal financial roadmap",
+            styles["teal_italic"],
+        )
+    )
+    story.append(Spacer(1, 14))
+    story.append(Paragraph("How to Use This Report", styles["toc_howto_h"]))
+    for paragraph in (
+        "Start with the Executive Summary on page 3 to understand your overall score and the "
+        "most urgent priorities at a glance.",
+        "Review Your 3 Financial Risks on page 4 and the Financial Readiness Breakdown on "
+        "page 5 to see where the biggest gaps are across categories.",
+        "Work through Your Personalized Action Plan starting on page 7. The actions are "
+        "ordered by urgency - complete the 0 to 7 day items before moving to 30 and 90 day steps.",
+        "Return to Personalized Insight and Mistakes to Avoid on pages 9 and 10 when you "
+        "want deeper context, then finish with Your Financial Readiness Verdict on page 11.",
+    ):
+        story.append(Paragraph(_clean_text(paragraph), styles["toc_howto_body"]))
+    story.append(PageBreak())
+    return story
 
 
 def _safe_extend(story: list[Any], builder: Any, label: str) -> None:
@@ -1882,12 +2339,18 @@ def _page_executive_summary(
     strengths = [(c, s) for c, s in _ranked(scores, reverse=True) if s >= 70]
     concerns = _ranked(scores)[:3]
     snapshot = _snapshot_phrase(overall)
+    grade = _letter_grade(overall)
+    grade_label = _grade_label(overall)
     story.append(Paragraph("Your Financial Snapshot", styles["section_h"]))
     story.append(
         Paragraph(
-            f"Based on your responses, {name}, your financial position reflects {snapshot}. "
-            f"The assessment identified {len(strengths)} area(s) of strength and "
-            f"{len(concerns)} priority concern(s) that warrant attention before focusing on growth.",
+            _clean_text(
+                f"Based on your responses, {name}, your financial position reflects {snapshot}. "
+                f"Your grade is {grade} - {grade_label}. "
+                f"The assessment identified {_pluralize_count(len(strengths), 'area', 'areas')} of strength and "
+                f"{_pluralize_count(len(concerns), 'priority concern', 'priority concerns')} that warrant "
+                f"attention before focusing on growth."
+            ),
             styles["body"],
         )
     )
@@ -1932,7 +2395,7 @@ def _page_executive_summary(
         stage,
         "Your next gains will come from closing the highest-impact gaps identified in this report.",
     )
-    story.append(Paragraph(f"In summary, {bottom}", styles["body"]))
+    story.append(Paragraph(_sentence_join("In summary, ", bottom), styles["body"]))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
     return story
@@ -2159,7 +2622,7 @@ def _page_insight(
 
 def _page_mistakes(
     styles: dict[str, ParagraphStyle],
-    mistakes: list[tuple[str, str]],
+    mistakes: list[tuple[str, str, str]],
 ) -> list[Any]:
     story: list[Any] = []
     story.extend(_header_band("Mistakes People With Your Profile Often Make"))
@@ -2170,8 +2633,51 @@ def _page_mistakes(
             styles["intro_muted"],
         )
     )
-    for title, detail in mistakes:
-        story.append(_callout(title, detail, AMBER))
+    dense_title = ParagraphStyle(
+        "IRMistakeTitle",
+        parent=styles["h2"],
+        fontSize=10,
+        spaceBefore=0,
+        spaceAfter=2,
+        leading=12,
+    )
+    dense_body = ParagraphStyle(
+        "IRMistakeBody",
+        parent=styles["body_left"],
+        fontSize=9,
+        leading=11,
+        spaceAfter=2,
+    )
+    dense_note = ParagraphStyle(
+        "IRMistakeNoteDense",
+        parent=styles["mistake_note"],
+        fontSize=8,
+        leading=10,
+        spaceBefore=2,
+        spaceAfter=0,
+    )
+    for title, detail, note in mistakes:
+        inner = [
+            Paragraph(f"<b>{_clean_text(title)}</b>", dense_title),
+            Paragraph(_clean_text(detail), dense_body),
+        ]
+        if note:
+            inner.append(Paragraph(_clean_text(note), dense_note))
+        table = Table([[inner]], colWidths=[6.8 * inch])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), SILVER),
+                    ("BOX", (0, 0), (-1, -1), 0, WHITE),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("LINEBEFORE", (0, 0), (0, -1), 4, AMBER),
+                ]
+            )
+        )
+        story.append(KeepTogether([table, Spacer(1, 5)]))
     story.append(Paragraph(DISCLAIMER, styles["muted"]))
     story.append(PageBreak())
     return story
@@ -2194,26 +2700,36 @@ def _page_verdict(
     )
     story.append(
         Paragraph(
-            f"{name}, your Financial Readiness Score of {overall}/100 places you in the "
-            f"{stage} stage. {verdict}",
+            _clean_text(
+                f"{name}, your Financial Readiness Score of {overall}/100 places you in the "
+                f"{stage} stage. {verdict}"
+            ),
             styles["body"],
         )
     )
     story.append(Paragraph("Primary Recommendation", styles["rec_h"]))
     story.append(
         Paragraph(
-            STAGE_RECOMMENDATION.get(
-                stage,
-                "Close your top identified gaps before scaling investment contributions.",
+            _clean_text(
+                STAGE_RECOMMENDATION.get(
+                    stage,
+                    "Close your top identified gaps before scaling investment contributions.",
+                )
             ),
             styles["body"],
         )
     )
     story.append(
         Paragraph(
-            "May Allah bless your wealth, purify your earnings, and grant you barakah in "
-            "your financial journey. Ameen.",
-            styles["dua"],
+            "JazakumAllahu khayran for using InvestReady by iRizq.",
+            ParagraphStyle(
+                "IRThanksLine",
+                parent=styles["teal_italic"],
+                fontSize=10,
+                alignment=TA_CENTER,
+                spaceBefore=12,
+                spaceAfter=10,
+            ),
         )
     )
     story.append(Paragraph("Continue your journey:", styles["center"]))
@@ -2229,7 +2745,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     name = str(payload.get("name") or "Investor").strip() or "Investor"
     email = str(payload.get("email") or "").strip()
     overall = int(round(float(payload.get("overall_score") or 0)))
-    grade = str(payload.get("letter_grade") or "C")
+    grade = _letter_grade(overall)
     stage = str(
         payload.get("financial_stage")
         or payload.get("investor_profile")
@@ -2284,6 +2800,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
         ),
         "Cover",
     )
+    _safe_extend(story, lambda: _page_toc(styles), "Table of Contents")
     _safe_extend(
         story,
         lambda: _page_executive_summary(

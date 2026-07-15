@@ -2046,19 +2046,19 @@
     }
 
     function getGrade(score) {
-      if (score >= 90) return "A";
-      if (score >= 80) return "B";
-      if (score >= 70) return "C";
-      if (score >= 60) return "D";
+      if (score >= 85) return "A";
+      if (score >= 70) return "B";
+      if (score >= 55) return "C";
+      if (score >= 40) return "D";
       return "F";
     }
 
     function getVerdictLine(score) {
-      if (score >= 90) return "Excellent - Your financial foundation is strong across all key areas.";
-      if (score >= 80) return "Strong - A solid foundation with a few high-impact gaps to address.";
-      if (score >= 70) return "Developing - Good progress with clear opportunities for improvement.";
-      if (score >= 60) return "Moderate - Key gaps present that need attention before scaling up.";
-      return "Early Stage - Important foundations need to be built before growth focus.";
+      if (score >= 85) return "Excellent Financial Readiness - Your foundation is strong across key areas.";
+      if (score >= 70) return "Strong Foundation - Solid progress with a few high-impact gaps to address.";
+      if (score >= 55) return "Developing Foundation - Clear opportunities for focused improvement.";
+      if (score >= 40) return "Needs Attention - Key gaps present that need attention before scaling up.";
+      return "Foundation Building Required - Important foundations need to be built before growth focus.";
     }
 
     function validateEmail(email) {
