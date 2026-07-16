@@ -1311,7 +1311,7 @@
             <h2 id="resultsTitle">Here is your Confidential Financial Summary.</h2>
             <div class="result-badges">
               <span class="result-pill grade" id="gradeBadge">Grade A</span>
-              <span class="result-pill" id="profileBadge">Profile: Pre-Growth</span>
+              <span class="result-pill" id="profileBadge">Building Momentum</span>
             </div>
             <p id="verdictText">Your financial foundation is developing.</p>
             <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
@@ -1398,27 +1398,65 @@
       "Financial Protection": "Protection gaps can reverse years of progress after one health or income shock."
     };
 
-    const STAGE_META = {
-      "Profile: Foundation": {
-        range: [0, 25],
-        blurb: "Your priority is building the financial foundation before focusing on growth."
-      },
-      "Profile: Stability": {
-        range: [26, 45],
-        blurb: "You are working toward stability. Consistent habits will accelerate progress."
-      },
-      "Profile: Pre-Growth": {
-        range: [46, 65],
-        blurb: "Your foundation is developing. You are approaching readiness for focused growth."
-      },
-      "Profile: Growth": {
-        range: [66, 80],
-        blurb: "You have a strong foundation and are positioned to build wealth systematically."
-      },
-      "Profile: Advanced": {
-        range: [81, 100],
-        blurb: "Your fundamentals are strong. Focus on optimizing and scaling what is working."
-      }
+    const PROFILE_DESCRIPTIONS = {
+      "Financially Strong": [
+        "Your financial fundamentals are strong across most categories. The work you have done to build this foundation is visible in your results. The focus from here is refinement, protecting what you have built, and optimizing the areas that still have room to grow.",
+        "Across the 9 categories assessed, your responses reflect a financially disciplined approach that most people take years to develop. The gaps that remain are refinement opportunities, not structural problems. Addressing them will compound your existing strengths further.",
+        "Your score places you among the stronger profiles in this assessment. The habits driving your results - consistent saving, disciplined behavior, and structured planning - are exactly the ones that compound over time. The work now is to protect and optimize, not rebuild.",
+        "A strong financial profile is not built overnight, and your results reflect that. Your fundamentals across stability, behavior, and planning are working. The priority from here is closing the remaining gaps without disrupting what is already working well."
+      ],
+      "Well Positioned": [
+        "You have built a solid financial foundation with clear strengths that show up directly in your category scores. The gaps identified are not structural failures - they are the next layer of improvement. Addressing them will move your profile meaningfully in the right direction.",
+        "Your responses reflect someone who has made real financial progress. The foundation is there. The remaining work is targeted - closing specific gaps rather than rebuilding from scratch. That is a significantly better position than most people starting this assessment.",
+        "A Well Positioned profile means your core habits are working but there are 2 to 3 areas where focused attention would create outsized improvement. Your score has upward momentum - the actions in this report are designed to accelerate that.",
+        "The distance between your current score and the next profile level is smaller than it may feel. Your strongest categories show what consistent habits can produce. Applying that same discipline to your weakest areas is the most direct path forward from here."
+      ],
+      "Building Momentum": [
+        "Your foundation is developing. The results show both real strengths and clear gaps - which is exactly what you would expect at this stage. The key insight is that the gaps are fixable, and fixing them creates compounding momentum that accelerates progress across all other categories.",
+        "You are in the phase where financial habits are forming but not yet fully automated or consistent. This is the most important phase to get right. The actions in this report are designed specifically for this stage - not generic advice, but the moves that matter most when you are Building Momentum.",
+        "Your score reflects a mix of categories working well and categories that need attention. This is not unusual - most people develop financial strength unevenly. The opportunity is to identify which gaps have the highest leverage and close those first before spreading attention further.",
+        "Building Momentum means the foundation exists but has not yet solidified. Each improvement you make from here reduces the cost of future improvements. The financial habits you build in this phase will determine your trajectory for the next decade."
+      ],
+      "Foundation Stage": [
+        "Your results reflect a financial position where the core foundations need attention before focusing on growth. This is not a criticism - it is a diagnosis. The gaps identified are addressable with consistent focused effort. Most people who reach strong financial positions passed through exactly this stage first.",
+        "A Foundation Stage profile means the priority is building the structures that make everything else possible - emergency buffers, consistent savings, and controlled debt. Without these in place, investing and growth activities carry more risk than they should. The good news is that each foundation habit you build reduces that risk significantly.",
+        "Your score identifies several key areas where foundational work will create the biggest return. Before scaling any financial activity, the goal is to make your position more resilient. A resilient foundation does not just protect you from setbacks - it makes every subsequent financial decision easier and more effective.",
+        "At the Foundation Stage, the highest-value actions are also the simplest: build a savings buffer, reduce high-cost obligations, and create consistent habits. These are not glamorous moves, but they are the ones that compound most reliably. Your action plan prioritizes these exactly."
+      ],
+      "Starting Point": [
+        "Every strong financial position started exactly where you are now. Your results reflect an early stage where the right habits have not yet had time to compound. The gap between your current position and a resilient financial foundation is not closed by a single large decision - it is closed by small consistent actions repeated over time.",
+        "A Starting Point score is not a judgment - it is a baseline. What it tells us is that the foundational financial habits are not yet in place, and that placing them there is the single highest-leverage thing you can do right now. The actions in this report are designed specifically for this stage - not investment tips, but the structural moves that create lasting financial progress.",
+        "Your results identify several areas where foundational work will create significant improvement. The encouraging reality is that at the Starting Point, even small consistent actions produce visible results quickly. Building one habit well is more valuable than attempting five habits inconsistently.",
+        "Starting Point means the journey is early, not that the destination is far. The most important financial decisions you will make are not about which investment to choose - they are about whether to automate savings, build a buffer, and reduce financial stress. This report focuses on exactly those decisions, in the order that matters most."
+      ]
+    };
+
+    const PROFILE_INSIGHT_VARIANTS = {
+      "Financially Strong": [
+        "Your foundation is solid. The focus from here is refinement and optimization rather than reconstruction. Small improvements to high-impact areas will compound into significant gains over time.",
+        "Strong financial profiles are maintained by the same habits that built them - consistency, discipline, and regular review. The areas identified in this report are where that attention will have the most impact going forward.",
+        "At your profile level, the biggest risk is complacency. Strong foundations can erode slowly if the habits that built them are gradually relaxed. The refinements identified here are designed to protect and extend your trajectory."
+      ],
+      "Well Positioned": [
+        "You are closer to a strong financial position than your score may suggest. Targeted improvements to your weakest areas will shift your trajectory meaningfully within 6 to 12 months.",
+        "The distance between your current profile and the next level is shorter than a full financial overhaul. It requires precise attention to 2 to 3 specific areas rather than a complete rebuild. Your action plan reflects that.",
+        "Well Positioned means you have done the hard foundational work. The remaining improvements are refinements, not repairs. Each one you address compounds your existing strengths rather than simply filling gaps."
+      ],
+      "Building Momentum": [
+        "You have already built some structure. The opportunity is to close the remaining gaps before they become more expensive to fix. Progress from here accelerates as each piece of the foundation locks in.",
+        "At the Building Momentum stage, the highest-value moves are the ones that create automation and reduce decisions. Every financial system you put in place removes one more monthly judgment call from your plate.",
+        "The habits you build over the next 90 days will determine which direction your financial trajectory moves. The gaps identified are not large - but they are important to close before they compound in the wrong direction."
+      ],
+      "Foundation Stage": [
+        "You are making progress on the foundation. The gaps identified are addressable. Each step forward reduces the cost and effort of the next one.",
+        "Foundation Stage profiles often feel stuck because the progress is not visible in investment returns - it shows up in reduced stress, increased buffer, and better monthly cash position. These are the real indicators of financial health at this stage.",
+        "The most important financial metric at your stage is not your investment return - it is your monthly cash surplus. Building that surplus through savings automation and debt reduction is what unlocks every other financial goal."
+      ],
+      "Starting Point": [
+        "Every strong financial position started exactly where you are now. The gap between your current position and a resilient financial foundation is closed through small consistent actions, not dramatic decisions.",
+        "At the Starting Point, the single most important move is starting. Not perfectly, not with the ideal amount - just starting with any consistent action and building the habit before scaling the amount.",
+        "The financial habits you form in the next 90 days will matter more than any investment decision you make in the next 5 years. The action plan in this report is designed around that reality."
+      ]
     };
 
     const SECTION_EXPLANATIONS = {
@@ -1778,7 +1816,10 @@
       answers: {},
       selectedMulti: [],
       scores: null,
-      lead: { name: "", email: "" }
+      lead: { name: "", email: "" },
+      profileVariantStage: null,
+      profileDescriptionVariant: null,
+      profileInsightVariant: null
     };
 
     const screens = {
@@ -2283,11 +2324,56 @@
         (risk * 0.20)
       );
 
-      if (stageScore <= 25) return "Profile: Foundation";
-      if (stageScore <= 45) return "Profile: Stability";
-      if (stageScore <= 65) return "Profile: Pre-Growth";
-      if (stageScore <= 80) return "Profile: Growth";
-      return "Profile: Advanced";
+      if (stageScore <= 25) return "Starting Point";
+      if (stageScore <= 45) return "Foundation Stage";
+      if (stageScore <= 65) return "Building Momentum";
+      if (stageScore <= 80) return "Well Positioned";
+      return "Financially Strong";
+    }
+
+    function pickVariantIndex(options) {
+      try {
+        if (!options || !options.length) return 0;
+        return Math.floor(Math.random() * options.length);
+      } catch (err) {
+        return 0;
+      }
+    }
+
+    function ensureProfileVariants(profileName) {
+      try {
+        const profile = profileName || "Building Momentum";
+        if (
+          state.profileVariantStage === profile &&
+          state.profileDescriptionVariant != null &&
+          state.profileInsightVariant != null
+        ) {
+          return;
+        }
+        const descOptions = PROFILE_DESCRIPTIONS[profile] || [""];
+        const insightOptions = PROFILE_INSIGHT_VARIANTS[profile] || [""];
+        state.profileDescriptionVariant = pickVariantIndex(descOptions);
+        state.profileInsightVariant = pickVariantIndex(insightOptions);
+        state.profileVariantStage = profile;
+      } catch (err) {
+        state.profileDescriptionVariant = 0;
+        state.profileInsightVariant = 0;
+        state.profileVariantStage = profileName || "Building Momentum";
+      }
+    }
+
+    function getSelectedProfileDescription(profileName) {
+      try {
+        const options = PROFILE_DESCRIPTIONS[profileName] || [""];
+        const idx =
+          typeof state.profileDescriptionVariant === "number"
+            ? state.profileDescriptionVariant
+            : 0;
+        return options[idx] || options[0] || "";
+      } catch (err) {
+        const options = PROFILE_DESCRIPTIONS[profileName] || [""];
+        return options[0] || "";
+      }
     }
 
     function getGrade(score) {
@@ -2333,6 +2419,8 @@
 
       const flags = scores.flags || buildFlags();
 
+      ensureProfileVariants(scores.financial_stage);
+
       return {
         name: state.lead.name,
         email: state.lead.email,
@@ -2346,6 +2434,8 @@
         profile_age: scores.profile_age,
         profile_income: scores.profile_income,
         profile_dependents: scores.profile_dependents,
+        profile_description_variant: state.profileDescriptionVariant,
+        profile_insight_variant: state.profileInsightVariant,
         CRITICAL_STABILITY: !!flags.CRITICAL_STABILITY,
         LOW_SAVER: !!flags.LOW_SAVER,
         EMOTIONAL_INVEST: !!flags.EMOTIONAL_INVEST,
@@ -2378,13 +2468,14 @@
     function renderResults(emailSent) {
       const scores = state.scores || calculateScores();
       state.scores = scores;
+      ensureProfileVariants(scores.financial_stage);
 
       document.getElementById("resultsTitle").textContent =
         `Here is your Confidential Financial Summary, ${state.lead.name}.`;
       document.getElementById("gradeBadge").textContent = `Grade ${scores.letter_grade}`;
       document.getElementById("profileBadge").textContent = scores.financial_stage;
       document.getElementById("verdictText").textContent = getVerdictLine(scores.overall_score);
-      const stageBlurb = (STAGE_META[scores.financial_stage] || {}).blurb || "";
+      const stageBlurb = getSelectedProfileDescription(scores.financial_stage);
       document.getElementById("greetingText").textContent = stageBlurb;
       document.getElementById("emailNote").textContent = emailSent
         ? `Your detailed Confidential Financial Summary PDF is being sent to ${state.lead.email}. Please check your inbox and spam folder.`
@@ -2480,7 +2571,8 @@
     function renderSummary(scores) {
       const summary = document.getElementById("summaryText");
       const stage = scores.financial_stage;
-      const blurb = (STAGE_META[stage] || {}).blurb || "";
+      ensureProfileVariants(stage);
+      const blurb = getSelectedProfileDescription(stage);
       summary.textContent = `With a Financial Readiness Score of ${scores.overall_score}/100 and grade ${scores.letter_grade}, your profile is ${stage}. ${blurb}`;
     }
 
