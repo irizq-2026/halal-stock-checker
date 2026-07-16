@@ -82,114 +82,300 @@ Q4_LABELS = {
     4: "more than 6 months",
 }
 
-FINANCIAL_STAGE_DESCRIPTIONS = {
-    "Profile: Foundation": (
-        "Your priority is building the financial foundation before focusing on growth."
-    ),
-    "Profile: Stability": (
-        "You are working toward stability. Consistent habits will accelerate progress."
-    ),
-    "Profile: Pre-Growth": (
-        "Your foundation is developing. You are approaching readiness for focused growth."
-    ),
-    "Profile: Growth": (
-        "You have a strong foundation and are positioned to build wealth systematically."
-    ),
-    "Profile: Advanced": (
-        "Your fundamentals are strong. Focus on optimizing and scaling what is working."
-    ),
+PROFILE_DESCRIPTIONS = {
+    "Financially Strong": [
+        (
+            "Your financial fundamentals are strong across most categories. The work you have "
+            "done to build this foundation is visible in your results. The focus from here is "
+            "refinement, protecting what you have built, and optimizing the areas that still "
+            "have room to grow."
+        ),
+        (
+            "Across the 9 categories assessed, your responses reflect a financially disciplined "
+            "approach that most people take years to develop. The gaps that remain are refinement "
+            "opportunities, not structural problems. Addressing them will compound your existing "
+            "strengths further."
+        ),
+        (
+            "Your score places you among the stronger profiles in this assessment. The habits "
+            "driving your results - consistent saving, disciplined behavior, and structured "
+            "planning - are exactly the ones that compound over time. The work now is to "
+            "protect and optimize, not rebuild."
+        ),
+        (
+            "A strong financial profile is not built overnight, and your results reflect that. "
+            "Your fundamentals across stability, behavior, and planning are working. The priority "
+            "from here is closing the remaining gaps without disrupting what is already working well."
+        ),
+    ],
+    "Well Positioned": [
+        (
+            "You have built a solid financial foundation with clear strengths that show up "
+            "directly in your category scores. The gaps identified are not structural failures - "
+            "they are the next layer of improvement. Addressing them will move your profile "
+            "meaningfully in the right direction."
+        ),
+        (
+            "Your responses reflect someone who has made real financial progress. The foundation "
+            "is there. The remaining work is targeted - closing specific gaps rather than "
+            "rebuilding from scratch. That is a significantly better position than most people "
+            "starting this assessment."
+        ),
+        (
+            "A Well Positioned profile means your core habits are working but there are 2 to 3 "
+            "areas where focused attention would create outsized improvement. Your score has "
+            "upward momentum - the actions in this report are designed to accelerate that."
+        ),
+        (
+            "The distance between your current score and the next profile level is smaller than "
+            "it may feel. Your strongest categories show what consistent habits can produce. "
+            "Applying that same discipline to your weakest areas is the most direct path forward "
+            "from here."
+        ),
+    ],
+    "Building Momentum": [
+        (
+            "Your foundation is developing. The results show both real strengths and clear gaps - "
+            "which is exactly what you would expect at this stage. The key insight is that the "
+            "gaps are fixable, and fixing them creates compounding momentum that accelerates "
+            "progress across all other categories."
+        ),
+        (
+            "You are in the phase where financial habits are forming but not yet fully automated "
+            "or consistent. This is the most important phase to get right. The actions in this "
+            "report are designed specifically for this stage - not generic advice, but the moves "
+            "that matter most when you are Building Momentum."
+        ),
+        (
+            "Your score reflects a mix of categories working well and categories that need "
+            "attention. This is not unusual - most people develop financial strength unevenly. "
+            "The opportunity is to identify which gaps have the highest leverage and close those "
+            "first before spreading attention further."
+        ),
+        (
+            "Building Momentum means the foundation exists but has not yet solidified. Each "
+            "improvement you make from here reduces the cost of future improvements. The "
+            "financial habits you build in this phase will determine your trajectory for the "
+            "next decade."
+        ),
+    ],
+    "Foundation Stage": [
+        (
+            "Your results reflect a financial position where the core foundations need attention "
+            "before focusing on growth. This is not a criticism - it is a diagnosis. The gaps "
+            "identified are addressable with consistent focused effort. Most people who reach "
+            "strong financial positions passed through exactly this stage first."
+        ),
+        (
+            "A Foundation Stage profile means the priority is building the structures that make "
+            "everything else possible - emergency buffers, consistent savings, and controlled "
+            "debt. Without these in place, investing and growth activities carry more risk than "
+            "they should. The good news is that each foundation habit you build reduces that "
+            "risk significantly."
+        ),
+        (
+            "Your score identifies several key areas where foundational work will create the "
+            "biggest return. Before scaling any financial activity, the goal is to make your "
+            "position more resilient. A resilient foundation does not just protect you from "
+            "setbacks - it makes every subsequent financial decision easier and more effective."
+        ),
+        (
+            "At the Foundation Stage, the highest-value actions are also the simplest: build a "
+            "savings buffer, reduce high-cost obligations, and create consistent habits. These "
+            "are not glamorous moves, but they are the ones that compound most reliably. Your "
+            "action plan prioritizes these exactly."
+        ),
+    ],
+    "Starting Point": [
+        (
+            "Every strong financial position started exactly where you are now. Your results "
+            "reflect an early stage where the right habits have not yet had time to compound. "
+            "The gap between your current position and a resilient financial foundation is not "
+            "closed by a single large decision - it is closed by small consistent actions "
+            "repeated over time."
+        ),
+        (
+            "A Starting Point score is not a judgment - it is a baseline. What it tells us is "
+            "that the foundational financial habits are not yet in place, and that placing them "
+            "there is the single highest-leverage thing you can do right now. The actions in "
+            "this report are designed specifically for this stage - not investment tips, but the "
+            "structural moves that create lasting financial progress."
+        ),
+        (
+            "Your results identify several areas where foundational work will create significant "
+            "improvement. The encouraging reality is that at the Starting Point, even small "
+            "consistent actions produce visible results quickly. Building one habit well is more "
+            "valuable than attempting five habits inconsistently."
+        ),
+        (
+            "Starting Point means the journey is early, not that the destination is far. The "
+            "most important financial decisions you will make are not about which investment to "
+            "choose - they are about whether to automate savings, build a buffer, and reduce "
+            "financial stress. This report focuses on exactly those decisions, in the order that "
+            "matters most."
+        ),
+    ],
 }
 
-STAGE_BOTTOM_LINE = {
-    "Profile: Foundation": (
-        "Your finances are in an early-stage build phase. The priority is stability and "
-        "habit formation, not investment scaling."
-    ),
-    "Profile: Stability": (
-        "You are in a stability-building phase. Addressing the gaps identified will create "
-        "the platform for more confident financial growth."
-    ),
-    "Profile: Pre-Growth": (
-        "You are approaching a growth phase but have key gaps to close first. Addressing "
-        "these now will make growth more sustainable."
-    ),
-    "Profile: Growth": (
-        "You are in an active wealth-building phase. Fine-tuning the gaps identified will "
-        "improve your trajectory meaningfully."
-    ),
-    "Profile: Advanced": (
-        "You are in an optimization phase. The opportunities identified here are "
-        "refinements to an already strong foundation."
-    ),
+PROFILE_INSIGHT_VARIANTS = {
+    "Financially Strong": [
+        (
+            "Your foundation is solid. The focus from here is refinement and optimization "
+            "rather than reconstruction. Small improvements to high-impact areas will "
+            "compound into significant gains over time."
+        ),
+        (
+            "Strong financial profiles are maintained by the same habits that built them - "
+            "consistency, discipline, and regular review. The areas identified in this report "
+            "are where that attention will have the most impact going forward."
+        ),
+        (
+            "At your profile level, the biggest risk is complacency. Strong foundations can "
+            "erode slowly if the habits that built them are gradually relaxed. The refinements "
+            "identified here are designed to protect and extend your trajectory."
+        ),
+    ],
+    "Well Positioned": [
+        (
+            "You are closer to a strong financial position than your score may suggest. "
+            "Targeted improvements to your weakest areas will shift your trajectory "
+            "meaningfully within 6 to 12 months."
+        ),
+        (
+            "The distance between your current profile and the next level is shorter than a "
+            "full financial overhaul. It requires precise attention to 2 to 3 specific areas "
+            "rather than a complete rebuild. Your action plan reflects that."
+        ),
+        (
+            "Well Positioned means you have done the hard foundational work. The remaining "
+            "improvements are refinements, not repairs. Each one you address compounds your "
+            "existing strengths rather than simply filling gaps."
+        ),
+    ],
+    "Building Momentum": [
+        (
+            "You have already built some structure. The opportunity is to close the remaining "
+            "gaps before they become more expensive to fix. Progress from here accelerates as "
+            "each piece of the foundation locks in."
+        ),
+        (
+            "At the Building Momentum stage, the highest-value moves are the ones that create "
+            "automation and reduce decisions. Every financial system you put in place removes "
+            "one more monthly judgment call from your plate."
+        ),
+        (
+            "The habits you build over the next 90 days will determine which direction your "
+            "financial trajectory moves. The gaps identified are not large - but they are "
+            "important to close before they compound in the wrong direction."
+        ),
+    ],
+    "Foundation Stage": [
+        (
+            "You are making progress on the foundation. The gaps identified are addressable. "
+            "Each step forward reduces the cost and effort of the next one."
+        ),
+        (
+            "Foundation Stage profiles often feel stuck because the progress is not visible in "
+            "investment returns - it shows up in reduced stress, increased buffer, and better "
+            "monthly cash position. These are the real indicators of financial health at this stage."
+        ),
+        (
+            "The most important financial metric at your stage is not your investment return - "
+            "it is your monthly cash surplus. Building that surplus through savings automation "
+            "and debt reduction is what unlocks every other financial goal."
+        ),
+    ],
+    "Starting Point": [
+        (
+            "Every strong financial position started exactly where you are now. The gap between "
+            "your current position and a resilient financial foundation is closed through small "
+            "consistent actions, not dramatic decisions."
+        ),
+        (
+            "At the Starting Point, the single most important move is starting. Not perfectly, "
+            "not with the ideal amount - just starting with any consistent action and building "
+            "the habit before scaling the amount."
+        ),
+        (
+            "The financial habits you form in the next 90 days will matter more than any "
+            "investment decision you make in the next 5 years. The action plan in this report "
+            "is designed around that reality."
+        ),
+    ],
 }
 
-STAGE_INSIGHT = {
-    "Profile: Foundation": (
-        "The good news is that at your stage, the actions that matter most are simple and "
-        "within immediate reach. Building the foundation now creates a platform that makes "
-        "everything else easier."
-    ),
-    "Profile: Stability": (
-        "You have already built some structure. The opportunity is to close the remaining "
-        "gaps before they become more expensive to fix. Progress from here accelerates as "
-        "each piece of the foundation locks in."
-    ),
-    "Profile: Pre-Growth": (
-        "You are closer to a strong financial position than your score may suggest. "
-        "Targeted improvements to your weakest areas will shift your trajectory "
-        "meaningfully within 6 to 12 months."
-    ),
-    "Profile: Growth": (
-        "Your foundation is solid. The focus from here is refinement and optimization "
-        "rather than reconstruction. Small improvements to high-impact areas will "
-        "compound into significant gains."
-    ),
-    "Profile: Advanced": (
-        "Your financial fundamentals are strong. The opportunities identified here are "
-        "precision improvements that will protect and accelerate what you have already built."
-    ),
-}
-
+# Keep short supporting copy keyed by the new profile names.
 STAGE_VERDICT = {
-    "Profile: Foundation": (
+    "Starting Point": (
         "Your priority is building the financial habits and buffers that make everything "
         "else possible. Growth should come after stability."
     ),
-    "Profile: Stability": (
+    "Foundation Stage": (
         "You are making progress on your foundation. The gaps identified are addressable "
         "with consistent focused effort over the next 3 to 6 months."
     ),
-    "Profile: Pre-Growth": (
+    "Building Momentum": (
         "Your foundation is developing well. Closing the identified gaps will position "
         "you for more confident financial growth."
     ),
-    "Profile: Growth": (
+    "Well Positioned": (
         "You are positioned to build wealth systematically. The improvements identified "
         "will strengthen an already solid foundation."
     ),
-    "Profile: Advanced": (
+    "Financially Strong": (
         "Your financial fundamentals are strong. The opportunities here are precision "
         "improvements to an already well-structured position."
     ),
 }
 
 STAGE_RECOMMENDATION = {
-    "Profile: Foundation": (
+    "Starting Point": (
         "Focus entirely on stability before any growth or investment scaling."
     ),
-    "Profile: Stability": (
+    "Foundation Stage": (
         "Build your emergency buffer and reduce debt before increasing investment activity."
     ),
-    "Profile: Pre-Growth": (
+    "Building Momentum": (
         "Close your top 3 identified gaps before scaling investment contributions."
     ),
-    "Profile: Growth": (
+    "Well Positioned": (
         "Optimize your existing structure and automate the remaining manual decisions."
     ),
-    "Profile: Advanced": (
+    "Financially Strong": (
         "Refine and protect what is working. Focus on the smallest high-impact "
         "improvements identified."
     ),
+}
+
+STAGE_ALIASES = {
+    "Foundation Builder": "Starting Point",
+    "Stability Seeker": "Foundation Stage",
+    "Growth Ready": "Building Momentum",
+    "Wealth Builder": "Well Positioned",
+    "Optimizer": "Financially Strong",
+    "Stage 1: Foundation Building": "Starting Point",
+    "Stage 2: Stability Building": "Foundation Stage",
+    "Stage 3: Growth Preparation": "Building Momentum",
+    "Stage 4: Wealth Building": "Well Positioned",
+    "Stage 5: Optimization": "Financially Strong",
+    "Profile: Foundation": "Starting Point",
+    "Profile: Stability": "Foundation Stage",
+    "Profile: Pre-Growth": "Building Momentum",
+    "Profile: Growth": "Well Positioned",
+    "Profile: Advanced": "Financially Strong",
+    "Starting Point": "Starting Point",
+    "Foundation Stage": "Foundation Stage",
+    "Building Momentum": "Building Momentum",
+    "Well Positioned": "Well Positioned",
+    "Financially Strong": "Financially Strong",
+}
+
+PROFILE_SHORT_NAMES = {
+    "Starting Point": "Starting Point",
+    "Foundation Stage": "Foundation Stage",
+    "Building Momentum": "Building Momentum",
+    "Well Positioned": "Well Positioned",
+    "Financially Strong": "Financially Strong",
 }
 
 PRIMARY_GAP_LABELS = {
@@ -233,33 +419,6 @@ INSIGHT_PROBLEM_LABELS = {
         "a gap between stated and behavioral risk tolerance that affects decisions under market pressure"
     ),
 }
-
-STAGE_ALIASES = {
-    "Foundation Builder": "Profile: Foundation",
-    "Stability Seeker": "Profile: Stability",
-    "Growth Ready": "Profile: Pre-Growth",
-    "Wealth Builder": "Profile: Growth",
-    "Optimizer": "Profile: Advanced",
-    "Stage 1: Foundation Building": "Profile: Foundation",
-    "Stage 2: Stability Building": "Profile: Stability",
-    "Stage 3: Growth Preparation": "Profile: Pre-Growth",
-    "Stage 4: Wealth Building": "Profile: Growth",
-    "Stage 5: Optimization": "Profile: Advanced",
-    "Profile: Foundation": "Profile: Foundation",
-    "Profile: Stability": "Profile: Stability",
-    "Profile: Pre-Growth": "Profile: Pre-Growth",
-    "Profile: Growth": "Profile: Growth",
-    "Profile: Advanced": "Profile: Advanced",
-}
-
-PROFILE_SHORT_NAMES = {
-    "Profile: Foundation": "Foundation",
-    "Profile: Stability": "Stability",
-    "Profile: Pre-Growth": "Pre-Growth",
-    "Profile: Growth": "Growth",
-    "Profile: Advanced": "Advanced",
-}
-
 
 STRENGTH_OBS = {
     "Cash Stability": (
@@ -1079,12 +1238,49 @@ def _normalize_stage(stage: str) -> str:
     for alias, canonical in STAGE_ALIASES.items():
         if value.lower() == alias.lower() or value.lower() == canonical.lower():
             return canonical
-    return "Profile: Pre-Growth"
+    return "Building Momentum"
 
 
 def _profile_short(stage: str) -> str:
     canonical = _normalize_stage(stage)
     return PROFILE_SHORT_NAMES.get(canonical, canonical.replace("Profile: ", ""))
+
+
+def _pick_variant_index(options: list[str], preferred: Any = None) -> int:
+    """Pick a stable variant index; fall back to 0 on any failure."""
+    try:
+        if not options:
+            return 0
+        if preferred is not None and str(preferred).strip() != "":
+            idx = int(preferred)
+            if 0 <= idx < len(options):
+                return idx
+        return int(random.randrange(len(options)))
+    except Exception:
+        return 0
+
+
+def get_profile_description(profile_name: str, variant_index: Any = None) -> str:
+    profile = _normalize_stage(profile_name)
+    options = PROFILE_DESCRIPTIONS.get(profile) or [""]
+    try:
+        idx = _pick_variant_index(options, variant_index)
+        return _clean_text(options[idx] or options[0])
+    except Exception:
+        return _clean_text(options[0] if options else "")
+
+
+def get_profile_insight(profile_name: str, variant_index: Any = None) -> str:
+    profile = _normalize_stage(profile_name)
+    options = PROFILE_INSIGHT_VARIANTS.get(profile) or [
+        "Targeted improvements to your weakest areas will shift your trajectory "
+        "meaningfully within 6 to 12 months."
+    ]
+    try:
+        idx = _pick_variant_index(options, variant_index)
+        return _clean_text(options[idx] or options[0])
+    except Exception:
+        return _clean_text(options[0])
 
 
 def _peer_percentile(overall: int) -> str:
@@ -2790,6 +2986,7 @@ def _page_executive_summary(
     overall: int,
     stage: str,
     scores: dict[str, float],
+    profile_description: str = "",
 ) -> list[Any]:
     story: list[Any] = []
     story.extend(_header_band("Executive Summary"))
@@ -2812,6 +3009,8 @@ def _page_executive_summary(
             styles["body"],
         )
     )
+    if profile_description:
+        story.append(Paragraph(_clean_text(profile_description), styles["body"]))
     percentile = _peer_percentile(overall)
     peer_note_style = ParagraphStyle(
         "IRPeerNote",
@@ -3081,6 +3280,7 @@ def _page_insight(
     stage: str,
     scores: dict[str, float],
     flags: dict[str, bool],
+    insight_text: str = "",
 ) -> list[Any]:
     story: list[Any] = []
     story.extend(_header_band("Personalized Insight"))
@@ -3110,15 +3310,10 @@ def _page_insight(
             styles["body"],
         )
     )
+    selected_insight = insight_text or get_profile_insight(stage)
     story.append(
         Paragraph(
-            _clean_text(
-                STAGE_INSIGHT.get(
-                    stage,
-                    "Targeted improvements to your weakest areas will shift your trajectory "
-                    "meaningfully within 6 to 12 months.",
-                )
-            ),
+            _clean_text(selected_insight),
             styles["body"],
         )
     )
@@ -3387,7 +3582,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
     stage = _normalize_stage(
         payload.get("financial_stage")
         or payload.get("investor_profile")
-        or "Profile: Pre-Growth"
+        or "Building Momentum"
     )
 
     scores = _normalize_scores(payload.get("category_scores") or {})
@@ -3406,6 +3601,20 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
 
     # Keep profile fields referenced so payload contracts remain stable.
     _ = (profile_age, profile_income)
+
+    # Select description/insight variants once per report so every page stays consistent.
+    desc_options = PROFILE_DESCRIPTIONS.get(stage) or [""]
+    insight_options = PROFILE_INSIGHT_VARIANTS.get(stage) or [""]
+    desc_idx = _pick_variant_index(
+        desc_options,
+        payload.get("profile_description_variant"),
+    )
+    insight_idx = _pick_variant_index(
+        insight_options,
+        payload.get("profile_insight_variant"),
+    )
+    profile_description = get_profile_description(stage, desc_idx)
+    profile_insight = get_profile_insight(stage, insight_idx)
 
     report_id = _make_report_id()
     risks = _build_risks(scores, answers, flags)
@@ -3458,6 +3667,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             overall=overall,
             stage=stage,
             scores=scores,
+            profile_description=profile_description,
         ),
         "Executive Summary",
     )
@@ -3481,6 +3691,7 @@ def generate_investready_pdf(payload: dict[str, Any]) -> bytes:
             stage=stage,
             scores=scores,
             flags=flags,
+            insight_text=profile_insight,
         ),
         "Personalized Insight",
     )
