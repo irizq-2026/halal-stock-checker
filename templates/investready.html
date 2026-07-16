@@ -451,22 +451,24 @@
     }
 
     #welcomeScreen .welcome-card h2#welcomeTitle {
-      margin: 0 auto;
-      max-width: 34rem;
-      font-family: Georgia, "Times New Roman", serif;
+      margin: 0 auto 12px;
+      font-family: Georgia, serif;
       font-size: clamp(1.6rem, 5vw, 2.4rem);
       font-weight: 800;
       line-height: 1.1;
-      letter-spacing: -0.02em;
       color: #ffffff;
+      text-align: center;
     }
 
     #welcomeScreen .welcome-subhead {
       max-width: 480px;
-      margin: 10px auto 0;
+      margin: 10px auto 0 auto;
+      font-family: Inter, system-ui, sans-serif;
       font-size: 13px;
+      font-weight: 400;
       line-height: 1.6;
       color: rgba(255, 255, 255, 0.65);
+      text-align: center;
     }
 
     #welcomeScreen .welcome-feature-grid {
@@ -518,6 +520,140 @@
       font-size: 11px;
       line-height: 1.4;
       color: rgba(255, 255, 255, 0.5);
+    }
+
+    #welcomeScreen .welcome-preview {
+      margin: 0 0 24px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    #welcomeScreen .welcome-preview-label {
+      margin: 0 0 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    #welcomeScreen .welcome-page-stack {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 210px;
+      padding: 18px 8px 24px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    #welcomeScreen .welcome-page-card {
+      position: relative;
+      width: min(46%, 190px);
+      min-height: 168px;
+      padding: 14px 12px;
+      border-radius: 10px;
+      background: #0d1f3c;
+      box-sizing: border-box;
+      text-align: left;
+      overflow: hidden;
+    }
+
+    #welcomeScreen .welcome-page-card.cover {
+      z-index: 1;
+      margin-right: -28px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transform: rotate(-3deg);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    #welcomeScreen .welcome-page-card.shariah {
+      z-index: 2;
+      margin-left: -28px;
+      border: 1px solid rgba(30, 200, 184, 0.3);
+      transform: rotate(3deg);
+      box-shadow: 0 10px 30px rgba(30, 200, 184, 0.1);
+    }
+
+    #welcomeScreen .welcome-page-logo {
+      display: block;
+      width: 54px;
+      height: auto;
+      margin: 0 0 10px;
+      filter: brightness(1.05);
+    }
+
+    #welcomeScreen .welcome-page-title {
+      margin: 0 0 12px;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.3;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    #welcomeScreen .welcome-page-score {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #welcomeScreen .welcome-page-score-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    #welcomeScreen .welcome-page-score-value {
+      font-size: 13px;
+      font-weight: 800;
+      color: #1ec8b8;
+      line-height: 1.2;
+    }
+
+    #welcomeScreen .welcome-page-score-grade {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    #welcomeScreen .welcome-page-banner {
+      margin: 0 0 10px;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #1ec8b8;
+      line-height: 1.35;
+    }
+
+    #welcomeScreen .welcome-page-headline {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #ffffff;
+    }
+
+    #welcomeScreen .welcome-page-quote {
+      margin: 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(30, 200, 184, 0.08);
+      border-left: 2px solid #1ec8b8;
+      font-size: 9px;
+      font-style: italic;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.72);
     }
 
     #welcomeScreen .welcome-compare-title {
@@ -685,6 +821,62 @@
 
       #welcomeScreen .welcome-urgency {
         padding: 8px 12px;
+      }
+
+      #welcomeScreen .welcome-page-stack {
+        min-height: 170px;
+        padding: 12px 4px 18px;
+      }
+
+      #welcomeScreen .welcome-page-card {
+        width: min(48%, 148px);
+        min-height: 142px;
+        padding: 10px 8px;
+      }
+
+      #welcomeScreen .welcome-page-card.cover {
+        margin-right: -18px;
+      }
+
+      #welcomeScreen .welcome-page-card.shariah {
+        margin-left: -18px;
+      }
+
+      #welcomeScreen .welcome-page-logo {
+        width: 42px;
+        margin-bottom: 8px;
+      }
+
+      #welcomeScreen .welcome-page-title {
+        font-size: 9px;
+        margin-bottom: 8px;
+      }
+
+      #welcomeScreen .welcome-page-score {
+        padding: 6px 8px;
+      }
+
+      #welcomeScreen .welcome-page-score-value {
+        font-size: 11px;
+      }
+
+      #welcomeScreen .welcome-page-score-grade {
+        font-size: 9px;
+      }
+
+      #welcomeScreen .welcome-page-banner {
+        font-size: 7px;
+        margin-bottom: 8px;
+      }
+
+      #welcomeScreen .welcome-page-headline {
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      #welcomeScreen .welcome-page-quote {
+        font-size: 8px;
+        padding: 6px 8px;
       }
     }
 
@@ -1601,6 +1793,26 @@
                 <p class="welcome-feature-desc">Your responses are never shared. Report is for your eyes only.</p>
               </div>
             </article>
+          </div>
+
+          <div class="welcome-preview" aria-label="Report preview">
+            <p class="welcome-preview-label">Inside Your 11-Page Personalized PDF</p>
+            <div class="welcome-page-stack" aria-hidden="true">
+              <div class="welcome-page-card cover">
+                <img class="welcome-page-logo" src="/static/logo.png" alt="" width="54" height="19">
+                <p class="welcome-page-title">InvestReady Financial Readiness Report</p>
+                <div class="welcome-page-score">
+                  <span class="welcome-page-score-label">Overall Score</span>
+                  <span class="welcome-page-score-value">34/100</span>
+                  <span class="welcome-page-score-grade">Grade F</span>
+                </div>
+              </div>
+              <div class="welcome-page-card shariah">
+                <p class="welcome-page-banner">Shariah Screened • AAOIFI Standards</p>
+                <p class="welcome-page-headline">Halal Wealth for Every Muslim</p>
+                <p class="welcome-page-quote">May Allah bless your wealth, purify your earnings, and grant you barakah in your financial journey. Ameen.</p>
+              </div>
+            </div>
           </div>
 
           <p class="welcome-compare-title">What You Would Normally Pay For This</p>
