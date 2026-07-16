@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>InvestReady - Financial Readiness Assessment | iRizq.com</title>
-  <meta name="description" content="Discover your financial readiness score with InvestReady, a free 5-minute assessment from iRizq.com that delivers a Confidential Financial Summary with your readiness score, priority gaps, and a personalized 7/30/90-day action plan.">
+  <title>InvestReady - Free $47 Financial Assessment for Muslims | iRizq.com</title>
+  <meta name="description" content="Get your personalized Confidential Financial Readiness Report - a $47 value - completely free. 9-category assessment with Shariah-compliant guidance. Takes 5 minutes.">
   <link rel="icon" href="/static/irizq_favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -371,6 +371,328 @@
       color: var(--text-muted);
       font-size: 0.88rem;
       font-weight: 700;
+    }
+
+    /* Welcome landing conversion layout - scoped to #welcomeScreen only */
+    #welcomeScreen .welcome-card {
+      background:
+        radial-gradient(circle at top right, rgba(30, 200, 184, 0.16), transparent 42%),
+        linear-gradient(160deg, #0d1f3c 0%, #14294f 55%, #0a1830 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 0;
+      color: var(--white);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #welcomeScreen .welcome-urgency {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      width: 100%;
+      padding: 8px 16px;
+      text-align: center;
+      background: linear-gradient(
+        90deg,
+        rgba(61, 122, 69, 0.25) 0%,
+        rgba(30, 200, 184, 0.2) 50%,
+        rgba(61, 122, 69, 0.25) 100%
+      );
+      border-bottom: 1px solid rgba(30, 200, 184, 0.2);
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    #welcomeScreen .welcome-urgency-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: #1ec8b8;
+      vertical-align: middle;
+      animation: blink-dot 2s ease-in-out infinite;
+    }
+
+    #welcomeScreen .welcome-landing-inner {
+      padding: clamp(1.25rem, 4vw, 2rem) clamp(1rem, 3.5vw, 1.75rem) clamp(1.35rem, 4vw, 2rem);
+      text-align: center;
+    }
+
+    #welcomeScreen .welcome-value-badges {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+
+    #welcomeScreen .welcome-value-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 14px;
+      border-radius: 100px;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #welcomeScreen .welcome-value-badge.value {
+      background: rgba(30, 200, 184, 0.12);
+      border: 1px solid rgba(30, 200, 184, 0.35);
+      color: #1ec8b8;
+    }
+
+    #welcomeScreen .welcome-value-badge.free {
+      background: rgba(61, 122, 69, 0.15);
+      border: 1px solid rgba(61, 122, 69, 0.35);
+      color: #4e9a57;
+    }
+
+    #welcomeScreen .welcome-card h2#welcomeTitle {
+      margin: 0 auto;
+      max-width: 34rem;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    #welcomeScreen .welcome-subhead {
+      max-width: 480px;
+      margin: 10px auto 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    #welcomeScreen .welcome-feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 20px 0 24px;
+      text-align: left;
+    }
+
+    #welcomeScreen .welcome-feature-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      min-width: 0;
+    }
+
+    #welcomeScreen .welcome-feature-icon {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(30, 200, 184, 0.12);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    #welcomeScreen .welcome-feature-copy {
+      min-width: 0;
+    }
+
+    #welcomeScreen .welcome-feature-title {
+      margin: 0 0 3px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    #welcomeScreen .welcome-feature-desc {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.4;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    #welcomeScreen .welcome-compare-title {
+      margin: 0 0 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    #welcomeScreen .welcome-compare-table {
+      margin: 0 0 20px;
+      padding: 4px 0;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    #welcomeScreen .welcome-compare-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: left;
+    }
+
+    #welcomeScreen .welcome-compare-row span:last-child {
+      flex: 0 0 auto;
+      color: rgba(255, 255, 255, 0.4);
+      text-decoration: line-through;
+      white-space: nowrap;
+    }
+
+    #welcomeScreen .welcome-compare-row.highlight {
+      background: rgba(30, 200, 184, 0.08);
+      border-top: 1px solid rgba(30, 200, 184, 0.15);
+      border-bottom: 1px solid rgba(30, 200, 184, 0.15);
+    }
+
+    #welcomeScreen .welcome-compare-row.highlight span:first-child {
+      color: #1ec8b8;
+      font-weight: 700;
+    }
+
+    #welcomeScreen .welcome-compare-row.highlight span:last-child {
+      color: #4e9a57;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    #welcomeScreen .welcome-cta-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    #welcomeScreen .welcome-value-callout {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: center;
+      color: #4e9a57;
+    }
+
+    #welcomeScreen #startBtn {
+      width: 100%;
+      max-width: 380px;
+      min-height: 0;
+      padding: 16px 40px;
+      border-radius: 100px;
+      background: #1ec8b8;
+      color: #0d1f3c;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 4px 20px rgba(30, 200, 184, 0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #welcomeScreen #startBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      background: #1ec8b8;
+      box-shadow: 0 6px 28px rgba(30, 200, 184, 0.4);
+    }
+
+    #welcomeScreen .welcome-time-est {
+      margin: 10px 0 0;
+      font-size: 11px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    #welcomeScreen .welcome-social-proof {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    #welcomeScreen .welcome-proof-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    #welcomeScreen .welcome-proof-check {
+      color: #1ec8b8;
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    #welcomeScreen .welcome-proof-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      flex: 0 0 auto;
+    }
+
+    #welcomeScreen .welcome-share-wrap {
+      margin-top: 16px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    #welcomeScreen #shareBtn {
+      width: 100%;
+      max-width: 380px;
+      color: rgba(255, 255, 255, 0.78);
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    #welcomeScreen #shareBtn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    @media (max-width: 480px) {
+      #welcomeScreen .welcome-feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #welcomeScreen .welcome-compare-row {
+        font-size: 11px;
+        padding: 10px 12px;
+      }
+
+      #welcomeScreen .welcome-social-proof {
+        gap: 10px 14px;
+      }
+
+      #welcomeScreen .welcome-urgency {
+        padding: 8px 12px;
+      }
     }
 
     .stage-questions {
@@ -1237,21 +1559,95 @@
 
     <section class="screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
       <div class="card welcome-card">
-        <span class="lesson-lbl">Confidential Financial Summary</span>
-        <h2 id="welcomeTitle">Know your financial readiness before your next money move.</h2>
-        <p>InvestReady is a short assessment that builds a private, personalized financial summary for Muslims building wealth the halal way.</p>
-        <ul class="takeaways">
-          <li><span class="checkmark" aria-hidden="true"></span><span>Discover your personal Financial Readiness Score</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>Identify your 3 biggest financial blind spots</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>Get a personalized action plan for the next 7, 30, and 90 days</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>Receive a confidential PDF financial summary report</span></li>
-          <li><span class="checkmark" aria-hidden="true"></span><span>100% free - takes under 5 minutes</span></li>
-        </ul>
-        <div class="button-row">
-          <button class="btn btn-primary" type="button" id="startBtn">Start My Assessment</button>
-          <button class="btn btn-ghost" type="button" id="shareBtn">Share This Assessment</button>
+        <div class="welcome-urgency">
+          <span><span class="welcome-urgency-dot" aria-hidden="true"></span>Complimentary launch access - normally $47</span>
         </div>
-        <div class="welcome-note">Used by Muslims building wealth the halal way</div>
+        <div class="welcome-landing-inner">
+          <div class="welcome-value-badges" aria-label="Offer highlights">
+            <span class="welcome-value-badge value">A $47 Value</span>
+            <span class="welcome-value-badge free">FREE Today</span>
+          </div>
+          <h2 id="welcomeTitle">Discover Your Halal Financial Blind Spots in 5 Minutes</h2>
+          <p class="welcome-subhead">Get a personalized Confidential Financial Summary - built specifically for Muslims to protect your wealth and align with Shariah values - completely free.</p>
+
+          <div class="welcome-feature-grid" aria-label="What you receive">
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">🎯</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">Your Financial Blind Spots</h3>
+                <p class="welcome-feature-desc">3 immediate risks identified from your unique answers - no generic templates.</p>
+              </div>
+            </article>
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">📊</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">9-Category Score Breakdown</h3>
+                <p class="welcome-feature-desc">Color-coded bars showing exactly where you stand and why</p>
+              </div>
+            </article>
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">🗓️</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">7, 30, and 90-Day Action Plan</h3>
+                <p class="welcome-feature-desc">Clear, prioritized steps designed to build immediate financial momentum.</p>
+              </div>
+            </article>
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">🌿</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">Shariah-Compliant Guidance</h3>
+                <p class="welcome-feature-desc">Grounded in AAOIFI standards and tailored specifically for Muslim households.</p>
+              </div>
+            </article>
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">📄</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">Confidential PDF Report</h3>
+                <p class="welcome-feature-desc">A $47 value delivered to your inbox - personalized to your results</p>
+              </div>
+            </article>
+            <article class="welcome-feature-card">
+              <div class="welcome-feature-icon" aria-hidden="true">🔒</div>
+              <div class="welcome-feature-copy">
+                <h3 class="welcome-feature-title">Private and Secure</h3>
+                <p class="welcome-feature-desc">Your responses are never shared. Report is for your eyes only.</p>
+              </div>
+            </article>
+          </div>
+
+          <p class="welcome-compare-title">What You Would Normally Pay For This</p>
+          <div class="welcome-compare-table" aria-label="Value comparison">
+            <div class="welcome-compare-row">
+              <span>1-on-1 Shariah Financial Consultation</span>
+              <span>$350+</span>
+            </div>
+            <div class="welcome-compare-row">
+              <span>Premium Islamic Finance Course</span>
+              <span>$149+</span>
+            </div>
+            <div class="welcome-compare-row highlight">
+              <span>iRizq InvestReady Assessment</span>
+              <span>FREE (Valued at $47)</span>
+            </div>
+          </div>
+
+          <div class="welcome-cta-wrap">
+            <p class="welcome-value-callout">Valued at $47 - Yours Free Today</p>
+            <button class="btn btn-primary" type="button" id="startBtn">Start My Free Assessment</button>
+            <p class="welcome-time-est">Takes 5 minutes - No credit card required</p>
+            <div class="welcome-social-proof" aria-label="Trust signals">
+              <span class="welcome-proof-item"><span class="welcome-proof-check" aria-hidden="true">✓</span>AAOIFI Shariah Standards</span>
+              <span class="welcome-proof-dot" aria-hidden="true"></span>
+              <span class="welcome-proof-item"><span class="welcome-proof-check" aria-hidden="true">✓</span>9 Categories Assessed</span>
+              <span class="welcome-proof-dot" aria-hidden="true"></span>
+              <span class="welcome-proof-item"><span class="welcome-proof-check" aria-hidden="true">✓</span>Confidential Report</span>
+            </div>
+          </div>
+
+          <div class="welcome-share-wrap">
+            <button class="btn btn-ghost" type="button" id="shareBtn">Share This Assessment</button>
+          </div>
+        </div>
       </div>
     </section>
 
