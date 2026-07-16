@@ -946,6 +946,21 @@
       margin: 0.9rem 0;
     }
 
+    #verdictText {
+      margin: 0;
+      font-size: 10px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .summary-box p {
+      margin: 0 0 0.65rem;
+    }
+
+    .summary-box p:last-child {
+      margin-bottom: 0;
+    }
+
     .result-pill {
       display: inline-flex;
       align-items: center;
@@ -1314,7 +1329,6 @@
               <span class="result-pill" id="profileBadge">Building Momentum</span>
             </div>
             <p id="verdictText">Your financial foundation is developing.</p>
-            <p id="greetingText">Great work. Here is your financial readiness snapshot.</p>
           </div>
         </div>
 
@@ -1333,10 +1347,11 @@
 
         <div class="summary-box">
           <h3>Summary</h3>
-          <p id="summaryText"></p>
+          <p id="summaryProfileText"></p>
+          <p id="summaryPriorityText"></p>
+          <p id="summaryEmailText"></p>
         </div>
 
-        <p class="email-note" id="emailNote">Your detailed Confidential Financial Summary PDF is being sent. Please check your inbox and spam folder.</p>
         <a class="btn btn-primary" href="https://stocks.irizq.com" target="_blank" rel="noopener">Explore Halal Stock Research</a>
       </div>
     </section>
@@ -2385,11 +2400,28 @@
     }
 
     function getVerdictLine(score) {
-      if (score >= 85) return "Excellent Financial Readiness - Your foundation is strong across key areas.";
-      if (score >= 70) return "Strong Foundation - Solid progress with a few high-impact gaps to address.";
-      if (score >= 55) return "Developing Foundation - Clear opportunities for focused improvement.";
-      if (score >= 40) return "Needs Attention - Key gaps present that need attention before scaling up.";
-      return "Foundation Building Required - Important foundations need to be built before growth focus.";
+      if (score >= 85) {
+        return "Your financial fundamentals are strong across most assessed categories.";
+      }
+      if (score >= 70) {
+        return "A solid foundation with clear strengths and targeted gaps to address.";
+      }
+      if (score >= 55) {
+        return "Your foundation is developing with important gaps to close before scaling.";
+      }
+      if (score >= 40) {
+        return "Key foundations need attention before focusing on investment growth.";
+      }
+      return "Building core financial habits is the highest-leverage priority right now.";
+    }
+
+    function getLowestCategory(categoryScores) {
+      const entries = Object.entries(categoryScores || {});
+      if (!entries.length) {
+        return { category: "Cash Stability", score: 0 };
+      }
+      entries.sort((a, b) => a[1] - b[1]);
+      return { category: entries[0][0], score: entries[0][1] };
     }
 
     function validateEmail(email) {
@@ -2475,15 +2507,10 @@
       document.getElementById("gradeBadge").textContent = `Grade ${scores.letter_grade}`;
       document.getElementById("profileBadge").textContent = scores.financial_stage;
       document.getElementById("verdictText").textContent = getVerdictLine(scores.overall_score);
-      const stageBlurb = getSelectedProfileDescription(scores.financial_stage);
-      document.getElementById("greetingText").textContent = stageBlurb;
-      document.getElementById("emailNote").textContent = emailSent
-        ? `Your detailed Confidential Financial Summary PDF is being sent to ${state.lead.email}. Please check your inbox and spam folder.`
-        : `Your results are shown here. If a PDF arrives later at ${state.lead.email}, please also check your spam or promotions folder.`;
 
       renderCategoryTable(scores.category_scores);
       renderInsights(scores.category_scores);
-      renderSummary(scores);
+      renderSummary(scores, emailSent);
       showScreen("results");
       animateScore(scores.overall_score);
     }
@@ -2568,12 +2595,19 @@
       });
     }
 
-    function renderSummary(scores) {
-      const summary = document.getElementById("summaryText");
+    function renderSummary(scores, emailSent) {
       const stage = scores.financial_stage;
       ensureProfileVariants(stage);
       const blurb = getSelectedProfileDescription(stage);
-      summary.textContent = `With a Financial Readiness Score of ${scores.overall_score}/100 and grade ${scores.letter_grade}, your profile is ${stage}. ${blurb}`;
+      const lowest = getLowestCategory(scores.category_scores);
+      const email = state.lead.email || "your inbox";
+
+      document.getElementById("summaryProfileText").textContent = blurb;
+      document.getElementById("summaryPriorityText").textContent =
+        `Your highest-leverage action right now is addressing ${lowest.category} (${lowest.score}/100).`;
+      document.getElementById("summaryEmailText").textContent = emailSent
+        ? `Your detailed Confidential Financial Summary PDF is being sent to ${email}. Please check your inbox and spam folder.`
+        : `Your results are shown here. If a PDF arrives later at ${email}, please also check your spam or promotions folder.`;
     }
 
     function animateScore(target) {
