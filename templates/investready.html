@@ -1564,6 +1564,194 @@
       margin: 1rem 0;
     }
 
+    #resultsScreen .workshop-banner {
+      position: relative;
+      overflow: hidden;
+      margin: 20px 0;
+      padding: 20px 22px;
+      border-radius: 12px;
+      border: 1px solid rgba(30, 200, 184, 0.3);
+      border-left: 4px solid #1ec8b8;
+      background: linear-gradient(
+        135deg,
+        rgba(13, 31, 60, 0.95) 0%,
+        rgba(26, 51, 24, 0.9) 100%
+      );
+      transition: opacity 200ms ease;
+    }
+
+    #resultsScreen .workshop-banner::before {
+      content: "";
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(30, 200, 184, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    #resultsScreen .workshop-banner.is-hiding {
+      opacity: 0;
+    }
+
+    #resultsScreen .workshop-dismiss {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      z-index: 1;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.25);
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    #resultsScreen .workshop-dismiss:hover {
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    #resultsScreen .workshop-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding-right: 64px;
+    }
+
+    #resultsScreen .workshop-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #resultsScreen .workshop-badge.location {
+      background: rgba(30, 200, 184, 0.12);
+      border: 1px solid rgba(30, 200, 184, 0.25);
+      color: #1ec8b8;
+    }
+
+    #resultsScreen .workshop-badge.seats {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #f87171;
+    }
+
+    #resultsScreen .workshop-title {
+      margin: 0 0 6px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #ffffff;
+    }
+
+    #resultsScreen .workshop-hook {
+      margin: 0 0 14px;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    #resultsScreen .workshop-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 0 0 16px;
+    }
+
+    #resultsScreen .workshop-detail {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.4;
+    }
+
+    #resultsScreen .workshop-location-note {
+      margin: 0 0 16px;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 11px;
+      font-style: italic;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    #resultsScreen .workshop-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 100px;
+      background: #1ec8b8;
+      color: #0d1f3c;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease;
+      box-sizing: border-box;
+    }
+
+    #resultsScreen .workshop-cta:hover {
+      background: #17a898;
+      transform: translateY(-1px);
+      color: #0d1f3c;
+    }
+
+    #resultsScreen .workshop-cta-note {
+      margin: 8px 0 0;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 10px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    @media (max-width: 480px) {
+      #resultsScreen .workshop-banner {
+        padding: 16px;
+      }
+
+      #resultsScreen .workshop-title {
+        font-size: 15px;
+      }
+
+      #resultsScreen .workshop-details {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      #resultsScreen .workshop-cta {
+        padding: 12px 20px;
+      }
+
+      #resultsScreen .workshop-location-note {
+        font-size: 10px;
+      }
+
+      #resultsScreen .workshop-badges {
+        padding-right: 0;
+        margin-top: 8px;
+      }
+    }
+
     .email-note {
       margin: 0.85rem 0 1rem;
       color: var(--text-muted);
@@ -1951,6 +2139,30 @@
           <p id="summaryEmailText"></p>
         </div>
 
+        <aside class="workshop-banner" id="workshopBanner" hidden>
+          <button class="workshop-dismiss" type="button" id="workshopDismissBtn">Maybe later</button>
+          <div class="workshop-badges">
+            <span class="workshop-badge location">📍 Greater Boston Area</span>
+            <span class="workshop-badge seats">⚡ Limited to 50 Families</span>
+          </div>
+          <h3 class="workshop-title">Halal Investing Blueprint Workshop</h3>
+          <p class="workshop-hook" id="workshopHookText"></p>
+          <div class="workshop-details">
+            <span class="workshop-detail">🗓️  In-Person Event</span>
+            <span class="workshop-detail">👨‍👩‍👧‍👦  For Muslim Families</span>
+            <span class="workshop-detail">🤝  First Come First Served</span>
+          </div>
+          <p class="workshop-location-note">This event is held in the Greater Boston area. If you are outside Boston, register your interest and we will notify you when a workshop comes to your area or becomes available online.</p>
+          <a
+            class="workshop-cta"
+            id="workshopCtaBtn"
+            href="https://irizq.com/halal-investing-workshop.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Reserve My Spot - Register Interest</a>
+          <p class="workshop-cta-note">Free to register interest. No commitment.</p>
+        </aside>
+
         <a class="btn btn-primary" href="https://stocks.irizq.com" target="_blank" rel="noopener">Explore Halal Stock Research</a>
       </div>
     </section>
@@ -1985,6 +2197,7 @@
 
   <script>
     const BACKEND_URL = window.location.origin;
+    const WORKSHOP_URL = "https://irizq.com/halal-investing-workshop.html";
 
     const CATEGORY_WEIGHTS = {
       "Cash Stability": 0.18,
@@ -2433,7 +2646,8 @@
       lead: { name: "", email: "" },
       profileVariantStage: null,
       profileDescriptionVariant: null,
-      profileInsightVariant: null
+      profileInsightVariant: null,
+      workshopBannerDismissed: false
     };
 
     const screens = {
@@ -3110,8 +3324,79 @@
       renderCategoryTable(scores.category_scores);
       renderInsights(scores.category_scores);
       renderSummary(scores, emailSent);
+      renderWorkshopBanner(scores.overall_score);
       showScreen("results");
       animateScore(scores.overall_score);
+    }
+
+    function getWorkshopHookLine(score, firstName) {
+      const name = firstName || "Friend";
+      if (score < 40) {
+        return (
+          `${name}, this workshop is built for exactly where you are right now. We walk ` +
+          "through the foundational steps that your assessment identified - in person, with " +
+          "a room full of Muslim families on the same journey."
+        );
+      }
+      if (score <= 54) {
+        return (
+          `${name}, your assessment shows you are building your foundation. This workshop ` +
+          "picks up exactly where your report leaves off - giving you a structured halal " +
+          "investing plan with community support."
+        );
+      }
+      if (score <= 69) {
+        return (
+          `${name}, your assessment shows real progress with clear gaps remaining. This ` +
+          "workshop is designed to help you close those gaps and move into confident halal " +
+          "wealth building - step by step."
+        );
+      }
+      if (score <= 84) {
+        return (
+          `${name}, your foundation is strong. This workshop will show you how to take ` +
+          "what you have built and scale it through a structured halal investing framework " +
+          "alongside other committed Muslim families."
+        );
+      }
+      return (
+        `${name}, your financial fundamentals are strong. This workshop is where people ` +
+        "at your level come to refine their halal investing strategy and connect with a " +
+        "serious Muslim financial community."
+      );
+    }
+
+    function renderWorkshopBanner(overallScore) {
+      const banner = document.getElementById("workshopBanner");
+      const hookEl = document.getElementById("workshopHookText");
+      const ctaBtn = document.getElementById("workshopCtaBtn");
+      if (!banner || !hookEl || !ctaBtn) return;
+
+      if (state.workshopBannerDismissed) {
+        banner.hidden = true;
+        banner.classList.remove("is-hiding");
+        return;
+      }
+
+      const name = String(state.lead.name || "").trim();
+      const firstName = name.split(/\s+/)[0] || "Friend";
+      const score = Number(overallScore);
+
+      hookEl.textContent = getWorkshopHookLine(score, firstName);
+      ctaBtn.href = WORKSHOP_URL;
+      banner.classList.remove("is-hiding");
+      banner.hidden = false;
+    }
+
+    function dismissWorkshopBanner() {
+      const banner = document.getElementById("workshopBanner");
+      if (!banner || banner.hidden) return;
+      state.workshopBannerDismissed = true;
+      banner.classList.add("is-hiding");
+      window.setTimeout(() => {
+        banner.hidden = true;
+        banner.classList.remove("is-hiding");
+      }, 200);
     }
 
     function renderCategoryTable(categoryScores) {
