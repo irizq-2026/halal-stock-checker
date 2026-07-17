@@ -1566,6 +1566,7 @@
 
     #resultsScreen .workshop-banner {
       position: relative;
+      display: none;
       overflow: hidden;
       margin: 20px 0;
       padding: 20px 22px;
@@ -1577,7 +1578,12 @@
         rgba(13, 31, 60, 0.95) 0%,
         rgba(26, 51, 24, 0.9) 100%
       );
+      opacity: 1;
       transition: opacity 200ms ease;
+    }
+
+    #resultsScreen .workshop-banner.is-visible {
+      display: block;
     }
 
     #resultsScreen .workshop-banner::before {
@@ -2139,7 +2145,7 @@
           <p id="summaryEmailText"></p>
         </div>
 
-        <aside class="workshop-banner" id="workshopBanner" hidden>
+        <aside class="workshop-banner" id="workshopBanner" aria-hidden="true">
           <button class="workshop-dismiss" type="button" id="workshopDismissBtn">Maybe later</button>
           <div class="workshop-badges">
             <span class="workshop-badge location">📍 Greater Boston Area</span>
@@ -3324,9 +3330,9 @@
       renderCategoryTable(scores.category_scores);
       renderInsights(scores.category_scores);
       renderSummary(scores, emailSent);
-      renderWorkshopBanner(scores.overall_score);
       showScreen("results");
       animateScore(scores.overall_score);
+      renderWorkshopBanner(scores.overall_score);
     }
 
     function getWorkshopHookLine(score, firstName) {
@@ -3373,8 +3379,9 @@
       if (!banner || !hookEl || !ctaBtn) return;
 
       if (state.workshopBannerDismissed) {
-        banner.hidden = true;
-        banner.classList.remove("is-hiding");
+        banner.classList.remove("is-visible", "is-hiding");
+        banner.setAttribute("aria-hidden", "true");
+        banner.style.display = "none";
         return;
       }
 
@@ -3383,19 +3390,29 @@
       const score = Number(overallScore);
 
       hookEl.textContent = getWorkshopHookLine(score, firstName);
-      ctaBtn.href = WORKSHOP_URL;
+      ctaBtn.setAttribute("href", WORKSHOP_URL);
+      banner.removeAttribute("hidden");
+      banner.style.display = "block";
+      banner.classList.add("is-visible");
       banner.classList.remove("is-hiding");
-      banner.hidden = false;
+      banner.setAttribute("aria-hidden", "false");
+
+      window.setTimeout(() => {
+        if (!state.workshopBannerDismissed && banner.classList.contains("is-visible")) {
+          banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }, 450);
     }
 
     function dismissWorkshopBanner() {
       const banner = document.getElementById("workshopBanner");
-      if (!banner || banner.hidden) return;
+      if (!banner || !banner.classList.contains("is-visible")) return;
       state.workshopBannerDismissed = true;
       banner.classList.add("is-hiding");
       window.setTimeout(() => {
-        banner.hidden = true;
-        banner.classList.remove("is-hiding");
+        banner.classList.remove("is-visible", "is-hiding");
+        banner.setAttribute("aria-hidden", "true");
+        banner.style.display = "none";
       }, 200);
     }
 
