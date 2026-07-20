@@ -3124,6 +3124,140 @@ def render_aaoifi_box() -> None:
     )
 
 
+
+def render_assessment_nav_card() -> None:
+    st.markdown(
+        """
+        <style>
+          a.assessment-card {
+            text-decoration: none !important;
+            display: block !important;
+            color: inherit !important;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(201,168,76,0.2);
+            border-left: 3px solid rgba(201,168,76,0.5);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            cursor: pointer;
+          }
+          a.assessment-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-left-color: rgba(201,168,76,0.8);
+          }
+          a.assessment-card:hover .assessment-card-title {
+            color: rgba(255,255,255,0.9) !important;
+          }
+          .assessment-card-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+          }
+          .assessment-card-label {
+            font-size: 9px;
+            color: rgba(201,168,76,0.7);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+          .assessment-card-title {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 500;
+            line-height: 1.4;
+          }
+          .assessment-card-arrow {
+            color: rgba(201,168,76,0.6);
+            font-size: 14px;
+            flex: 0 0 auto;
+          }
+        </style>
+        <a href="https://stocks.irizq.com/investready" class="assessment-card">
+          <div class="assessment-card-row">
+            <div>
+              <div class="assessment-card-label">FREE TOOL</div>
+              <div class="assessment-card-title">Know if You Are Financially Ready to Invest - Take the Free Assessment</div>
+            </div>
+            <div class="assessment-card-arrow">→</div>
+          </div>
+        </a>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_workshop_nav_card() -> None:
+    st.markdown(
+        """
+        <style>
+          a.workshop-card {
+            text-decoration: none !important;
+            display: block !important;
+            color: inherit !important;
+            background: rgba(30,200,184,0.04);
+            border: 1px solid rgba(30,200,184,0.15);
+            border-left: 3px solid rgba(30,200,184,0.4);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 16px 0 8px 0;
+            cursor: pointer;
+          }
+          a.workshop-card:hover {
+            background: rgba(30,200,184,0.07);
+            border-left-color: rgba(30,200,184,0.6);
+          }
+          a.workshop-card:hover .workshop-card-title {
+            color: rgba(255,255,255,0.9) !important;
+          }
+          .workshop-card-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+          }
+          .workshop-card-label {
+            font-size: 9px;
+            color: rgba(30,200,184,0.6);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+          .workshop-card-title {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 500;
+            line-height: 1.4;
+          }
+          .workshop-card-sub {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 3px;
+            line-height: 1.4;
+          }
+          .workshop-card-arrow {
+            color: rgba(30,200,184,0.5);
+            font-size: 14px;
+            flex: 0 0 auto;
+          }
+        </style>
+        <a href="https://irizq.com/halal-investing-workshop.html" class="workshop-card" target="_blank" rel="noopener noreferrer">
+          <div class="workshop-card-row">
+            <div>
+              <div class="workshop-card-label">GREATER BOSTON - LIMITED SPOTS</div>
+              <div class="workshop-card-title">Halal Investing Blueprint Workshop - In-Person Event for Muslim Families</div>
+              <div class="workshop-card-sub">Limited to 50 families. Register your interest today.</div>
+            </div>
+            <div class="workshop-card-arrow">→</div>
+          </div>
+        </a>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_whatsapp_share(data: dict, screening: dict) -> None:
     symbol = str(data.get("symbol", "")).upper()
     company = _company_name(data)
@@ -3813,8 +3947,10 @@ def main() -> None:
     elif not st.session_state.has_results:
         render_disclaimer()
 
+    render_assessment_nav_card()
     render_aaoifi_box()
     render_feedback_small()
+    render_workshop_nav_card()
     st.markdown(
         "<div style='margin-top: 10px; text-align: center;'>"
         "<a href='?page=admin' style='font-size: 12px; color: #6b7280;'>Admin Dashboard</a>"
