@@ -145,6 +145,18 @@ def ensure_ebook_stats_table() -> None:
                 );
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS investready_funnel (
+                    id SERIAL PRIMARY KEY,
+                    event VARCHAR(50) NOT NULL,
+                    question INTEGER,
+                    ip_address VARCHAR(45),
+                    session_id VARCHAR(36),
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
             # Safe additive columns for the revamped assessment payload.
             for statement in (
                 "ALTER TABLE investready_submissions ADD COLUMN IF NOT EXISTS financial_stage VARCHAR(50)",
@@ -508,6 +520,96 @@ def investready_submit() -> tuple[Any, int]:
         LOGGER.exception("Failed to generate/send InvestReady report for %s", email)
 
     return jsonify({"ok": True}), 200
+
+
+@app.post("/investready/track")
+def investready_track() -> tuple[Any, int]:
+    try:
+        payload = request.get_json(silent=True) or {}
+        event = str(payload.get("event") or "").strip()[:50]
+        session_id = str(payload.get("session_id") or "").strip()[:36] or None
+        question_raw = payload.get("question")
+        question_val = None
+        if question_raw is not None and question_raw != "":
+            try:
+                question_val = int(question_raw)
+            except (TypeError, ValueError):
+                question_val = None
+        ip_address = request.remote_addr
+        if event:
+            with _get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO investready_funnel (event, question, ip_address, session_id)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (event, question_val, ip_address, session_id),
+                    )
+                conn.commit()
+    except Exception:
+        LOGGER.exception("Failed to log InvestReady funnel event")
+    return jsonify({"ok": True}), 200
+
+
+@app.get("/admin/investready-stats")
+def investready_stats() -> tuple[Any, int]:
+    try:
+        with _get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT event, COUNT(*)
+                    FROM investready_funnel
+                    WHERE event IN (
+                        'page_visit',
+                        'assessment_started',
+                        'contact_screen_reached',
+                        'assessment_completed'
+                    )
+                    GROUP BY event
+                    """
+                )
+                counts = {str(row[0]): int(row[1]) for row in cur.fetchall()}
+                cur.execute(
+                    """
+                    SELECT question, COUNT(*)
+                    FROM investready_funnel
+                    WHERE event = 'question_view' AND question IS NOT NULL
+                    GROUP BY question
+                    ORDER BY question ASC
+                    """
+                )
+                by_question_dropoff = [
+                    {"question": int(row[0]), "views": int(row[1])}
+                    for row in cur.fetchall()
+                ]
+
+        page_visits = counts.get("page_visit", 0)
+        assessment_started = counts.get("assessment_started", 0)
+        contact_screen_reached = counts.get("contact_screen_reached", 0)
+        assessment_completed = counts.get("assessment_completed", 0)
+
+        def _rate(numerator: int, denominator: int) -> str:
+            if denominator <= 0:
+                return "0.0%"
+            return f"{round((numerator / denominator) * 100, 1)}%"
+
+        return jsonify(
+            {
+                "page_visits": page_visits,
+                "assessment_started": assessment_started,
+                "contact_screen_reached": contact_screen_reached,
+                "assessment_completed": assessment_completed,
+                "start_rate": _rate(assessment_started, page_visits),
+                "completion_rate": _rate(assessment_completed, assessment_started),
+                "full_funnel_rate": _rate(assessment_completed, page_visits),
+                "by_question_dropoff": by_question_dropoff,
+            }
+        ), 200
+    except Exception:
+        LOGGER.exception("Failed to load InvestReady funnel stats")
+        return jsonify({"ok": False, "error": "Failed to load stats."}), 500
 
 
 if __name__ == "__main__":

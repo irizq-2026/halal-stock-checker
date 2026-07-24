@@ -808,9 +808,244 @@
       background: rgba(255, 255, 255, 0.06);
     }
 
+    #welcomeScreen .welcome-urgency-short {
+      display: none;
+    }
+
+    #welcomeScreen .welcome-features-toggle,
+    #welcomeScreen .welcome-compare-toggle {
+      display: none;
+      width: 100%;
+      margin: 0 0 16px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #1ec8b8;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #welcomeScreen .welcome-compare-toggle {
+      margin: 0 0 8px;
+    }
+
+    .investready-sticky-cta {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .hero-header {
+        padding: 0.65rem 0.85rem 1.1rem;
+      }
+
+      .hero-header:after {
+        display: none;
+      }
+
+      .brand-row {
+        margin-bottom: 0.4rem;
+      }
+
+      .brand-row img {
+        width: 72px;
+      }
+
+      .badge {
+        padding: 0.28rem 0.55rem;
+        font-size: 0.68rem;
+      }
+
+      .hero-title {
+        margin-top: 0.4rem;
+        font-size: clamp(1.7rem, 9vw, 2.25rem);
+      }
+
+      .hero-chips {
+        display: none;
+      }
+
+      .assessment-zone {
+        margin-top: -0.8rem;
+        margin-bottom: 1rem;
+      }
+
+      body:has(#welcomeScreen.active) .progress-shell {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-landing-inner {
+        display: flex;
+        flex-direction: column;
+        padding-top: 16px;
+        padding-bottom: calc(1.35rem + 96px);
+      }
+
+      #welcomeScreen .welcome-value-badges {
+        order: 1;
+        margin-bottom: 10px;
+      }
+
+      #welcomeScreen .welcome-card h2#welcomeTitle {
+        order: 2;
+        margin-bottom: 8px;
+        font-size: clamp(1.35rem, 6.2vw, 1.75rem);
+      }
+
+      #welcomeScreen .welcome-card p.welcome-subhead {
+        order: 3;
+        margin-top: 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      #welcomeScreen .welcome-cta-wrap {
+        order: 4;
+        margin-top: 14px;
+      }
+
+      #welcomeScreen .welcome-feature-grid {
+        order: 5;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 16px 0 8px;
+      }
+
+      #welcomeScreen .welcome-features-toggle {
+        order: 6;
+        margin-bottom: 8px;
+      }
+
+      #welcomeScreen .welcome-preview {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-compare-toggle {
+        order: 7;
+      }
+
+      #welcomeScreen .welcome-compare-collapsible {
+        order: 8;
+      }
+
+      #welcomeScreen .welcome-share-wrap {
+        order: 9;
+        margin-top: 10px;
+      }
+
+      #welcomeScreen .welcome-feature-card {
+        padding: 10px 12px;
+      }
+
+      #welcomeScreen .welcome-feature-desc {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-social-proof {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-urgency-full {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-urgency-short {
+        display: inline;
+      }
+
+      #welcomeScreen .welcome-feature-card.welcome-feature-extra {
+        display: none;
+      }
+
+      #welcomeScreen .welcome-feature-grid.is-expanded .welcome-feature-card.welcome-feature-extra {
+        display: flex;
+      }
+
+      #welcomeScreen .welcome-feature-grid.is-expanded .welcome-feature-desc {
+        display: block;
+      }
+
+      #welcomeScreen .welcome-features-toggle,
+      #welcomeScreen .welcome-compare-toggle {
+        display: block;
+      }
+
+      #welcomeScreen .welcome-compare-collapsible {
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        margin: 0;
+        transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.25s ease;
+      }
+
+      #welcomeScreen .welcome-compare-collapsible.is-open {
+        max-height: 320px;
+        opacity: 1;
+        margin: 0 0 8px;
+      }
+
+      #welcomeScreen .welcome-compare-collapsible:not(.is-open) .welcome-compare-title,
+      #welcomeScreen .welcome-compare-collapsible:not(.is-open) .welcome-compare-table {
+        margin: 0;
+        border-width: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      .investready-sticky-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: linear-gradient(
+          to top,
+          rgba(13, 31, 60, 0.98) 0%,
+          rgba(13, 31, 60, 0.95) 100%
+        );
+        border-top: 1px solid rgba(30, 200, 184, 0.2);
+        padding: 12px 20px 20px 20px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .investready-sticky-cta[hidden] {
+        display: none !important;
+      }
+
+      .investready-sticky-cta-label {
+        margin: 0 0 8px;
+        color: rgba(255, 255, 255, 0.45);
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .investready-sticky-cta-btn {
+        display: block;
+        width: 100%;
+        padding: 15px 24px;
+        border: none;
+        border-radius: 100px;
+        background: #1ec8b8;
+        color: #0d1f3c;
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(30, 200, 184, 0.35);
+      }
+    }
+
     @media (max-width: 480px) {
       #welcomeScreen .welcome-feature-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       #welcomeScreen .welcome-compare-row {
@@ -1941,7 +2176,11 @@
     <section class="screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
       <div class="card welcome-card">
         <div class="welcome-urgency">
-          <span><span class="welcome-urgency-dot" aria-hidden="true"></span>Complimentary launch access - normally $47</span>
+          <span>
+            <span class="welcome-urgency-dot" aria-hidden="true"></span>
+            <span class="welcome-urgency-full">Complimentary launch access - normally $47</span>
+            <span class="welcome-urgency-short">Currently free - $47 value</span>
+          </span>
         </div>
         <div class="welcome-landing-inner">
           <div class="welcome-value-badges" aria-label="Offer highlights">
@@ -1980,14 +2219,14 @@
                 <p class="welcome-feature-desc">Grounded in AAOIFI standards and tailored specifically for Muslim households.</p>
               </div>
             </article>
-            <article class="welcome-feature-card">
+            <article class="welcome-feature-card welcome-feature-extra">
               <div class="welcome-feature-icon" aria-hidden="true">📄</div>
               <div class="welcome-feature-copy">
                 <h3 class="welcome-feature-title">Confidential PDF Report</h3>
                 <p class="welcome-feature-desc">A $47 value delivered to your inbox - personalized to your results</p>
               </div>
             </article>
-            <article class="welcome-feature-card">
+            <article class="welcome-feature-card welcome-feature-extra">
               <div class="welcome-feature-icon" aria-hidden="true">🔒</div>
               <div class="welcome-feature-copy">
                 <h3 class="welcome-feature-title">Private and Secure</h3>
@@ -1995,6 +2234,7 @@
               </div>
             </article>
           </div>
+          <button class="welcome-features-toggle" type="button" id="featuresToggle" aria-expanded="false">See all features +</button>
 
           <div class="welcome-preview" aria-label="Report preview">
             <p class="welcome-preview-label">Inside Your 11-Page Personalized PDF</p>
@@ -2016,19 +2256,22 @@
             </div>
           </div>
 
-          <p class="welcome-compare-title">What You Would Normally Pay For This</p>
-          <div class="welcome-compare-table" aria-label="Value comparison">
-            <div class="welcome-compare-row">
-              <span>1-on-1 Shariah Financial Consultation</span>
-              <span>$350+</span>
-            </div>
-            <div class="welcome-compare-row">
-              <span>Premium Islamic Finance Course</span>
-              <span>$149+</span>
-            </div>
-            <div class="welcome-compare-row highlight">
-              <span>iRizq InvestReady Assessment</span>
-              <span>FREE (Valued at $47)</span>
+          <button class="welcome-compare-toggle" type="button" id="compareToggle" aria-expanded="false">Why is this free? +</button>
+          <div class="welcome-compare-collapsible" id="compareCollapsible">
+            <p class="welcome-compare-title">What You Would Normally Pay For This</p>
+            <div class="welcome-compare-table" aria-label="Value comparison">
+              <div class="welcome-compare-row">
+                <span>1-on-1 Shariah Financial Consultation</span>
+                <span>$350+</span>
+              </div>
+              <div class="welcome-compare-row">
+                <span>Premium Islamic Finance Course</span>
+                <span>$149+</span>
+              </div>
+              <div class="welcome-compare-row highlight">
+                <span>iRizq InvestReady Assessment</span>
+                <span>FREE (Valued at $47)</span>
+              </div>
             </div>
           </div>
 
@@ -2194,6 +2437,11 @@
     </div>
   </div>
 
+  <div class="investready-sticky-cta" id="stickyCtaBar" role="region" aria-label="Start assessment">
+    <p class="investready-sticky-cta-label">FREE - A $47 Value - Takes 5 Minutes</p>
+    <button class="investready-sticky-cta-btn" type="button" id="stickyStartBtn">Start My Free Assessment</button>
+  </div>
+
   <footer class="site-footer">
     <div class="footer-inner">
       <img class="footer-logo" src="/static/logo.png" alt="iRizq logo" width="90" height="32">
@@ -2208,6 +2456,28 @@
   <script>
     const BACKEND_URL = window.location.origin;
     const WORKSHOP_URL = "https://irizq.com/halal-investing-workshop.html";
+
+    const SESSION_ID = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c == "x" ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+
+    let onWelcomeScreen = true;
+
+    function trackEvent(event, question = null) {
+      fetch(window.location.origin + "/investready/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: event,
+          question: question,
+          session_id: SESSION_ID
+        }),
+        keepalive: true
+      }).catch(() => {});
+    }
+
+    trackEvent("page_visit");
 
     const CATEGORY_WEIGHTS = {
       "Cash Stability": 0.18,
@@ -2671,6 +2941,12 @@
     const progressPercent = document.getElementById("progressPercent");
     const progressFill = document.getElementById("progressFill");
     const startBtn = document.getElementById("startBtn");
+    const stickyStartBtn = document.getElementById("stickyStartBtn");
+    const stickyCtaBar = document.getElementById("stickyCtaBar");
+    const featuresToggle = document.getElementById("featuresToggle");
+    const compareToggle = document.getElementById("compareToggle");
+    const compareCollapsible = document.getElementById("compareCollapsible");
+    const featureGrid = document.querySelector("#welcomeScreen .welcome-feature-grid");
     const shareBtn = document.getElementById("shareBtn");
     const questionFrame = document.getElementById("questionFrame");
     const categoryLabel = document.getElementById("categoryLabel");
@@ -2823,6 +3099,10 @@
           document.body.classList.add("question-active");
         }, 260);
       }
+
+      if (name === "capture") {
+        trackEvent("contact_screen_reached");
+      }
     }
 
     function updateProgress() {
@@ -2865,6 +3145,8 @@
         state.currentIndex = active.length - 1;
       }
       const question = active[state.currentIndex];
+      const currentQ = state.currentIndex + 1;
+      trackEvent("question_view", currentQ);
       const slideClass = direction === "right" ? "slide-right" : "slide-left";
 
       questionFrame.classList.add(slideClass);
@@ -3535,11 +3817,41 @@
       requestAnimationFrame(tick);
     }
 
-    startBtn.addEventListener("click", () => {
+    function hideStickyCtaBar() {
+      if (stickyCtaBar) {
+        stickyCtaBar.style.display = "none";
+      }
+    }
+
+    function startAssessment() {
+      onWelcomeScreen = false;
+      hideStickyCtaBar();
+      trackEvent("assessment_started");
       state.currentIndex = 0;
       showScreen("question");
       renderQuestion("left");
-    });
+    }
+
+    startBtn.addEventListener("click", startAssessment);
+    if (stickyStartBtn) {
+      stickyStartBtn.addEventListener("click", startAssessment);
+    }
+
+    if (featuresToggle && featureGrid) {
+      featuresToggle.addEventListener("click", () => {
+        const expanded = featureGrid.classList.toggle("is-expanded");
+        featuresToggle.setAttribute("aria-expanded", String(expanded));
+        featuresToggle.textContent = expanded ? "See all features -" : "See all features +";
+      });
+    }
+
+    if (compareToggle && compareCollapsible) {
+      compareToggle.addEventListener("click", () => {
+        const expanded = compareCollapsible.classList.toggle("is-open");
+        compareToggle.setAttribute("aria-expanded", String(expanded));
+        compareToggle.textContent = expanded ? "Why is this free? -" : "Why is this free? +";
+      });
+    }
 
     shareBtn.addEventListener("click", async () => {
       const shareData = {
@@ -3722,7 +4034,17 @@
       }, 100);
 
       try {
-        await submitResults(payload);
+        const response = await submitResults(payload);
+        let completedOk = false;
+        try {
+          const data = await response.json();
+          completedOk = !!(data && data.ok === true);
+        } catch (_) {
+          completedOk = false;
+        }
+        if (completedOk) {
+          trackEvent("assessment_completed");
+        }
         stopLoadingUi();
         fillEl.style.width = "100%";
         statusEl.textContent = "Sending to your inbox...";
