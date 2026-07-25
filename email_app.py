@@ -28,6 +28,17 @@ LOGGER = logging.getLogger(__name__)
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
+
+def get_real_ip():
+    if request.headers.get("X-Forwarded-For"):
+        ip = request.headers.get("X-Forwarded-For").split(",")[0].strip()
+    elif request.headers.get("X-Real-IP"):
+        ip = request.headers.get("X-Real-IP")
+    else:
+        ip = request.remote_addr
+    return ip
+
+
 EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 DEFAULT_PAGE = "ebook-landing"
 PDF_RELATIVE_PATH = Path("static/downloads/iRizq-Halal-Investing-Roadmap.pdf")
@@ -424,7 +435,7 @@ def subscribe() -> tuple[Any, int]:
     if not email or not EMAIL_RE.match(email):
         return jsonify({"ok": False, "error": "Invalid email address."}), 400
 
-    ip_address = request.remote_addr
+    ip_address = get_real_ip()
     try:
         log_ebook_event(event_type="download", page=DEFAULT_PAGE, ip_address=ip_address)
     except Exception:
@@ -447,7 +458,7 @@ def subscribe() -> tuple[Any, int]:
 def track_visit() -> tuple[Any, int]:
     payload = request.get_json(silent=True) or {}
     page = str(payload.get("page") or DEFAULT_PAGE).strip() or DEFAULT_PAGE
-    ip_address = request.remote_addr
+    ip_address = get_real_ip()
 
     try:
         log_ebook_event(event_type="visit", page=page, ip_address=ip_address)
@@ -499,7 +510,7 @@ def investready_submit() -> tuple[Any, int]:
     payload["investor_profile"] = investor_profile
     if not payload.get("financial_stage"):
         payload["financial_stage"] = investor_profile
-    ip_address = request.remote_addr
+    ip_address = get_real_ip()
 
     try:
         save_investready_submission(payload, ip_address=ip_address)
@@ -535,7 +546,7 @@ def investready_track() -> tuple[Any, int]:
                 question_val = int(question_raw)
             except (TypeError, ValueError):
                 question_val = None
-        ip_address = request.remote_addr
+        ip_address = get_real_ip()
         if event:
             with _get_db_connection() as conn:
                 with conn.cursor() as cur:
