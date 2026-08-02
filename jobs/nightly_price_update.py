@@ -105,7 +105,7 @@ async def run_nightly_update() -> dict[str, Any]:
         await create_tables_if_not_exist(db_conn)
 
         if datetime.now().weekday() == 6:
-            logger.info("Sunday — refreshing SEC shares data...")
+            logger.info("Sunday - refreshing SEC shares data...")
             sec_result = await fetch_and_store_sec_shares(db_conn)
             logger.info("SEC shares result: %s", sec_result)
         else:

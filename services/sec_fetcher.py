@@ -132,12 +132,12 @@ async def _get_json(
     response = await client.get(url, headers=headers)
     try:
         if response.status_code == 429:
-            LOGGER.error("SEC rate limited for %s — waiting 60s then retrying once", ticker)
+            LOGGER.error("SEC rate limited for %s - waiting 60s then retrying once", ticker)
             await asyncio.sleep(60)
             retry_response = await client.get(url, headers=headers)
             try:
                 if retry_response.status_code == 429:
-                    LOGGER.error("SEC rate limited for %s — skipped", ticker)
+                    LOGGER.error("SEC rate limited for %s - skipped", ticker)
                     return 429, None
                 if retry_response.status_code == 404:
                     return 404, None
