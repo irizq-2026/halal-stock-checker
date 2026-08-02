@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import logging
 import time
 from dataclasses import dataclass, field
@@ -22,6 +23,7 @@ from rules import screen_stock
 from services.edgar_xbrl import (
     DATA_FREQUENCY_ANNUAL,
     DATA_FREQUENCY_QUARTERLY,
+    FILER_DOMESTIC,
     FILER_UNKNOWN,
     TAXONOMY_IFRS_FULL,
     TAXONOMY_US_GAAP,
@@ -42,6 +44,10 @@ SEC_TICKER_MAPPING_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 SEC_COMPANY_CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}/us-gaap/{concept}.json"
 SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+
+# Keep peak RSS under small Render plans by never materializing the full universe.
+REFRESH_FETCH_BATCH_SIZE = 25
+REFRESH_TICKER_CONCURRENCY = 8
 
 FIELD_TOTAL_DEBT = "total_debt"
 FIELD_TOTAL_CASH = "total_cash"
@@ -1270,10 +1276,17 @@ async def _fetch_ticker_packet(
 
     cik = mapped["cik"]
     submissions = await client.fetch_submissions(cik) or {}
-    company_facts = await client.fetch_company_facts(cik) or {}
-    facts = company_facts.get("facts") or {}
     filer_type = detect_filer_type(submissions)
+    # Full companyfacts JSON is multi-MB per CIK. Only FPI tickers need it for IFRS parsing;
+    # domestic tickers use targeted companyconcept endpoints instead.
+    if is_fpi_filer_type(filer_type):
+        company_facts = await client.fetch_company_facts(cik) or {}
+    else:
+        company_facts = {}
+    facts = company_facts.get("facts") or {}
     taxonomy = detect_taxonomy(facts)
+    if taxonomy is None and filer_type == FILER_DOMESTIC:
+        taxonomy = TAXONOMY_US_GAAP
     company_name = str(submissions.get("name") or mapped["company_name"]).strip() or symbol
     sic_code = str(submissions.get("sic") or "").strip() or None
     sic_description = str(submissions.get("sicDescription") or "").strip() or None
@@ -1533,6 +1546,12 @@ async def _fetch_ticker_packet(
         if latest_filing is not None and latest_filing.get("filing_type")
         else (primary_point.form if primary_point and primary_point.form else "10-K")
     )
+
+    # Release large EDGAR JSON payloads before the packet is retained by the batch.
+    if company_facts:
+        company_facts.clear()
+    if isinstance(submissions, dict):
+        submissions.clear()
 
     return TickerEdgarPacket(
         ticker=symbol,
@@ -1899,7 +1918,7 @@ class SecRefreshService:
 
         async with AsyncEdgarClient() as client:
             mapping = await client.fetch_ticker_mapping()
-            ticker_sem = asyncio.Semaphore(40)
+            ticker_sem = asyncio.Semaphore(REFRESH_TICKER_CONCURRENCY)
 
             async def _worker(symbol: str) -> tuple[str, TickerEdgarPacket]:
                 async with ticker_sem:
@@ -2035,41 +2054,58 @@ class SecRefreshService:
         tickers = [row[0] for row in self.session.execute(query).all()]
         audit = RunAudit()
         summaries: list[RefreshSummary] = []
+        total = len(tickers)
 
-        packets = asyncio.run(self._fetch_packets(tickers, audit))
-        for ticker in tickers:
-            packet = packets.get(ticker)
-            if packet is None:
-                message = "Pipeline packet missing."
-                audit.record_pipeline_error(ticker, message)
-                summaries.append(
-                    RefreshSummary(
-                        ticker=ticker,
-                        processed_filings=0,
-                        skipped_filings=0,
-                        status="error",
-                        message=message,
+        # Fetch+persist in small batches so peak memory stays bounded instead of
+        # materializing every EDGAR packet for the whole universe at once.
+        for batch_start in range(0, total, REFRESH_FETCH_BATCH_SIZE):
+            batch = tickers[batch_start : batch_start + REFRESH_FETCH_BATCH_SIZE]
+            packets = asyncio.run(self._fetch_packets(batch, audit))
+            for ticker in batch:
+                packet = packets.pop(ticker, None)
+                if packet is None:
+                    message = "Pipeline packet missing."
+                    audit.record_pipeline_error(ticker, message)
+                    summaries.append(
+                        RefreshSummary(
+                            ticker=ticker,
+                            processed_filings=0,
+                            skipped_filings=0,
+                            status="error",
+                            message=message,
+                        )
                     )
-                )
-                continue
+                    continue
 
-            try:
-                summary = self._persist_packet(packet, audit)
-                self.session.commit()
-                summaries.append(summary)
-            except Exception as exc:  # pragma: no cover - defensive scheduler loop
-                self.session.rollback()
-                audit.record_pipeline_error(ticker, str(exc))
-                LOGGER.exception("Refresh failed for ticker %s", ticker)
-                summaries.append(
-                    RefreshSummary(
-                        ticker=ticker,
-                        processed_filings=0,
-                        skipped_filings=0,
-                        status="error",
-                        message=str(exc),
+                try:
+                    summary = self._persist_packet(packet, audit)
+                    self.session.commit()
+                    summaries.append(summary)
+                except Exception as exc:  # pragma: no cover - defensive scheduler loop
+                    self.session.rollback()
+                    audit.record_pipeline_error(ticker, str(exc))
+                    LOGGER.exception("Refresh failed for ticker %s", ticker)
+                    summaries.append(
+                        RefreshSummary(
+                            ticker=ticker,
+                            processed_filings=0,
+                            skipped_filings=0,
+                            status="error",
+                            message=str(exc),
+                        )
                     )
-                )
+                finally:
+                    del packet
+
+            packets.clear()
+            self.session.expunge_all()
+            gc.collect()
+            LOGGER.info(
+                "Refresh progress: %s/%s tickers (batch size %s)",
+                min(batch_start + len(batch), total),
+                total,
+                REFRESH_FETCH_BATCH_SIZE,
+            )
 
         audit.flush_logs()
         self._emit_summary(audit, summaries)

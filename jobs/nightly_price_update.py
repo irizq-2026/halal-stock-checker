@@ -38,6 +38,10 @@ class DbConnection:
     async def execute(self, query: str, params: dict[str, Any] | None = None) -> None:
         await asyncio.to_thread(self._execute_sync, query, params or {})
 
+    async def reset_session(self) -> None:
+        """Drop accumulated session state between long-running SEC batches."""
+        await asyncio.to_thread(self._reset_session_sync)
+
     async def close(self) -> None:
         await asyncio.to_thread(self._session.close)
 
@@ -52,6 +56,14 @@ class DbConnection:
     def _execute_sync(self, query: str, params: dict[str, Any]) -> None:
         try:
             self._session.execute(text(query), params)
+            self._session.commit()
+        except Exception:
+            self._session.rollback()
+            raise
+
+    def _reset_session_sync(self) -> None:
+        try:
+            self._session.expunge_all()
             self._session.commit()
         except Exception:
             self._session.rollback()

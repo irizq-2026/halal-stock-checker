@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -15,7 +16,7 @@ from services.edgar_xbrl import is_supported_report_form
 LOGGER = logging.getLogger(__name__)
 
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
-SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+SEC_COMPANY_CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}/{taxonomy}/{concept}.json"
 
 SEC_HEADERS_BASE = {
     "User-Agent": "iRizq.com admin@irizq.com",
@@ -31,6 +32,9 @@ SHARES_TAG_PRIORITY = (
     ("us-gaap", "SharesOutstanding"),
     ("dei", "EntityCommonStockSharesOutstanding"),
 )
+
+# Bound peak memory on small cron plans by resetting session/GC between batches.
+SHARES_FETCH_BATCH_SIZE = 50
 
 
 class DbConnProtocol(Protocol):
@@ -59,32 +63,44 @@ def _parse_date(raw: Any) -> date | None:
         return None
 
 
+def _extract_latest_shares_from_rows(tagged: Any) -> tuple[int | None, date | None]:
+    if not isinstance(tagged, list):
+        return None, None
+    filtered_rows = []
+    for row in tagged:
+        form = str((row or {}).get("form") or "").upper().strip()
+        if not is_supported_report_form(form):
+            continue
+        shares_val = (row or {}).get("val")
+        try:
+            shares_int = int(shares_val)
+        except (TypeError, ValueError):
+            continue
+        end_date = _parse_date((row or {}).get("end"))
+        if not end_date:
+            continue
+        filtered_rows.append((end_date, shares_int))
+    if not filtered_rows:
+        return None, None
+    filtered_rows.sort(key=lambda item: item[0], reverse=True)
+    latest_date, latest_value = filtered_rows[0]
+    return latest_value, latest_date
+
+
 def _extract_latest_shares(company_facts: dict[str, Any]) -> tuple[int | None, date | None]:
+    """Legacy companyfacts extractor kept for compatibility/tests."""
     facts = company_facts.get("facts") or {}
     for taxonomy, tag in SHARES_TAG_PRIORITY:
         tagged = (((facts.get(taxonomy) or {}).get(tag) or {}).get("units") or {}).get("shares") or []
-        if not isinstance(tagged, list):
-            continue
-        filtered_rows = []
-        for row in tagged:
-            form = str((row or {}).get("form") or "").upper().strip()
-            if not is_supported_report_form(form):
-                continue
-            shares_val = (row or {}).get("val")
-            try:
-                shares_int = int(shares_val)
-            except (TypeError, ValueError):
-                continue
-            end_date = _parse_date((row or {}).get("end"))
-            if not end_date:
-                continue
-            filtered_rows.append((end_date, shares_int))
-        if not filtered_rows:
-            continue
-        filtered_rows.sort(key=lambda item: item[0], reverse=True)
-        latest_date, latest_value = filtered_rows[0]
-        return latest_value, latest_date
+        shares_outstanding, shares_date = _extract_latest_shares_from_rows(tagged)
+        if shares_outstanding is not None:
+            return shares_outstanding, shares_date
     return None, None
+
+
+def _extract_latest_shares_from_concept(payload: dict[str, Any] | None) -> tuple[int | None, date | None]:
+    units = (payload or {}).get("units") or {}
+    return _extract_latest_shares_from_rows(units.get("shares") or [])
 
 
 async def fetch_company_ticker_map(client: httpx.AsyncClient) -> dict[str, dict[str, str]]:
@@ -106,22 +122,71 @@ async def fetch_company_ticker_map(client: httpx.AsyncClient) -> dict[str, dict[
     return mapping
 
 
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    ticker: str,
+    headers: dict[str, str],
+) -> tuple[int, dict[str, Any] | None]:
+    response = await client.get(url, headers=headers)
+    try:
+        if response.status_code == 429:
+            LOGGER.error("SEC rate limited for %s — waiting 60s then retrying once", ticker)
+            await asyncio.sleep(60)
+            retry_response = await client.get(url, headers=headers)
+            try:
+                if retry_response.status_code == 429:
+                    LOGGER.error("SEC rate limited for %s — skipped", ticker)
+                    return 429, None
+                if retry_response.status_code == 404:
+                    return 404, None
+                retry_response.raise_for_status()
+                return retry_response.status_code, retry_response.json()
+            finally:
+                await retry_response.aclose()
+        if response.status_code == 404:
+            return 404, None
+        response.raise_for_status()
+        return response.status_code, response.json()
+    finally:
+        await response.aclose()
+
+
 async def _fetch_company_facts(client: httpx.AsyncClient, ticker: str, cik: str) -> dict[str, Any] | None:
-    url = SEC_COMPANY_FACTS_URL.format(cik=_pad_cik(cik))
-    response = await client.get(url, headers=SEC_HEADERS_FACTS)
-    if response.status_code == 429:
-        LOGGER.error("SEC rate limited for %s — waiting 60s then retrying once", ticker)
-        await asyncio.sleep(60)
-        retry_response = await client.get(url, headers=SEC_HEADERS_FACTS)
-        if retry_response.status_code == 429:
-            LOGGER.error("SEC rate limited for %s — skipped", ticker)
-            return None
-        retry_response.raise_for_status()
-        return retry_response.json()
-    if response.status_code == 404:
+    """Deprecated path: full companyfacts JSON. Prefer concept fetches."""
+    url = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json".format(cik=_pad_cik(cik))
+    status, payload = await _get_json(client, url, ticker=ticker, headers=SEC_HEADERS_FACTS)
+    if status in {404, 429} or not payload:
         return None
-    response.raise_for_status()
-    return response.json()
+    return payload
+
+
+async def _fetch_shares_via_concepts(
+    client: httpx.AsyncClient,
+    ticker: str,
+    cik: str,
+) -> tuple[int | None, date | None]:
+    """
+    Fetch only the shares concept endpoints instead of full companyfacts.
+
+    Full companyfacts payloads are often multi-MB and were exhausting the
+    512MB cron memory limit during the Sunday refresh.
+    """
+    padded = _pad_cik(cik)
+    for taxonomy, concept in SHARES_TAG_PRIORITY:
+        url = SEC_COMPANY_CONCEPT_URL.format(cik=padded, taxonomy=taxonomy, concept=concept)
+        status, payload = await _get_json(client, url, ticker=ticker, headers=SEC_HEADERS_FACTS)
+        if status == 404 or not payload:
+            continue
+        shares_outstanding, shares_date = _extract_latest_shares_from_concept(payload)
+        # Drop payload immediately; do not retain large JSON across tickers.
+        if isinstance(payload, dict):
+            payload.clear()
+        del payload
+        if shares_outstanding is not None:
+            return shares_outstanding, shares_date
+    return None, None
 
 
 async def _upsert_sec_shares(db_conn: DbConnProtocol, record: SharesRecord) -> None:
@@ -179,19 +244,15 @@ async def fetch_and_store_sec_shares(
         if limit and limit > 0:
             ticker_items = ticker_items[:limit]
 
-        for offset in range(0, len(ticker_items), 50):
-            batch = ticker_items[offset : offset + 50]
+        for offset in range(0, len(ticker_items), SHARES_FETCH_BATCH_SIZE):
+            batch = ticker_items[offset : offset + SHARES_FETCH_BATCH_SIZE]
             for ticker, meta in batch:
                 processed += 1
                 cik = meta["cik"]
                 company_name = meta["company_name"]
                 try:
-                    company_facts = await _fetch_company_facts(client, ticker, cik)
+                    shares_outstanding, shares_date = await _fetch_shares_via_concepts(client, ticker, cik)
                     await asyncio.sleep(0.15)
-                    if not company_facts:
-                        failed += 1
-                        continue
-                    shares_outstanding, shares_date = _extract_latest_shares(company_facts)
                     if shares_outstanding is None:
                         LOGGER.info("No shares data found for %s", ticker)
                         failed += 1
@@ -208,7 +269,16 @@ async def fetch_and_store_sec_shares(
                 except Exception:
                     LOGGER.exception("Failed SEC shares fetch for %s", ticker)
                     failed += 1
-            LOGGER.info("Processed %s/%s tickers...", min(offset + 50, len(ticker_items)), len(ticker_items))
+
+            reset = getattr(db_conn, "reset_session", None)
+            if callable(reset):
+                await reset()
+            gc.collect()
+            LOGGER.info(
+                "Processed %s/%s tickers...",
+                min(offset + SHARES_FETCH_BATCH_SIZE, len(ticker_items)),
+                len(ticker_items),
+            )
 
     return {
         "processed": processed,
